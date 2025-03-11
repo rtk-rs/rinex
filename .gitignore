@@ -18,9 +18,8 @@ Cargo.lock
 **/*.rs.bk
 .DS_Store
 *.rnx
+*.crx
 
 rinex/merge.rnx
 rinex/test.crx
 rinex/test.rnx
-DATA/
-WORKSPACE/

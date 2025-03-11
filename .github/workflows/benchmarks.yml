@@ -1,4 +1,4 @@
-name: Benchmarks
+name: Benchmarking
 
 on:
   push:
@@ -7,32 +7,37 @@ on:
     tags:
       - "*"
   pull_request:
-    branches:
-      - main
-
-env:
-  RUST_BACKTRACE: 1
-  CARGO_TERM_COLOR: always
+  workflow_dispatch:
 
 jobs:
-  benchmark:
-    name: Benchmarking
+  benchmarking:
+    name: Benchmarking (API)
     runs-on: ubuntu-latest
+    env:
+      CARGO: cargo
+      RUST_BACKTRACE: 1
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
-          - name: BINEX Benchmark
-            folder: "binex"
+        - bench: hatanaka
+          sample_size: 100
+        - bench: parsing
+          sample_size: 1000
+        - bench: formatting
+          sample_size: 1000
+
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-      - name: ${{ matrix.name }}
-        run: cargo bench -p ${{ matrix.folder }} > benchmark.txt
-      
-      - name: Parse and publish summary
-        run: python tools/parse_crit_benchmark.py < benchmark.txt >> $GITHUB_STEP_SUMMARY
+
+      - name: Bench
+        run: cargo bench --bench ${{ matrix.bench }} -- --sample-size ${{ matrix.sample_size }}  > ${{ matrix.bench }}.txt
+
+      - name: Upload Results
+        run: python tools/parse_crit_benchmark.py < ${{ matrix.bench }}.txt >> $GITHUB_STEP_SUMMARY

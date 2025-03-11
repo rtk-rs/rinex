@@ -39,55 +39,30 @@ jobs:
       matrix:
         include:
           - name: Workspace default
-            folder: "."
             opts: -r
           - name: Workspace All-features
-            folder: "."
             opts: --all-features
           - name: RINEX Default
-            folder: rinex
             opts: -r
           - name: RINEX Observations
-            folder: rinex
             opts: --features "obs"
           - name: RINEX Navigation
-            folder: rinex
             opts: --features "nav"
           - name: RINEX QC
-            folder: rinex
             opts: --features "qc"
           - name: RINEX Meteo
-            folder: rinex
             opts: --features "meteo"
           - name: RINEX Clock
-            folder: rinex
             opts: --features "clock"
           - name: ANTEX
-            folder: rinex
             opts: --features "antex"
           - name: DORIS RINEX
-            folder: rinex
             opts: --features "doris"
           - name: RINEX Processing
-            folder: rinex
             opts: --features "processing"
           - name: RINEX Full
-            folder: rinex
             opts: --features "full"
           - name: RINEX All-features
-            folder: rinex
-            opts: --all-features
-          - name: SP3 default
-            folder: sp3
-            opts: -r
-          - name: SP3 QC
-            folder: sp3
-            opts: --features "qc"
-          - name: SP3 Processing
-            folder: sp3
-            opts: --features "processing"
-          - name: SP3 All-features
-            folder: sp3
             opts: --all-features
 
     steps:
@@ -100,11 +75,10 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libudev-dev
 
     - name: ${{ matrix.name }} 
       run: |
-        cd ${{ matrix.folder }} && cargo clean && cargo update && cargo build ${{ matrix.opts }}
+        cargo clean && cargo update && cargo build ${{ matrix.opts }}
    
   tests:
     name: Tests
@@ -116,10 +90,11 @@ jobs:
       with:
         toolchain: stable
         override: true
+    
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libudev-dev
+    
     - uses: actions-rs/cargo@v1
       name: Test (all features)
       with:
@@ -136,56 +111,11 @@ jobs:
       with:
         toolchain: nightly
         override: true
+    
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libudev-dev
+    
     - name: Documentation
       run: |
         ./tools/builddoc.sh
-  
-  windows-build:
-    name: Windows
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      name: Install Rust
-      with:
-        toolchain: stable
-        override: true
-        
-    - uses: actions-rs/cargo@v1
-      name: Build (default) 
-      with:
-        command: build
-        args: --release
-
-    - uses: actions-rs/cargo@v1
-      name: Build (all features)
-      with: 
-        command: build 
-        args: --all-features --release
-  
-  macos-build:
-    name: MacOS
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      name: Install Rust
-      with:
-        toolchain: stable
-        override: true
-    
-    - uses: actions-rs/cargo@v1
-      name: Build (default) 
-      with:
-        command: build
-        args: --release
-
-    - uses: actions-rs/cargo@v1
-      name: Build (all features)
-      with: 
-        command: build 
-        args: --all-features --release

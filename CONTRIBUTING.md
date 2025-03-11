@@ -7,8 +7,8 @@ Use the github portal to submit PR, all contributions are welcomed.
 Don't forget to run a quick `cargo fmt` prior any submissions, so the CI/CD does not fail
 on coding style "issues".
 
-This crate and ecosystem is part of the Georust community. 
-You can contact us on [Discord](https://discord.gg/Fp2aape).
+This crate and ecosystem is part of the [RTK-rs framework and community](https://github.com/rtk-rs).  
+Contact us on [Discord](https://discord.gg/duETmeGc).
 
 Crate architecture
 ==================
@@ -97,20 +97,8 @@ standard SBAS systems. We parse them as Geo::LineStrings to
 define a contour area for a given SBAS system. This gives one method
 to select a SBAS from given location on Earth
 
-Crate dependencies
-==================
+External key dependencies
+=========================
 
-- `qc-traits` and `sinex` are core libraries.
-- `rinex` is the central dependency to most other libraries or applications.
-- tiny applications like `rnx2crx`, `crx2rnx` and `ublox-rnx` only depend on the rinex crate
-- `sp3` is a library that only depends on `rinex` 
-- `gnss-rtk` is a library that depends on `rinex`, `sp3` and `rinex-qc`
-- `cli` is an application that exposes `rinex-qc`, `gnss-rtk`, `sp3` and `rinex`
-
-External key dependencies:
-
-- `Hifitime` (timing lib) is used by all libraries
-- `Nyx-space` (navigation lib) is used by `gnss-rtk`
-- `Ublox-rs` (UBX protocol) is used by `ublox-rnx`
-
-<img align="center" width="450" src="https://github.com/georust/rinex/blob/main/doc/dependencies.png">
+- `Hifitime` for timing and timescales
+- `ANISE` for navigation

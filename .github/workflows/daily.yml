@@ -17,59 +17,27 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - name: Workspace default
-            folder: "."
+          - name: Default
             opts: -r
-          - name: Workspace All-features
-            folder: "."
-            opts: --all-features
-          - name: RINEX Default
-            folder: rinex
-            opts: -r
-          - name: RINEX Observations
-            folder: rinex
+          - name: Observations
             opts: --features "obs"
-          - name: RINEX Navigation
-            folder: rinex
+          - name: Navigation
             opts: --features "nav"
-          - name: RINEX QC
-            folder: rinex
+          - name: Qc
             opts: --features "qc"
-          - name: RINEX Meteo
-            folder: rinex
+          - name: Meteo
             opts: --features "meteo"
-          - name: RINEX Clock
-            folder: rinex
+          - name: Clock
             opts: --features "clock"
           - name: ANTEX
-            folder: rinex
             opts: --features "antex"
-          - name: DORIS RINEX
-            folder: rinex
+          - name: DORIS
             opts: --features "doris"
-          - name: RINEX Processing
-            folder: rinex
+          - name: Processing
             opts: --features "processing"
-          - name: RINEX Full
-            folder: rinex
+          - name: Full
             opts: --features "full"
-          - name: RINEX All-features
-            folder: rinex
-            opts: --all-features
-          - name: BINEX
-            folder: binex
-            opts: --all-features
-          - name: SP3 default
-            folder: sp3
-            opts: -r
-          - name: SP3 QC
-            folder: sp3
-            opts: --features "qc"
-          - name: SP3 Processing
-            folder: sp3
-            opts: --features "processing"
-          - name: SP3 All-features
-            folder: sp3
+          - name: All-features
             opts: --all-features
 
     steps:
@@ -82,11 +50,10 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libudev-dev
 
     - name: ${{ matrix.name }} 
       run: |
-        cd ${{ matrix.folder }} && cargo clean && cargo update && cargo build ${{ matrix.opts }}
+        cargo clean && cargo update && cargo build ${{ matrix.opts }}
    
   tests:
     name: Tests
@@ -101,7 +68,6 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libudev-dev
     - uses: actions-rs/cargo@v1
       name: Test (all features)
       with:
@@ -121,7 +87,6 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libudev-dev
     - name: Documentation
       run: |
         ./tools/builddoc.sh

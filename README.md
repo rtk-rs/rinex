@@ -1,20 +1,18 @@
 RINEX 
 =====
 
-[![Rust](https://github.com/georust/rinex/actions/workflows/rust.yml/badge.svg)](https://github.com/georust/rinex/actions/workflows/rust.yml)
-[![Rust](https://github.com/georust/rinex/actions/workflows/daily.yml/badge.svg)](https://github.com/georust/rinex/actions/workflows/daily.yml)
+[![Rust](https://github.com/rtk-rs/rinex/actions/workflows/rust.yml/badge.svg)](https://github.com/rtk-rs/rinex/actions/workflows/rust.yml)
+[![Rust](https://github.com/rtk-rs/rinex/actions/workflows/daily.yml/badge.svg)](https://github.com/rtk-rs/rinex/actions/workflows/daily.yml)
 [![crates.io](https://docs.rs/rinex/badge.svg)](https://docs.rs/rinex/)
 [![crates.io](https://img.shields.io/crates/d/rinex.svg)](https://crates.io/crates/rinex)
 
-[![minimum rustc: 1.64](https://img.shields.io/badge/minimum%20rustc-1.64-blue?logo=rust)](https://www.whatrustisit.com)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](https://github.com/georust/rinex/blob/main/LICENSE-APACHE)
-[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](https://github.com/georust/rinex/blob/main/LICENSE-MIT) 
+[![License](https://img.shields.io/badge/license-MPL_2.0-orange?style=for-the-badge&logo=mozilla)](https://github.com/rtk-rs/sp3/blob/main/LICENSE)
 
-Parser and write for [RINEX](https://en.wikipedia.org/wiki/RINEX), SP3 and SINEX data.
-All these formats are open source solutions to answer the requirements of GNSS navigation.
+[RINEX (Receiver Independent EXchange)](https://en.wikipedia.org/wiki/RINEX) parser and writer.  
+The RINEX format is fully open source and is specified to answer the requirements of navigation and precise navigation.
 
-Use [Github Issues](https://github.com/georust/rinex/issues) to report bugs and other malfunctions.  
-You can also open a [Discussion](https://github.com/georust/rinex/discussions) or leave us a message [on Discord](https://discord.gg/Fp2aape).
+Use [Github Issues](https://github.com/rtk-rs/rinex/issues) to report issues while using this library.
+can also open a [Discussion](https://github.com/rtk-rs/rinex/discussions) or leave us a message [on Discord](https://discord.gg/duETmeGc).
 
 ## Advantages :rocket: 
 
@@ -34,29 +32,14 @@ You can also open a [Discussion](https://github.com/georust/rinex/discussions) o
 
 ## Warnings :warning:
 
-- The BINEX parser does not support all frames yet
 - Navigation is currently not feasible with Glonass and IRNSS
-- Differential navigation (SBAS, DGNSS or RTK) is not support yet
-- Our applications do not accept proprietary formats like Septentrio for example
 - File production might lack some features, mostly because we're currently focused on data processing
-
-## Repository 
-
-* [`rinex`](rinex/) is the core library 
-* [`tutorials`](tutorials/) is a superset of scripts (Linux/MacOS compatible)
-to get started quickly. The examples span pretty much everything our applications allow.
-* [`sp3`](sp3/) High Precision Orbits (by IGS) 
-* [`binex`](binex/) BINEX Encoding and Decoding library
-* [`sinex`](sinex/) SNX dedicated core library
-* [`tools`](tools/) are utility scripts and development tools
-
-This repository now only hosts parser libraries: previous applications have been moved to the [RTK-rs](https://github.com/rtk-rs) workspace.
 
 ## Citation and referencing
 
 If you need to reference this work, please use the following model:
 
-`GeoRust RINEX Team (2023), RINEX: analysis and processing (Apache-2/MIT), https://georust.org`
+`RTK-rs Team (2025), RINEX: analysis and processing (MPLv2), https://github.com/rtk-rs`
 
 Formats & revisions
 ===================
@@ -78,12 +61,6 @@ RINEX formats & applications
 |  Antenna (ATX)             | :heavy_check_mark:| :construction:      | :construction:   | Precise RX/SV Antenna calibration | `antex::Antenna` | :heavy_minus_sign: |
 |  Ionosphere Maps  (IONEX)  | :heavy_check_mark:|  :construction:     | :heavy_check_mark:  :chart_with_upwards_trend: | Ionosphere Electron density | Epoch | UTC |
 |  DORIS RINEX               | :heavy_check_mark:|  :construction:     | :heavy_check_mark:   | Temperature, Moisture, Pseudo Range and Phase observations | Epoch | TAI |
-|  SINEX  (SNX)              | :construction:    |  :construction:     | :heavy_minus_sign:   | SINEX are special RINEX, they are managed by a dedicated [core library](sinex/) | Epoch | :question: |
-|  Troposphere  (TRO)        | :construction:    |  :construction:     | :question:           | Troposphere modeling | Epoch | :question: |
-|  Bias  (BIA)               | :heavy_check_mark: |  :construction:    | :question:           | Bias estimates, like DCB.. | Epoch | :question: |
-
-Other formats
-=============
 
 Contributions
 =============
