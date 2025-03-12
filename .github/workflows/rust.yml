@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+
     - uses: actions-rs/toolchain@v1
       name: Install Rust
       with:
@@ -38,40 +39,41 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - name: Workspace default
+          - name: Default
             opts: -r
-          - name: Workspace All-features
+          - name: All-features
             opts: --all-features
-          - name: RINEX Default
-            opts: -r
-          - name: RINEX Observations
+          - name: Observations
             opts: --features "obs"
-          - name: RINEX Navigation
+          - name: Navigation
             opts: --features "nav"
-          - name: RINEX QC
+          - name: QC
             opts: --features "qc"
-          - name: RINEX Meteo
+          - name: Meteo
             opts: --features "meteo"
-          - name: RINEX Clock
+          - name: Clock
             opts: --features "clock"
           - name: ANTEX
             opts: --features "antex"
           - name: DORIS RINEX
             opts: --features "doris"
-          - name: RINEX Processing
+          - name: Processing
             opts: --features "processing"
-          - name: RINEX Full
+          - name: Full
             opts: --features "full"
-          - name: RINEX All-features
-            opts: --all-features
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+    
     - uses: actions-rs/toolchain@v1
       name: Install Rust
       with:
         toolchain: stable
         override: true
+    
     - name: Install Dependencies
       run: |
         sudo apt-get update
@@ -79,22 +81,11 @@ jobs:
     - name: ${{ matrix.name }} 
       run: |
         cargo clean && cargo update && cargo build ${{ matrix.opts }}
-   
-  tests:
-    name: Tests
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      name: Install Rust
-      with:
-        toolchain: stable
-        override: true
     
-    - name: Install Dependencies
+    - name: Tests
       run: |
-        sudo apt-get update
-    
+        cargo clean && cargo update && cargo build ${{ matrix.opts }}
+   
     - uses: actions-rs/cargo@v1
       name: Test (all features)
       with:
@@ -106,15 +97,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+    
     - uses: actions-rs/toolchain@v1
       name: Install nightly
       with:
         toolchain: nightly
         override: true
-    
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
     
     - name: Documentation
       run: |
