@@ -42,14 +42,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
     - uses: actions-rs/toolchain@v1
       name: Install Rust
       with:
         toolchain: stable
         override: true
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
 
     - name: ${{ matrix.name }} 
       run: |
@@ -60,14 +61,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
     - uses: actions-rs/toolchain@v1
       name: Install Rust
       with:
         toolchain: stable
         override: true
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
+
     - uses: actions-rs/cargo@v1
       name: Test (all features)
       with:
@@ -79,14 +82,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+    
     - uses: actions-rs/toolchain@v1
       name: Install nightly
       with:
         toolchain: nightly
         override: true
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
+    
     - name: Documentation
       run: |
         ./tools/builddoc.sh
