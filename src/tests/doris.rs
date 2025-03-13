@@ -10,7 +10,7 @@ mod test {
     #[cfg(feature = "flate2")]
     fn v3_cs2rx18164() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources")
+            .join("data")
             .join("DOR")
             .join("V3")
             .join("cs2rx18164.gz");

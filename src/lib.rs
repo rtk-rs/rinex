@@ -267,7 +267,7 @@ pub(crate) fn fmt_comment(content: &str) -> String {
 /// [Rinex] comprises a [Header] and a [Record] section.
 /// ```
 /// use rinex::prelude::*;
-/// let rnx = Rinex::from_file("test_resources/OBS/V2/delf0010.21o")
+/// let rnx = Rinex::from_file("data/OBS/V2/delf0010.21o")
 ///     .unwrap();
 /// // header contains high level information
 /// // like file standard revision:
@@ -383,7 +383,7 @@ impl Rinex {
     ///
     /// ```
     /// use rinex::prelude::*;
-    /// let rinex = Rinex::from_file("test_resources/OBS/V3/DUTH0630.22O")
+    /// let rinex = Rinex::from_file("data/OBS/V3/DUTH0630.22O")
     ///     .unwrap();
     ///
     /// // convert to CRINEX
@@ -895,7 +895,7 @@ impl Rinex {
     /// ```
     /// // Read a RINEX and dump it without any modifications
     /// use rinex::prelude::*;
-    /// let rnx = Rinex::from_file("test_resources/OBS/V3/DUTH0630.22O")
+    /// let rnx = Rinex::from_file("data/OBS/V3/DUTH0630.22O")
     ///   .unwrap();
     /// assert!(rnx.to_file("test.rnx").is_ok());
     /// ```
@@ -919,7 +919,7 @@ impl Rinex {
     /// ```
     /// use rinex::prelude::Rinex;
     ///
-    /// let rinex = Rinex::from_gzip_file("test_resources/IONEX/V1/CKMG0020.22I.gz")
+    /// let rinex = Rinex::from_gzip_file("data/IONEX/V1/CKMG0020.22I.gz")
     ///     .unwrap();
     ///
     /// assert!(rinex.is_ionex());
@@ -980,7 +980,7 @@ impl Rinex {
     /// ```
     /// // Read a RINEX and dump it without any modifications
     /// use rinex::prelude::*;
-    /// let rnx = Rinex::from_file("test_resources/OBS/V3/DUTH0630.22O")
+    /// let rnx = Rinex::from_file("data/OBS/V3/DUTH0630.22O")
     ///   .unwrap();
     /// assert!(rnx.to_file("test.rnx").is_ok());
     /// ```
@@ -1108,7 +1108,7 @@ impl Rinex {
     // /// ```
     // /// use rinex::prelude::*;
     // /// use std::str::FromStr;
-    // /// let rnx = Rinex::from_file("test_resources/OBS/V2/aopr0010.17o")
+    // /// let rnx = Rinex::from_file("data/OBS/V2/aopr0010.17o")
     // ///     .unwrap();
     // ///
     // /// let mut data = rnx.sv_epoch();
@@ -1180,7 +1180,7 @@ impl Rinex {
     /// ```
     /// use rinex::prelude::*;
     /// use itertools::Itertools; // .sorted()
-    /// let rnx = Rinex::from_file("test_resources/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx")
+    /// let rnx = Rinex::from_file("data/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx")
     ///     .unwrap();
     ///
     /// assert!(

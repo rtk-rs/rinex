@@ -522,7 +522,7 @@ mod test {
     #[test]
     fn gf_signal_combination() {
         let fullpath = format!(
-            "{}/test_resources/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
+            "{}/data/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
             env!("CARGO_MANIFEST_DIR")
         );
         let rinex = Rinex::from_file(&fullpath).unwrap();
@@ -611,7 +611,7 @@ mod test {
     #[test]
     fn if_signal_combination() {
         let fullpath = format!(
-            "{}/test_resources/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
+            "{}/data/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
             env!("CARGO_MANIFEST_DIR")
         );
         let rinex = Rinex::from_file(&fullpath).unwrap();
@@ -749,7 +749,7 @@ mod test {
     #[test]
     fn wl_signal_combination() {
         let fullpath = format!(
-            "{}/test_resources/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
+            "{}/data/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
             env!("CARGO_MANIFEST_DIR")
         );
         let rinex = Rinex::from_file(&fullpath).unwrap();
@@ -887,7 +887,7 @@ mod test {
     #[test]
     fn nl_signal_combination() {
         let fullpath = format!(
-            "{}/test_resources/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
+            "{}/data/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
             env!("CARGO_MANIFEST_DIR")
         );
         let rinex = Rinex::from_file(&fullpath).unwrap();
@@ -1025,7 +1025,7 @@ mod test {
     #[test]
     fn mw_signal_combination() {
         let fullpath = format!(
-            "{}/test_resources/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
+            "{}/data/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
             env!("CARGO_MANIFEST_DIR")
         );
         let rinex = Rinex::from_file(&fullpath).unwrap();
@@ -1135,7 +1135,7 @@ mod test {
     #[ignore]
     fn code_multipath() {
         let fullpath = format!(
-            "{}/test_resources/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
+            "{}/data/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
             env!("CARGO_MANIFEST_DIR")
         );
 

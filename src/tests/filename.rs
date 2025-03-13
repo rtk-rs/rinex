@@ -17,7 +17,7 @@ fn short_filename_conventions() {
         "MET/V2/clar0020.00m",
     ] {
         let fp = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources")
+            .join("data")
             .join(testfile);
 
         let rinex = Rinex::from_file(fp.to_string_lossy().as_ref()).unwrap();
@@ -60,7 +60,7 @@ fn long_filename_conventions() {
         ),
     ] {
         let fp = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources")
+            .join("data")
             .join(testfile);
 
         let rinex = if is_gzip {

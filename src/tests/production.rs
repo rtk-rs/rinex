@@ -32,7 +32,7 @@ mod test {
     #[cfg(feature = "flate2")]
     fn obs_v2() {
         let prefix = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources")
+            .join("data")
             .join("OBS")
             .join("V2");
         // does not work well on very old rinex like V2/KOSG..
@@ -56,7 +56,7 @@ mod test {
     #[test]
     #[cfg(feature = "flate2")]
     fn obs_v3() {
-        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/OBS/V3/";
+        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/OBS/V3/";
         for file in std::fs::read_dir(folder).unwrap() {
             let fp = file.unwrap();
             let fp = fp.path();
@@ -91,7 +91,7 @@ mod test {
     #[test]
     #[cfg(feature = "flate2")]
     fn meteo_v2() {
-        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/MET/V2/";
+        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/MET/V2/";
         for file in std::fs::read_dir(folder).unwrap() {
             let fp = file.unwrap();
             let fp = fp.path();
@@ -102,7 +102,7 @@ mod test {
     #[test]
     #[cfg(feature = "flate2")]
     fn meteo_v3() {
-        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/MET/V3/";
+        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/MET/V3/";
         for file in std::fs::read_dir(folder).unwrap() {
             let fp = file.unwrap();
             let fp = fp.path();
@@ -113,7 +113,7 @@ mod test {
     #[test]
     #[cfg(feature = "flate2")]
     fn meteo_v4() {
-        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/MET/V4/";
+        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/MET/V4/";
         for file in std::fs::read_dir(folder).unwrap() {
             let fp = file.unwrap();
             let fp = fp.path();
@@ -125,7 +125,7 @@ mod test {
     #[cfg(feature = "flate2")]
     #[ignore]
     fn clocks_v2() {
-        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/CLK/V2/";
+        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/CLK/V2/";
         for file in std::fs::read_dir(folder).unwrap() {
             let fp = file.unwrap();
             let fp = fp.path();
@@ -137,7 +137,7 @@ mod test {
     #[cfg(feature = "flate2")]
     #[ignore]
     fn nav_v2() {
-        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/NAV/V2/";
+        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/NAV/V2/";
         for file in std::fs::read_dir(folder).unwrap() {
             let fp = file.unwrap();
             let fp = fp.path();
@@ -149,7 +149,7 @@ mod test {
     #[cfg(feature = "flate2")]
     #[ignore]
     fn nav_v3() {
-        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/NAV/V3/";
+        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/NAV/V3/";
         for file in std::fs::read_dir(folder).unwrap() {
             let fp = file.unwrap();
             let fp = fp.path();
@@ -161,7 +161,7 @@ mod test {
     #[cfg(feature = "flate2")]
     #[ignore]
     fn nav_v4() {
-        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/NAV/V4/";
+        let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/NAV/V4/";
         for file in std::fs::read_dir(folder).unwrap() {
             let fp = file.unwrap();
             let fp = fp.path();

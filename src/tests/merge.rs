@@ -11,21 +11,15 @@ mod test {
 
     #[test]
     fn fail_on_type_mismatch() {
-        let test_resources = PathBuf::new()
-            .join(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources");
+        let data = PathBuf::new().join(env!("CARGO_MANIFEST_DIR")).join("data");
 
-        let path1 = test_resources
+        let path1 = data
             .clone()
             .join("NAV")
             .join("V3")
             .join("AMEL00NLD_R_20210010000_01D_MN.rnx");
 
-        let path2 = test_resources
-            .clone()
-            .join("OBS")
-            .join("V3")
-            .join("LARM0630.22O");
+        let path2 = data.clone().join("OBS").join("V3").join("LARM0630.22O");
 
         let path = path1.to_string_lossy().to_string();
         let mut r1 = Rinex::from_file(&path).unwrap();
@@ -38,11 +32,9 @@ mod test {
 
     #[test]
     fn merge_nav() {
-        let test_resources = PathBuf::new()
-            .join(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources");
+        let data = PathBuf::new().join(env!("CARGO_MANIFEST_DIR")).join("data");
 
-        let path = test_resources
+        let path = data
             .clone()
             .join("NAV")
             .join("V3")
@@ -51,7 +43,7 @@ mod test {
         let path = path.to_string_lossy().to_string();
         let rnx_a = Rinex::from_file(&path).unwrap();
 
-        let path = test_resources
+        let path = data
             .clone()
             .join("NAV")
             .join("V3")
@@ -92,18 +84,18 @@ mod test {
 
     #[test]
     fn merge_obs_v2() {
-        let test_resources = PathBuf::new()
+        let data = PathBuf::new()
             .join(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources")
+            .join("data")
             .join("OBS")
             .join("V2");
 
-        let path = test_resources.clone().join("AJAC3550.21O");
+        let path = data.clone().join("AJAC3550.21O");
 
         let path = path.to_string_lossy().to_string();
         let rnx_a = Rinex::from_file(&path).unwrap();
 
-        let path = test_resources.clone().join("npaz3550.21o");
+        let path = data.clone().join("npaz3550.21o");
 
         let path = path.to_string_lossy().to_string();
         let rnx_b = Rinex::from_file(&path).unwrap();
@@ -148,22 +140,18 @@ mod test {
 
     #[test]
     fn merge_obs_v3() {
-        let test_resources = PathBuf::new()
+        let data = PathBuf::new()
             .join(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources")
+            .join("data")
             .join("OBS")
             .join("V3");
 
-        let path = test_resources
-            .clone()
-            .join("ACOR00ESP_R_20213550000_01D_30S_MO.rnx");
+        let path = data.clone().join("ACOR00ESP_R_20213550000_01D_30S_MO.rnx");
 
         let path = path.to_string_lossy().to_string();
         let rnx_a = Rinex::from_file(&path).unwrap();
 
-        let path = test_resources
-            .clone()
-            .join("ALAC00ESP_R_20220090000_01D_30S_MO.rnx");
+        let path = data.clone().join("ALAC00ESP_R_20220090000_01D_30S_MO.rnx");
 
         let path = path.to_string_lossy().to_string();
         let rnx_b = Rinex::from_file(&path).unwrap();
@@ -249,12 +237,12 @@ mod test {
     // #[cfg(feature = "antex")]
     // fn merge_atx() {
     //     let fp = env!("CARGO_MANIFEST_DIR").to_owned()
-    //         + "/test_resources/ATX/V1/TROSAR25.R4__LEIT_2020_09_23.atx";
+    //         + "/data/ATX/V1/TROSAR25.R4__LEIT_2020_09_23.atx";
     //     let rinex_a = Rinex::from_file(&fp);
     //     let rinex_a = rinex_a.unwrap();
 
     //     let fp =
-    //         env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/ATX/V1/igs14_small.atx.gz";
+    //         env!("CARGO_MANIFEST_DIR").to_owned() + "/data/ATX/V1/igs14_small.atx.gz";
     //     let rinex_b = Rinex::from_file(&fp);
     //     let rinex_b = rinex_b.unwrap();
 

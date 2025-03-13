@@ -8,7 +8,7 @@ mod sampling {
     #[test]
     fn obs_sampling() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources")
+            .join("data")
             .join("OBS")
             .join("V2")
             .join("AJAC3550.21O");
@@ -46,7 +46,7 @@ mod sampling {
     }
     #[test]
     fn meteo_sampling() {
-        let path = env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/MET/V2/abvi0010.15m";
+        let path = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/MET/V2/abvi0010.15m";
         let rinex = Rinex::from_file(&path).unwrap();
         assert_eq!(
             rinex.dominant_sample_rate(),
@@ -123,11 +123,11 @@ mod sampling {
     #[test]
     fn steady_sampling() {
         let path = env!("CARGO_MANIFEST_DIR").to_owned()
-            + "/test_resources/CLK/V3/GRG0MGXFIN_20201770000_01D_30S_CLK.CLK.gz";
+            + "/data/CLK/V3/GRG0MGXFIN_20201770000_01D_30S_CLK.CLK.gz";
         let rinex = Rinex::from_file(&path).unwrap();
         assert!(rinex.steady_sampling());
 
-        let path = env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/MET/V2/abvi0010.15m";
+        let path = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/MET/V2/abvi0010.15m";
         let rinex = Rinex::from_file(&path).unwrap();
         assert!(!rinex.steady_sampling());
     }

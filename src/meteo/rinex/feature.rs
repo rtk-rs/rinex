@@ -19,7 +19,7 @@ impl Rinex {
     /// Applies to Meteo RINEX.
     /// ```
     /// use rinex::prelude::*;
-    /// let rinex = Rinex::from_file("test_resources/MET/V2/abvi0010.15m")
+    /// let rinex = Rinex::from_file("data/MET/V2/abvi0010.15m")
     ///     .unwrap();
     /// for (epoch, value) in rinex.wind_speed_iter() {
     ///     println!("{} value: {} m/s", epoch, value);
@@ -39,7 +39,7 @@ impl Rinex {
     /// Applies to Meteo RINEX.
     /// ```
     /// use rinex::prelude::*;
-    /// let rinex = Rinex::from_file("test_resources/MET/V2/abvi0010.15m")
+    /// let rinex = Rinex::from_file("data/MET/V2/abvi0010.15m")
     ///     .unwrap();
     /// for (epoch, value) in rinex.wind_direction_iter() {
     ///     println!("{} value: {}°", epoch, value);
@@ -59,7 +59,7 @@ impl Rinex {
     /// Values expressed in tenths of mm. Applies to Meteo RINEX.
     /// ```
     /// use rinex::prelude::*;
-    /// let rinex = Rinex::from_file("test_resources/MET/V2/abvi0010.15m")
+    /// let rinex = Rinex::from_file("data/MET/V2/abvi0010.15m")
     ///     .unwrap();
     /// for (epoch, value) in rinex.accumulated_rain_iter() {
     ///     println!("{} value: {} 1/10 mm", epoch, value);
@@ -107,7 +107,7 @@ impl Rinex {
     /// Applies to Meteo RINEX.
     /// ```
     /// use rinex::prelude::*;
-    /// let rinex = Rinex::from_file("test_resources/MET/V2/abvi0010.15m")
+    /// let rinex = Rinex::from_file("data/MET/V2/abvi0010.15m")
     ///     .unwrap();
     /// for (epoch, value) in rinex.zenith_total_delay_iter() {
     ///     println!("{} value: {} mm", epoch, value);
@@ -127,7 +127,7 @@ impl Rinex {
     /// Applies to Meteo RINEX.
     /// ```
     /// use rinex::prelude::*;
-    /// let rinex = Rinex::from_file("test_resources/MET/V2/abvi0010.15m")
+    /// let rinex = Rinex::from_file("data/MET/V2/abvi0010.15m")
     ///     .unwrap();
     /// for (epoch, value) in rinex.zenith_dry_delay_iter() {
     ///     println!("{} value: {} mm", epoch, value);
@@ -147,7 +147,7 @@ impl Rinex {
     /// Applies to Meteo RINEX.
     /// ```
     /// use rinex::prelude::*;
-    /// let rinex = Rinex::from_file("test_resources/MET/V2/abvi0010.15m")
+    /// let rinex = Rinex::from_file("data/MET/V2/abvi0010.15m")
     ///     .unwrap();
     /// for (epoch, value) in rinex.zenith_wet_delay_iter() {
     ///     println!("{} value: {} mm", epoch, value);
@@ -170,7 +170,7 @@ impl Rinex {
     //   /// use rinex::prelude::Preprocessing; // only on "processing" feature
     //   ///
     //   /// // parse a RINEX
-    //   /// let rinex = Rinex::from_file("test_resources/MET/V2/abvi0010.15m")
+    //   /// let rinex = Rinex::from_file("data/MET/V2/abvi0010.15m")
     //   ///     .unwrap();
     //   ///
     //   /// // only when built with "processing" feature

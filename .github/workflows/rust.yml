@@ -15,77 +15,87 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  linter:
-    name: Linter 
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - uses: actions-rs/toolchain@v1
-      name: Install Rust
-      with:
-        toolchain: stable
-        override: true
-    - uses: actions-rs/cargo@v1
-      name: Linter 
-      with:
-        command: fmt
-        args: --all -- --check
-
   build:
     name: Build 
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - name: Default
-            opts: -r
-          - name: All-features
-            opts: --all-features
-          - name: Observations
-            opts: --features "obs"
-          - name: Navigation
-            opts: --features "nav"
-          - name: QC
-            opts: --features "qc"
-          - name: Meteo
-            opts: --features "meteo"
-          - name: Clock
-            opts: --features "clock"
-          - name: ANTEX
-            opts: --features "antex"
-          - name: DORIS RINEX
-            opts: --features "doris"
-          - name: Processing
-            opts: --features "processing"
-          - name: Full
-            opts: --features "full"
-
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
         fetch-depth: 0
     
+    - uses: actions-rs/cargo@v1
+      name: Linter 
+      with:
+        command: fmt
+        args: --all -- --check
+    
     - uses: actions-rs/toolchain@v1
       name: Install Rust
       with:
         toolchain: stable
         override: true
     
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-
-    - name: ${{ matrix.name }} 
-      run: |
-        cargo clean && cargo update && cargo build ${{ matrix.opts }}
+    - uses: actions-rs/cargo@v1
+      name: Build (default)
+      with:
+        command: build
+        args: -r
     
-    - name: Tests
-      run: |
-        cargo clean && cargo update && cargo build ${{ matrix.opts }}
-   
+    - uses: actions-rs/cargo@v1
+      name: Build (all features)
+      with:
+        command: build
+        args: --all-features
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (Observation)
+      with:
+        command: build
+        args: --features obs
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (Navigation)
+      with:
+        command: build
+        args: --features nav
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (Meteo)
+      with:
+        command: build
+        args: --features meteo
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (Clock)
+      with:
+        command: build
+        args: --features clock
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (DORIS)
+      with:
+        command: build
+        args: --features doris
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (ANTEX)
+      with:
+        command: build
+        args: --features antex
+
+    - uses: actions-rs/cargo@v1
+      name: Build (Qc)
+      with:
+        command: build
+        args: --features qc
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (Processing)
+      with:
+        command: build
+        args: --features processing
+    
     - uses: actions-rs/cargo@v1
       name: Test (all features)
       with:
