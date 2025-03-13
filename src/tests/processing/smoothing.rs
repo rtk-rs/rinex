@@ -25,7 +25,7 @@ mod test {
     }
     #[test]
     fn v3_duth0630_hatch_filter() {
-        let initial_rinex = Rinex::from_file("test_resources/OBS/V3/DUTH0630.22O").unwrap();
+        let initial_rinex = Rinex::from_file("data/OBS/V3/DUTH0630.22O").unwrap();
         let filter = Filter::from_str("smooth:hatch:c1c,c2p,l1c,l2p").unwrap();
         let filtered = initial_rinex.filter(filter);
 

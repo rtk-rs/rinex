@@ -5,8 +5,7 @@ mod test {
 
     #[test]
     fn clk_v2_cod20352() {
-        let test_resource =
-            env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/CLK/V2/COD20352.CLK";
+        let test_resource = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/CLK/V2/COD20352.CLK";
         let rinex = Rinex::from_file(&test_resource);
         let rinex = rinex.unwrap();
         assert_eq!(rinex.epoch_iter().count(), 10);
@@ -130,8 +129,7 @@ mod test {
     }
     #[test]
     fn clk_v3_usno() {
-        let test_resource =
-            env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/CLK/V3/USNO1.txt";
+        let test_resource = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/CLK/V3/USNO1.txt";
         let rinex = Rinex::from_file(&test_resource);
 
         let rinex = rinex.unwrap();
@@ -243,8 +241,7 @@ mod test {
     }
     #[test]
     fn clk_v3_04_example1() {
-        let test_resource =
-            env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/CLK/V3/example1.txt";
+        let test_resource = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/CLK/V3/example1.txt";
         let rinex = Rinex::from_file(&test_resource);
         assert!(rinex.is_ok());
         let rinex = rinex.unwrap();
@@ -287,8 +284,7 @@ mod test {
     }
     #[test]
     fn clk_v3_04_example2() {
-        let test_resource =
-            env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/CLK/V3/example2.txt";
+        let test_resource = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/CLK/V3/example2.txt";
         let rinex = Rinex::from_file(&test_resource);
         assert!(rinex.is_ok());
         let rinex = rinex.unwrap();

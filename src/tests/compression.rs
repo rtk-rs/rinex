@@ -19,14 +19,14 @@ mod test {
 
             let crnx_path = PathBuf::new()
                 .join(env!("CARGO_MANIFEST_DIR"))
-                .join("test_resources")
+                .join("data")
                 .join("CRNX")
                 .join("V1")
                 .join(crnx_name);
 
             let rnx_path = PathBuf::new()
                 .join(env!("CARGO_MANIFEST_DIR"))
-                .join("test_resources")
+                .join("data")
                 .join("OBS")
                 .join("V2")
                 .join(rnx_name);
@@ -73,14 +73,14 @@ mod test {
 
             let crnx_path = PathBuf::new()
                 .join(env!("CARGO_MANIFEST_DIR"))
-                .join("test_resources")
+                .join("data")
                 .join("CRNX")
                 .join("V3")
                 .join(crnx_name);
 
             let rnx_path = PathBuf::new()
                 .join(env!("CARGO_MANIFEST_DIR"))
-                .join("test_resources")
+                .join("data")
                 .join("OBS")
                 .join("V3")
                 .join(rnx_name);

@@ -9,7 +9,7 @@ use std::path::Path;
 #[cfg(feature = "flate2")]
 fn v1_ckmg0020_22i() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("IONEX")
         .join("V1")
         .join("CKMG0020.22I.gz");
@@ -116,7 +116,7 @@ fn v1_ckmg0020_22i() {
 #[cfg(feature = "flate2")]
 fn v1_ckmg0090_12i() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("IONEX")
         .join("V1")
         .join("CKMG0090.21I.gz");
@@ -157,7 +157,7 @@ fn v1_ckmg0090_12i() {
 #[cfg(feature = "flate2")]
 fn v1_jplg0010_17i() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("IONEX")
         .join("V1")
         .join("jplg0010.17i.gz");

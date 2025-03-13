@@ -116,7 +116,7 @@ use std::{
 //     ];
 //     for (crnx_name, rnx_name) in pool {
 //         // parse DUT
-//         let path = format!("test_resources/CRNX/V1/{}", crnx_name);
+//         let path = format!("data/CRNX/V1/{}", crnx_name);
 //         let crnx = Rinex::from_file(&path);
 
 //         assert!(crnx.is_ok(), "failed to parse {}", path);
@@ -278,7 +278,7 @@ use std::{
 //         let filename = format!("{}.rnx", random_name(10));
 
 //         // run test on generated file
-//         let path = format!("test_resources/OBS/V2/{}", rnx_name);
+//         let path = format!("data/OBS/V2/{}", rnx_name);
 //         let model = Rinex::from_file(&path).unwrap();
 
 //         // TODO unlock this
@@ -304,7 +304,7 @@ fn testbench_v3() {
     ];
     for (crnx_name, rnx_name) in pool {
         // parse DUT
-        let path = format!("test_resources/CRNX/V3/{}", crnx_name);
+        let path = format!("data/CRNX/V3/{}", crnx_name);
 
         let mut dut = Rinex::from_file(&path).unwrap();
 
@@ -381,7 +381,7 @@ fn testbench_v3() {
         assert!(obs.crinex.is_none());
 
         // run test on generated file
-        let path = format!("test_resources/OBS/V3/{}", rnx_name);
+        let path = format!("data/OBS/V3/{}", rnx_name);
         let model = Rinex::from_file(&path).unwrap();
 
         // TODO unlock this
@@ -393,7 +393,7 @@ fn testbench_v3() {
 #[ignore] // TODO
 fn v1_zegv0010_21d() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("CRNX")
         .join("V1")
         .join("zegv0010.21d");
@@ -430,7 +430,7 @@ fn v1_zegv0010_21d() {
 #[test]
 fn v3_acor00esp_r2021() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("CRNX")
         .join("V3")
         .join("ACOR00ESP_R_20213550000_01D_30S_MO.crx");
@@ -485,8 +485,7 @@ use crate::prelude::{GeodeticMarker, MarkerType};
 #[cfg(feature = "flate2")]
 fn v3_esbc00dnk() {
     let dut =
-        Rinex::from_gzip_file("test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
-            .unwrap();
+        Rinex::from_gzip_file("data/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz").unwrap();
 
     let mut geo_marker = GeodeticMarker::default()
         .with_name("ESBC00DNK")
@@ -531,8 +530,7 @@ fn v3_esbc00dnk() {
 #[cfg(feature = "flate2")]
 fn v3_mojn00dnk() {
     let dut =
-        Rinex::from_gzip_file("test_resources/CRNX/V3/MOJN00DNK_R_20201770000_01D_30S_MO.crx.gz")
-            .unwrap();
+        Rinex::from_gzip_file("data/CRNX/V3/MOJN00DNK_R_20201770000_01D_30S_MO.crx.gz").unwrap();
 
     generic_observation_rinex_test(
             &dut,

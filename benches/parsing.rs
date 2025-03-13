@@ -15,14 +15,14 @@ fn benchmark(c: &mut Criterion) {
     // Small RINEX OBS (V2)
     parsing_grp.bench_function("OBS/V2", |b| {
         b.iter(|| {
-            rinex_parsing("test_resources/OBS/V2/rovn0010.21o");
+            rinex_parsing("data/OBS/V2/rovn0010.21o");
         })
     });
 
     // Small RINEX OBS (V3)
     parsing_grp.bench_function("OBS/V3", |b| {
         b.iter(|| {
-            rinex_parsing("test_resources/OBS/V3/DUTH0630.22O");
+            rinex_parsing("data/OBS/V3/DUTH0630.22O");
         })
     });
 

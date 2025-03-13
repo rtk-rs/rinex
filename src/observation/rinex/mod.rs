@@ -20,7 +20,7 @@ impl Rinex {
     /// Returns true if [Rinex] format is [RinexType::ObservationData].
     /// ```
     /// use rinex::prelude::Rinex;
-    /// let rinex = Rinex::from_file("test_resources/OBS/V3/DUTH0630.22O")
+    /// let rinex = Rinex::from_file("data/OBS/V3/DUTH0630.22O")
     ///     .unwrap();
     /// assert!(rinex.is_observation_rinex());
     /// ```

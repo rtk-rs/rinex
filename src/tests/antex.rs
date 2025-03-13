@@ -10,8 +10,8 @@ mod test {
     use std::str::FromStr;
     #[test]
     fn v1_trosar_25r4_leit_2020_09_23() {
-        let test_resource = env!("CARGO_MANIFEST_DIR").to_owned()
-            + "/test_resources/ATX/V1/TROSAR25.R4__LEIT_2020_09_23.atx";
+        let test_resource =
+            env!("CARGO_MANIFEST_DIR").to_owned() + "/data/ATX/V1/TROSAR25.R4__LEIT_2020_09_23.atx";
         let rinex = Rinex::from_file(&test_resource);
         assert!(rinex.is_ok());
         let rinex = rinex.unwrap();
@@ -110,7 +110,7 @@ mod test {
     #[test]
     fn v1_4_igs_atx() {
         let test_resource =
-            env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/ATX/V1/igs14_small.atx.gz";
+            env!("CARGO_MANIFEST_DIR").to_owned() + "/data/ATX/V1/igs14_small.atx.gz";
 
         let rinex = Rinex::from_gzip_file(&test_resource).unwrap();
 

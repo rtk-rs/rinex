@@ -9,9 +9,7 @@ mod test {
         // Tests entire repository with at least successful parsing
         // and runs a few verifications.
         // For thorough verifications, we have dedicated tests elsewhere.
-        let test_resources = PathBuf::new()
-            .join(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources");
+        let test_resources = PathBuf::new().join(env!("CARGO_MANIFEST_DIR")).join("data");
 
         for data in vec![
             "OBS", // "CRNX",

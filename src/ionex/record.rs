@@ -39,7 +39,7 @@ pub type TECPlane = HashMap<(i32, i32), TEC>;
 /// ```
 /// use rinex::prelude::*;
 /// use rinex::ionex::*;
-/// let rinex = Rinex::from_file("../test_resources/IONEX/V1/CKMG0020.22I.gz")
+/// let rinex = Rinex::from_file("../data/IONEX/V1/CKMG0020.22I.gz")
 ///     .unwrap();
 /// assert_eq!(rinex.is_ionex(), true);
 /// assert_eq!(rinex.is_ionex_2d(), true);

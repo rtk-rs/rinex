@@ -6,7 +6,7 @@ RINEX
 [![crates.io](https://docs.rs/rinex/badge.svg)](https://docs.rs/rinex/)
 [![crates.io](https://img.shields.io/crates/d/rinex.svg)](https://crates.io/crates/rinex)
 
-[![License](https://img.shields.io/badge/license-MPL_2.0-orange?style=for-the-badge&logo=mozilla)](https://github.com/rtk-rs/sp3/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-MPL_2.0-orange?style=for-the-badge&logo=mozilla)](https://github.com/rtk-rs/rinex/blob/main/LICENSE)
 
 [RINEX (Receiver Independent EXchange)](https://en.wikipedia.org/wiki/RINEX) parser and writer.  
 The RINEX format is fully open source and is specified to answer the requirements of navigation and precise navigation.
@@ -25,7 +25,6 @@ can also open a [Discussion](https://github.com/rtk-rs/rinex/discussions) or lea
 - Efficient seamless compression and decompression
 - Most RINEX formats supported (see following table)
 - High Precision Clock RINEX products (for PPP)
-- High Precision Orbital [SP3 for PPP](https://docs.rs/sp3/1.0.7/sp3/)
 - DORIS (special RINEX)
 - Many pre-processing algorithms including Filter Designer
 - Several file operations: merging, splitting, time binning (batch)

@@ -7,8 +7,7 @@ use std::fs::remove_file;
 
 #[test]
 fn v2_abvi0010_15m() {
-    let path: String =
-        env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/MET/V2/abvi0010.15m";
+    let path: String = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/MET/V2/abvi0010.15m";
 
     let dut = Rinex::from_file(path).unwrap();
     generic_meteo_rinex_test(
@@ -105,7 +104,7 @@ fn v2_abvi0010_15m() {
 #[cfg(feature = "flate2")]
 fn v3_pots00deu() {
     let path = env!("CARGO_MANIFEST_DIR").to_owned()
-        + "/test_resources/MET/V3/POTS00DEU_R_20232540000_01D_05M_MM.rnx.gz";
+        + "/data/MET/V3/POTS00DEU_R_20232540000_01D_05M_MM.rnx.gz";
 
     let dut = Rinex::from_gzip_file(path).unwrap();
 
@@ -124,7 +123,7 @@ fn v3_pots00deu() {
 
 #[test]
 fn v4_example_1() {
-    let path = env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/MET/V4/example1.txt";
+    let path = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/MET/V4/example1.txt";
 
     let dut = Rinex::from_file(path).unwrap();
 
