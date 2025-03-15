@@ -312,7 +312,7 @@ impl Rinex {
 
                 let is_l1_pivot = v.observable.is_l1_pivot(v.sv.constellation);
 
-                let carrier = v.observable.carrier(v.sv.constellation);
+                let carrier = v.observable.to_carrier(v.sv.constellation);
                 if carrier.is_err() {
                     continue;
                 }
@@ -437,7 +437,7 @@ impl Rinex {
         for (k, v) in self.signal_observations_iter() {
             let is_ph = v.observable.is_phase_range_observable();
             let is_pr = v.observable.is_pseudo_range_observable();
-            let carrier = v.observable.carrier(v.sv.constellation);
+            let carrier = v.observable.to_carrier(v.sv.constellation);
 
             if !is_ph && !is_pr || carrier.is_err() {
                 continue;

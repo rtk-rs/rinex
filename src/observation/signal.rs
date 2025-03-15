@@ -86,8 +86,8 @@ impl SignalObservation {
 
         let both_phase = phase_1 && phase_2;
 
-        let carrier_1 = self.observable.carrier(self.sv.constellation);
-        let carrier_2 = rhs.observable.carrier(self.sv.constellation);
+        let carrier_1 = self.observable.to_carrier(self.sv.constellation);
+        let carrier_2 = rhs.observable.to_carrier(self.sv.constellation);
 
         let both_ok = carrier_1.is_ok() && carrier_2.is_ok();
 

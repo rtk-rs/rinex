@@ -118,9 +118,8 @@ impl Observable {
         }
     }
 
-    /// Tries to reconstruct a [Carrier] signal from this [Observable].
-    /// This will work if our database knows this [Self::code].
-    pub fn carrier(&self, c: Constellation) -> Result<Carrier, Error> {
+    /// [Carrier] conversion attempt, from this [Observable] and for this [Constellation].
+    pub fn to_carrier(&self, c: Constellation) -> Result<Carrier, Error> {
         Carrier::from_observable(c, self)
     }
 
@@ -313,7 +312,7 @@ impl Observable {
     /// used in signal combinations
     pub(crate) fn is_l1_pivot(&self, constellation: Constellation) -> bool {
         if self.is_phase_range_observable() || self.is_pseudo_range_observable() {
-            if let Ok(carrier) = self.carrier(constellation) {
+            if let Ok(carrier) = self.to_carrier(constellation) {
                 matches!(
                     carrier,
                     Carrier::L1 | Carrier::E1 | Carrier::G1(_) | Carrier::S1 | Carrier::B2I

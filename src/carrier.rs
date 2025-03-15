@@ -107,6 +107,9 @@ impl std::str::FromStr for Carrier {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let content = s.to_uppercase();
         let content = content.trim();
+        ////////////////////////
+        // GPS
+        ////////////////////////
         if content.eq("L1") {
             Ok(Self::L1)
         } else if content.eq("L2") {
@@ -115,15 +118,18 @@ impl std::str::FromStr for Carrier {
             Ok(Self::L5)
         } else if content.eq("L6") {
             Ok(Self::L6)
+        ////////////////////////
+        // Galileo
+        ////////////////////////
         } else if content.eq("E1") {
             Ok(Self::E1)
         } else if content.eq("E5") {
             Ok(Self::E5)
         } else if content.eq("E6") {
             Ok(Self::E6)
-        /*
-         * Glonass
-         */
+        ////////////////////////
+        // Glonass
+        ////////////////////////
         } else if content.eq("G1") {
             Ok(Self::G1(None))
         } else if content.eq("G1A") {
@@ -132,9 +138,10 @@ impl std::str::FromStr for Carrier {
             Ok(Self::G2(None))
         } else if content.eq("G2A") {
             Ok(Self::G2a)
-        /*
-         * BeiDou
-         */
+
+        ////////////////////////
+        // BeiDou
+        ////////////////////////
         } else if content.eq("B1I") {
             Ok(Self::B1I)
         } else if content.eq("B1A") {
@@ -151,9 +158,9 @@ impl std::str::FromStr for Carrier {
             Ok(Self::B3)
         } else if content.eq("B3A") {
             Ok(Self::B3A)
-        /*
-         * DORIS
-         */
+        ////////////////////
+        // DORIS
+        ////////////////////
         } else if content.eq("S1") {
             Ok(Self::S1)
         } else if content.eq("U2") {
@@ -165,11 +172,13 @@ impl std::str::FromStr for Carrier {
 }
 
 impl Carrier {
-    /// Returns frequency associated to this channel in MHz
+    /// Returns [Carrier] frequency in Hz.
     pub fn frequency(&self) -> f64 {
-        self.frequency_mhz() * 1.0E6
+        self.frequency_mega_hz() * 1.0E6
     }
-    pub fn frequency_mhz(&self) -> f64 {
+
+    /// Returns [Carrier] frequency in MHz.
+    pub fn frequency_mega_hz(&self) -> f64 {
         match self {
             Self::L1 | Self::E1 | Self::B1A | Self::B1C => 1575.42_f64,
             Self::L2 => 1227.60_f64,
@@ -177,13 +186,9 @@ impl Carrier {
             Self::L5 | Self::E5a | Self::B2A => 1176.45_f64,
             Self::E5 | Self::B2 => 1191.795_f64,
             Self::E5b | Self::B2I | Self::B2B => 1207.140_f64,
-            /*
-             * IRNSS
-             */
+            // IRNSS
             Self::S => 2492.028_f64,
-            /*
-             * Glonass
-             */
+            // Glonass
             Self::G1a => 1600.995_f64,
             Self::G1(None) => 1602.0_f64,
             Self::G1(Some(c)) => 1602.0_f64 + (*c as f64 * 9.0 / 16.0),
@@ -191,14 +196,10 @@ impl Carrier {
             Self::G2(None) => 1246.06_f64,
             Self::G2(Some(c)) => 1246.06_f64 + (*c as f64 * 7.0 / 16.0),
             Self::G3 => 1202.025_f64,
-            /*
-             * BeiDou
-             */
+            // BeiDou
             Self::B1I => 1561.098_f64,
             Self::B3 | Self::B3A => 1268.520_f64,
-            /*
-             * DORIS
-             */
+            // DORIS
             Self::S1 => 2036.25,
             Self::U2 => 401.25,
         }
@@ -211,13 +212,13 @@ impl Carrier {
         matches!(self, Self::L1 | Self::E1 | Self::B1A | Self::B1C)
     }
 
-    /// Returns carrier wavelength
+    /// Returns [Carrier] wavelength
     pub fn wavelength(&self) -> f64 {
         299_792_458.0_f64 / self.frequency()
     }
 
     /// Returns channel bandwidth in MHz.
-    pub fn bandwidth_mhz(&self) -> f64 {
+    pub fn bandwidth_mega_hz(&self) -> f64 {
         match self {
             Self::L1 | Self::G1(_) | Self::G1a | Self::E1 => 15.345_f64,
             Self::L2 | Self::G2(_) | Self::G2a => 11.0_f64,
@@ -303,7 +304,8 @@ impl Carrier {
     //        },
     //    }
     //}
-    /// Converts to exact Glonass carrier
+
+    /// Converts to exact Glonass FDMA channel
     pub fn with_glonass_offset(&self, offset: i8) -> Self {
         match self {
             Self::L1 => Self::G1(Some(offset)),
@@ -311,6 +313,7 @@ impl Carrier {
             other => *other,
         }
     }
+
     pub(crate) fn gpsl1_codes() -> [&'static str; 40] {
         [
             "C1", "L1", "D1", "S1", "P1", "C1C", "L1C", "D1C", "S1C", "C1S", "L1S", "D1S", "S1S",
@@ -319,6 +322,7 @@ impl Carrier {
             "L1N", "D1N", "S1N",
         ]
     }
+
     pub(crate) fn gpsl2_codes() -> [&'static str; 44] {
         [
             "C2", "L2", "D2", "S2", "P2", "C2C", "L2C", "D2C", "S2C", "C2D", "L2D", "D2D", "S2D",
@@ -327,12 +331,15 @@ impl Carrier {
             "C2M", "L2M", "D2M", "S2M", "L2N", "D2N", "S2N",
         ]
     }
+
     pub(crate) fn gpsl5_codes() -> [&'static str; 16] {
         [
             "C5", "L5", "D5", "S5", "C5I", "L5I", "D5I", "S5I", "C5Q", "L5Q", "D5Q", "S5Q", "C5X",
             "L5X", "D5X", "S5X",
         ]
     }
+
+    /// GPS [Carrier] identification attempt
     fn from_gps_observable(obs: &Observable) -> Result<Self, Error> {
         match obs {
             Observable::PhaseRange(code)
@@ -353,32 +360,39 @@ impl Carrier {
             _ => Err(Error::UnknownGPSObservable),
         }
     }
+
     pub(crate) fn g1_codes() -> [&'static str; 12] {
         [
             "C1", "L1", "D1", "S1", "C1C", "L1C", "D1C", "S1C", "C1P", "L1P", "D1P", "S1P",
         ]
     }
+
     pub(crate) fn g1a_codes() -> [&'static str; 12] {
         [
             "C4A", "L4A", "D4A", "S4A", "C4B", "L4B", "D4B", "S4B", "C4X", "L4X", "D4X", "S4X",
         ]
     }
+
     pub(crate) fn g2_codes() -> [&'static str; 12] {
         [
             "C2", "L2", "D2", "S2", "C2C", "L2C", "D2C", "S2C", "C2P", "L2P", "D2P", "S2P",
         ]
     }
+
     pub(crate) fn g2a_codes() -> [&'static str; 12] {
         [
             "C6A", "L6A", "D6A", "S6A", "C6B", "L6B", "D6B", "S6B", "C6X", "L6X", "D6X", "S6X",
         ]
     }
+
     pub(crate) fn g3_codes() -> [&'static str; 16] {
         [
             "C3", "L3", "D3", "S3", "C3I", "L3I", "D3I", "S3I", "C3Q", "L3Q", "D3Q", "S3Q", "C3X",
             "L3X", "D3X", "S3X",
         ]
     }
+
+    /// Glonass [Carrier] identification attempt.
     fn from_glo_observable(obs: &Observable) -> Result<Self, Error> {
         match obs {
             Observable::PhaseRange(code)
@@ -403,34 +417,41 @@ impl Carrier {
             _ => Err(Error::UnknownGlonassObservable),
         }
     }
+
     pub(crate) fn e1_codes() -> [&'static str; 24] {
         [
             "C1", "L1", "D1", "S1", "C1A", "L1A", "D1A", "S1A", "C1B", "L1B", "D1B", "S1B", "C1C",
             "L1C", "D1C", "S1C", "C1X", "L1X", "D1X", "S1X", "C1Z", "L1Z", "D1Z", "S1Z",
         ]
     }
+
     pub(crate) fn e5_codes() -> [&'static str; 16] {
         [
             "C5", "L5", "D5", "S5", "C8I", "L8I", "D8I", "S8I", "C8Q", "L8Q", "D8Q", "S8Q", "C8X",
             "L8X", "D8X", "S8X",
         ]
     }
+
     pub(crate) fn e5a_codes() -> [&'static str; 12] {
         [
             "C5I", "L5I", "D5I", "S5I", "C5Q", "L5Q", "D5Q", "S5Q", "C5X", "L5X", "D5X", "S5X",
         ]
     }
+
     pub(crate) fn e5b_codes() -> [&'static str; 12] {
         [
             "C7I", "L7I", "D7I", "S7I", "C7Q", "L7Q", "D7Q", "S7Q", "C7X", "L7X", "D7X", "S7X",
         ]
     }
+
     pub(crate) fn e6_codes() -> [&'static str; 24] {
         [
             "C6", "L6", "D6", "S6", "C6A", "L6A", "D6A", "S6A", "C6B", "L6B", "D6B", "S6B", "C6C",
             "L6C", "D6C", "S6C", "C6X", "L6X", "D6X", "S6X", "C6Z", "L6Z", "D6Z", "S6Z",
         ]
     }
+
+    /// Galileo [Carrier] identification attempt.
     fn from_gal_observable(obs: &Observable) -> Result<Self, Error> {
         match obs {
             Observable::PhaseRange(code)
@@ -455,15 +476,19 @@ impl Carrier {
             _ => Err(Error::UnknownGalieoObservable),
         }
     }
+
     pub(crate) fn geol1_codes() -> [&'static str; 8] {
         ["C1", "L1", "D1", "S1", "C1C", "L1C", "D1C", "S1C"]
     }
+
     pub(crate) fn geol5_codes() -> [&'static str; 16] {
         [
             "C5", "L5", "D5", "S5", "C5I", "L5I", "D5I", "S5I", "C5Q", "L5Q", "D5Q", "S5Q", "C5X",
             "L5X", "D5X", "S5X",
         ]
     }
+
+    /// SBAS [Carrier] identification attempt.
     fn from_geo_observable(obs: &Observable) -> Result<Self, Error> {
         match obs {
             Observable::PhaseRange(code)
@@ -482,6 +507,7 @@ impl Carrier {
             _ => Err(Error::UnknownSBASObservable),
         }
     }
+
     pub(crate) fn qzl1_codes() -> [&'static str; 32] {
         [
             "C1", "L1", "D1", "S1", "C1B", "L1B", "D1B", "S1B", "C1C", "L1C", "D1C", "S1C", "C1E",
@@ -489,12 +515,14 @@ impl Carrier {
             "L1X", "D1X", "S1X", "C1Z", "L1Z", "D1Z", "S1Z",
         ]
     }
+
     pub(crate) fn qzl2_codes() -> [&'static str; 16] {
         [
             "C2", "L2", "D2", "S2", "C2S", "L2S", "D2S", "S2S", "C2L", "L2L", "D2L", "S2L", "C2X",
             "L2X", "D2X", "S2X",
         ]
     }
+
     pub(crate) fn qzl5_codes() -> [&'static str; 28] {
         [
             "C5", "L5", "D5", "S5", "C5D", "L5D", "D5D", "S5D", "C5I", "L5I", "D5I", "S5I", "C5P",
@@ -502,12 +530,15 @@ impl Carrier {
             "L5Z", "D5Z", "S5Z",
         ]
     }
+
     pub(crate) fn qzl6_codes() -> [&'static str; 24] {
         [
             "C6", "L6", "D6", "S6", "C6S", "L6S", "D6S", "S6S", "C6L", "L6L", "D6L", "S6L", "C6X",
             "L6X", "D6X", "S6X", "C6E", "L6E", "D6E", "S6E", "C6S", "L6S", "D6S", "S6Z",
         ]
     }
+
+    /// QZSS [Carrier] identification attempt.
     fn from_qzss_observable(obs: &Observable) -> Result<Self, Error> {
         match obs {
             Observable::PhaseRange(code)
@@ -530,53 +561,64 @@ impl Carrier {
             _ => Err(Error::UnknownQZSSObservable),
         }
     }
+
     pub(crate) fn b1a_codes() -> [&'static str; 12] {
         [
             "C1S", "L1S", "D1S", "S1S", "C1L", "L1L", "D1L", "S1L", "C1Z", "L1Z", "D1Z", "S1Z",
         ]
     }
+
     pub(crate) fn b1c_codes() -> [&'static str; 12] {
         [
             "C1D", "L1D", "D1D", "S1D", "C1P", "L1P", "D1P", "S1P", "C1X", "L1X", "D1X", "S1X",
         ]
     }
+
     pub(crate) fn b1i_codes() -> [&'static str; 16] {
         [
             "C1", "L1", "D1", "S1", "C2I", "L2I", "D2I", "S2I", "C2Q", "L2Q", "D2Q", "S2Q", "C2X",
             "L2X", "D2X", "S2X",
         ]
     }
+
     pub(crate) fn b2a_codes() -> [&'static str; 12] {
         [
             "C5D", "L5D", "D5D", "S5D", "C5P", "L5P", "D5P", "S5P", "C5X", "L5X", "D5X", "S5X",
         ]
     }
+
     pub(crate) fn b2i_codes() -> [&'static str; 16] {
         [
             "C2", "L2", "D2", "S2", "C7I", "L7I", "D7I", "S7I", "C7Q", "L7Q", "D7Q", "S7Q", "C7X",
             "L7X", "D7X", "S7X",
         ]
     }
+
     pub(crate) fn b2b_codes() -> [&'static str; 12] {
         [
             "C7D", "L7D", "D7D", "S7D", "C7P", "L7P", "D7P", "S7P", "C7Z", "L7Z", "D7Z", "S7Z",
         ]
     }
+
     pub(crate) fn b2_codes() -> [&'static str; 12] {
         [
             "C8D", "L8D", "D8D", "S8D", "C8P", "L8P", "D8P", "S8P", "C8X", "L8X", "D8X", "S8X",
         ]
     }
+
     pub(crate) fn b3_codes() -> [&'static str; 12] {
         [
             "C6I", "L6I", "D6I", "S6I", "C6Q", "L6Q", "D6Q", "S6Q", "C6X", "L6X", "D6X", "S6X",
         ]
     }
+
     pub(crate) fn b3a_codes() -> [&'static str; 12] {
         [
             "C6D", "L6D", "D6D", "S6D", "C6P", "L6P", "D6P", "S6P", "C6Z", "L6Z", "D6Z", "S6Z",
         ]
     }
+
+    /// BDS [Carrier] identification attempt
     fn from_bds_observable(obs: &Observable) -> Result<Self, Error> {
         match obs {
             Observable::PhaseRange(code)
@@ -609,18 +651,22 @@ impl Carrier {
             _ => Err(Error::UnknownBeiDouObservable),
         }
     }
+
     pub(crate) fn irnl5_codes() -> [&'static str; 20] {
         [
             "C5", "L5", "D5", "S5", "C5A", "L5A", "D5A", "S5A", "C5B", "L5B", "D5B", "S5B", "C5C",
             "L5C", "D5C", "S5C", "C5X", "L5X", "D5X", "S5X",
         ]
     }
+
     pub(crate) fn irn_s_codes() -> [&'static str; 16] {
         [
             "C9A", "L9A", "D9A", "S9A", "C9B", "L9B", "D9B", "S9B", "C9C", "L9C", "D9C", "S9C",
             "C9X", "L9X", "D9X", "S9X",
         ]
     }
+
+    /// IRNSS [Carrier] identification attempt.
     fn from_irnss_observable(obs: &Observable) -> Result<Self, Error> {
         match obs {
             Observable::PhaseRange(code)
@@ -639,8 +685,9 @@ impl Carrier {
             _ => Err(Error::UnknownIRNSSObservable),
         }
     }
-    /// Identifies Frequency channel, from given observable, related
-    /// to given Constellation
+
+    /// [Carrier] signal identifcation attempt,
+    /// from provided [Constellation] and [Observable].
     pub fn from_observable(
         constellation: Constellation,
         observable: &Observable,
