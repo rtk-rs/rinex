@@ -790,7 +790,7 @@ mod test {
         assert!(Carrier::from_str("L5").is_ok());
 
         let l1 = Carrier::from_str("L1").unwrap();
-        assert_eq!(l1.frequency_mhz(), 1575.42_f64);
+        assert_eq!(l1.frequency_mega_hz(), 1575.42_f64);
         assert_eq!(l1.wavelength(), 299792458.0 / 1_575_420_000.0_f64);
 
         for constell in [
