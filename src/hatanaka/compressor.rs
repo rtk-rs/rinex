@@ -4,7 +4,7 @@ use crate::{
     epoch::epoch_decompose as epoch_decomposition,
     error::FormattingError,
     hatanaka::{NumDiff, TextDiff},
-    observation::{HeaderFields, LliFlags, Record},
+    observation::{HeaderFields, Record},
     prelude::{Observable, SV},
     BufWriter,
 };
