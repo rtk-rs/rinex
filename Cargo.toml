@@ -120,7 +120,7 @@ strum = "0.26"
 thiserror = "2"
 lazy_static = "1.4"
 num-derive = "0.4"
-itertools = "0.13.0"
+itertools = "0.14.0"
 
 # Log is optional and our "debug" feature: use this if you're a dev.
 # Turn this on to obtain debug traces during parsing, formatting and calculations
