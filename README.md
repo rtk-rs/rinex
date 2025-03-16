@@ -8,11 +8,13 @@ RINEX
 
 [![License](https://img.shields.io/badge/license-MPL_2.0-orange?style=for-the-badge&logo=mozilla)](https://github.com/rtk-rs/rinex/blob/main/LICENSE)
 
-[RINEX (Receiver Independent EXchange)](https://en.wikipedia.org/wiki/RINEX) parser and writer.  
-The RINEX format is fully open source and is specified to answer the requirements of navigation and precise navigation.
+[RINEX (Receiver Independent EXchange)](https://en.wikipedia.org/wiki/RINEX) parser and formatter.   
+The RINEX format is fully open source and is specified to answer the requirements of navigation and much more.
 
-Use [Github Issues](https://github.com/rtk-rs/rinex/issues) to report issues while using this library.
-can also open a [Discussion](https://github.com/rtk-rs/rinex/discussions) or leave us a message [on Discord](https://discord.gg/duETmeGc).
+To contribute to either of our project or join our community, you way
+- open an [Issue on Github.com](https://github.com/rtk-rs/rinex/issues) 
+- follow our [Discussions on Github.com](https://github.com/rtk-rs/discussions)
+- join our [Discord channel](https://discord.com/invite/VwuKPcw6)
 
 ## Advantages :rocket: 
 
