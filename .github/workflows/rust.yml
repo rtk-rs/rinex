@@ -136,17 +136,6 @@ jobs:
         command: clean
     
     - uses: actions-rs/cargo@v1
-      name: Build (Processing)
-      with:
-        command: build
-        args: --features processing
-    
-    - uses: actions-rs/cargo@v1
-      name: Clean
-      with:
-        command: clean
-    
-    - uses: actions-rs/cargo@v1
       name: Test (all features)
       with:
         command: test

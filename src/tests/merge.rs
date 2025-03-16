@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test {
     use crate::{
-        prelude::{qc::Merge, Rinex},
+        prelude::{qc::QcMerge, Rinex},
         tests::toolkit::{generic_observation_rinex_test, TimeFrame},
     };
     use std::{

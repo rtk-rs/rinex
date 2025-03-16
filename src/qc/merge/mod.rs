@@ -1,6 +1,6 @@
 //! RINEX File merging (combination)
 use crate::prelude::{
-    qc::{Merge, MergeError},
+    qc::{QcMerge, QcMergeError},
     Constellation, Epoch, Observable, Rinex,
 };
 
@@ -111,14 +111,8 @@ pub(crate) fn merge_time_of_last_obs(lhs: &mut Option<Epoch>, rhs: &Option<Epoch
     }
 }
 
-impl Merge for Rinex {
-    fn merge(&self, rhs: &Self) -> Result<Self, MergeError> {
-        let mut lhs = self.clone();
-        lhs.merge_mut(rhs)?;
-        Ok(lhs)
-    }
-
-    fn merge_mut(&mut self, rhs: &Self) -> Result<(), MergeError> {
+impl QcMerge for Rinex {
+    fn merge_mut(&mut self, rhs: &Self) -> Result<(), QcMergeError> {
         self.header.merge_mut(&rhs.header)?;
         self.production.merge_mut(&rhs.production)?;
 
@@ -126,44 +120,44 @@ impl Merge for Rinex {
             if let Some(rhs) = rhs.record.as_nav() {
                 return merge_mut_nav(lhs, rhs);
             } else {
-                return Err(MergeError::FileTypeMismatch);
+                return Err(QcMergeError::FileTypeMismatch);
             }
         } else if let Some(lhs) = self.record.as_mut_obs() {
             if let Some(rhs) = rhs.record.as_obs() {
                 return merge_mut_obs(lhs, rhs);
             } else {
-                return Err(MergeError::FileTypeMismatch);
+                return Err(QcMergeError::FileTypeMismatch);
             }
         } else if let Some(lhs) = self.record.as_mut_meteo() {
             if let Some(rhs) = rhs.record.as_meteo() {
                 return merge_mut_meteo(lhs, rhs);
             } else {
-                return Err(MergeError::FileTypeMismatch);
+                return Err(QcMergeError::FileTypeMismatch);
             }
         } else if let Some(lhs) = self.record.as_mut_ionex() {
             if let Some(rhs) = rhs.record.as_ionex() {
                 return merge_mut_ionex(lhs, rhs);
             } else {
-                return Err(MergeError::FileTypeMismatch);
+                return Err(QcMergeError::FileTypeMismatch);
             }
         } else if let Some(lhs) = self.record.as_mut_antex() {
             if let Some(rhs) = rhs.record.as_antex() {
                 return merge_mut_antex(lhs, rhs);
             } else {
-                return Err(MergeError::FileTypeMismatch);
+                return Err(QcMergeError::FileTypeMismatch);
             }
         } else if let Some(lhs) = self.record.as_mut_clock() {
             if let Some(rhs) = rhs.record.as_clock() {
                 return merge_mut_clock(lhs, rhs);
             } else {
-                return Err(MergeError::FileTypeMismatch);
+                return Err(QcMergeError::FileTypeMismatch);
             }
         } else {
             let doris = self.record.as_mut_doris().unwrap();
             if let Some(rhs) = rhs.record.as_doris() {
                 return merge_mut_doris(doris, rhs);
             } else {
-                return Err(MergeError::FileTypeMismatch);
+                return Err(QcMergeError::FileTypeMismatch);
             }
         }
     }

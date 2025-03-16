@@ -59,10 +59,6 @@ mod sampling;
 #[cfg_attr(docsrs, doc(cfg(feature = "qc")))]
 mod qc;
 
-#[cfg(feature = "processing")]
-#[cfg_attr(docsrs, doc(cfg(feature = "processing")))]
-mod processing;
-
 #[cfg(feature = "binex")]
 #[cfg_attr(docsrs, doc(cfg(feature = "binex")))]
 mod binex;
@@ -183,14 +179,9 @@ pub mod prelude {
     #[cfg(feature = "qc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "qc")))]
     pub mod qc {
-        pub use qc_traits::{Merge, MergeError};
-    }
-
-    #[cfg(feature = "processing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "processing")))]
-    pub mod processing {
         pub use qc_traits::{
-            Decimate, DecimationFilter, Filter, MaskFilter, Masking, Preprocessing, Split,
+            QcDecimationFilter, QcField, QcFilter, QcMaskOperand, QcMerge, QcMergeError,
+            QcPreprocessing, QcRepair, QcRework, QcSplit,
         };
     }
 

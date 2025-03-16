@@ -1,5 +1,5 @@
 use crate::prelude::{
-    qc::{Merge, MergeError},
+    qc::{QcMerge, QcMergeError},
     Constellation, Epoch, Header,
 };
 
@@ -8,18 +8,10 @@ use super::{
     merge_time_of_first_obs, merge_time_of_last_obs,
 };
 
-impl Merge for Header {
-    fn merge(&self, rhs: &Self) -> Result<Self, MergeError> {
+impl QcMerge for Header {
+    fn merge_mut(&mut self, rhs: &Self) -> Result<(), QcMergeError> {
         if self.rinex_type != rhs.rinex_type {
-            return Err(MergeError::FileTypeMismatch);
-        }
-        let mut lhs = self.clone();
-        lhs.merge_mut(rhs)?;
-        Ok(lhs)
-    }
-    fn merge_mut(&mut self, rhs: &Self) -> Result<(), MergeError> {
-        if self.rinex_type != rhs.rinex_type {
-            return Err(MergeError::FileTypeMismatch);
+            return Err(QcMergeError::FileTypeMismatch);
         }
 
         let (a_cst, b_cst) = (self.constellation, rhs.constellation);
@@ -101,7 +93,7 @@ impl Merge for Header {
                 let mut mixed_antex = lhs.pcv_type.is_relative() && !rhs.pcv_type.is_relative();
                 mixed_antex |= !lhs.pcv_type.is_relative() && rhs.pcv_type.is_relative();
                 if mixed_antex {
-                    return Err(MergeError::FileTypeMismatch);
+                    return Err(QcMergeError::FileTypeMismatch);
                 }
                 //TODO: merge_mut_option(&mut lhs.reference_sn, &rhs.reference_sn);
             }
@@ -147,16 +139,16 @@ impl Merge for Header {
         if let Some(lhs) = &mut self.ionex {
             if let Some(rhs) = &rhs.ionex {
                 if lhs.reference != rhs.reference {
-                    return Err(MergeError::ReferenceFrameMismatch);
+                    return Err(QcMergeError::ReferenceFrameMismatch);
                 }
                 if lhs.grid != rhs.grid {
-                    return Err(MergeError::DimensionMismatch);
+                    return Err(QcMergeError::DimensionMismatch);
                 }
                 if lhs.map_dimension != rhs.map_dimension {
-                    return Err(MergeError::DimensionMismatch);
+                    return Err(QcMergeError::DimensionMismatch);
                 }
                 if lhs.base_radius != rhs.base_radius {
-                    return Err(MergeError::DimensionMismatch);
+                    return Err(QcMergeError::DimensionMismatch);
                 }
 
                 //TODO: this is not enough, need to take into account and rescale..
@@ -178,7 +170,7 @@ impl Merge for Header {
         }
 
         // add special comment
-        let now = Epoch::now().map_err(|_| MergeError::Other)?;
+        let now = Epoch::now().map_err(|_| QcMergeError::Other)?;
 
         self.program = Some(format!(
             "rs-rinex v{}",

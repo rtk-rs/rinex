@@ -1,8 +1,8 @@
-use crate::{clock::Record, prelude::qc::MergeError};
+use crate::{clock::Record, prelude::qc::QcMergeError};
 
 use super::merge_mut_option;
 
-pub fn merge_mut(rec: &mut Record, rhs: &Record) -> Result<(), MergeError> {
+pub fn merge_mut(rec: &mut Record, rhs: &Record) -> Result<(), QcMergeError> {
     for (rhs_epoch, rhs_content) in rhs.iter() {
         if let Some(lhs_content) = rec.get_mut(rhs_epoch) {
             for (rhs_key, rhs_prof) in rhs_content.iter() {

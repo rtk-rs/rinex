@@ -1,17 +1,12 @@
 use crate::{
-    prelude::qc::{Merge, MergeError},
+    prelude::qc::{QcMerge, QcMergeError},
     prod::{DataSource, ProductionAttributes},
 };
 
 use super::merge_mut_option;
 
-impl Merge for ProductionAttributes {
-    fn merge(&self, rhs: &Self) -> Result<Self, MergeError> {
-        let mut lhs = self.clone();
-        lhs.merge_mut(rhs)?;
-        Ok(lhs)
-    }
-    fn merge_mut(&mut self, rhs: &Self) -> Result<(), MergeError> {
+impl QcMerge for ProductionAttributes {
+    fn merge_mut(&mut self, rhs: &Self) -> Result<(), QcMergeError> {
         merge_mut_option(&mut self.region, &rhs.region);
         merge_mut_option(&mut self.v3_details, &rhs.v3_details);
         if let Some(lhs) = &mut self.v3_details {

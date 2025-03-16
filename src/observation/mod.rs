@@ -12,13 +12,13 @@ mod snr;
 #[cfg(feature = "obs")]
 pub use rinex::feature::{Combination, CombinationKey};
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod mask; // mask Trait implementation
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod decim; // decim Trait implementation
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod repair; // repair Trait implementation
 
 #[cfg(feature = "serde")]

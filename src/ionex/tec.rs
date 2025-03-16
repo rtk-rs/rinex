@@ -90,17 +90,11 @@ impl TEC {
 }
 
 #[cfg(feature = "qc")]
-use qc_traits::{Merge, MergeError};
+use qc_traits::{QcMerge, QcMergeError};
 
 #[cfg(feature = "qc")]
-impl Merge for TEC {
-    fn merge(&self, rhs: &Self) -> Result<Self, MergeError> {
-        let mut s = self.clone();
-        s.merge_mut(&rhs)?;
-        Ok(s)
-    }
-
-    fn merge_mut(&mut self, rhs: &Self) -> Result<(), MergeError> {
+impl QcMerge for TEC {
+    fn merge_mut(&mut self, rhs: &Self) -> Result<(), QcMergeError> {
         if self.rms.is_none() {
             self.rms = rhs.rms.clone();
         }

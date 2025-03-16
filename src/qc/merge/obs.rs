@@ -1,6 +1,6 @@
-use crate::{observation::Record, prelude::qc::MergeError};
+use crate::{observation::Record, prelude::qc::QcMergeError};
 
-pub fn merge_mut(rec: &mut Record, rhs: &Record) -> Result<(), MergeError> {
+pub fn merge_mut(rec: &mut Record, rhs: &Record) -> Result<(), QcMergeError> {
     for (k, rhs) in rhs.iter() {
         if let Some(lhs) = rec.get_mut(k) {
             // TODO: could merge clock field

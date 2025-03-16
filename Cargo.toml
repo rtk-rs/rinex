@@ -35,7 +35,7 @@ exclude = [
 ################################################################
 
 [features]
-default = []
+default = ["flate2"]
 
 # OBSERVATION RINEX Iterators & methods. Unlocks signal combinations.
 obs = []
@@ -83,12 +83,6 @@ qc = [
     "dep:maud",
 ] 
 
-# Unlocks the Filter designer, pre and post processing algorithms.
-processing = [
-    "qc",
-    "gnss-qc-traits/processing",
-]
-
 # Unlock all features, at once
 full = [
     "antex",
@@ -99,7 +93,7 @@ full = [
     "meteo",
     "nav",
     "obs",
-    "processing",
+    "qc",
     "serde",
     "binex",
     "rtcm",
@@ -140,7 +134,7 @@ anise = { version = "0.5.3", optional = true }
 nalgebra = { version = "0.33.0", optional = true }
 hifitime = { version = "4.0.0", features = ["serde", "std"] }
 gnss-rs = { version = "2.3.5", features = ["serde", "domes", "cospar"] }
-gnss-qc-traits = { version = "0.1.1", features = ["html"], optional = true }
+gnss-qc-traits = { path = "../qc-traits", features = ["html"], optional = true }
 
 maud = { version = "0.26", optional = true }
 

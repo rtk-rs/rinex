@@ -1,6 +1,6 @@
 use crate::prelude::{Duration, Epoch, Header, Record, Rinex};
 
-use gnss_qc_traits::Split;
+use gnss_qc_traits::QcSplit;
 
 mod clock;
 mod doris;
@@ -11,76 +11,19 @@ mod nav;
 mod obs;
 mod production;
 
-use obs::{split as obs_split, split_even_dt as obs_split_even_dt, split_mut as obs_split_mut};
+use obs::{split_even_dt as obs_split_even_dt, split_mut as obs_split_mut};
 
-use nav::{split as nav_split, split_even_dt as nav_split_even_dt, split_mut as nav_split_mut};
+use nav::{split_even_dt as nav_split_even_dt, split_mut as nav_split_mut};
 
-use meteo::{
-    split as meteo_split, split_even_dt as meteo_split_even_dt, split_mut as meteo_split_mut,
-};
+use meteo::{split_even_dt as meteo_split_even_dt, split_mut as meteo_split_mut};
 
-use clock::{
-    split as clock_split, split_even_dt as clock_split_even_dt, split_mut as clock_split_mut,
-};
+use clock::{split_even_dt as clock_split_even_dt, split_mut as clock_split_mut};
 
-use ionex::{
-    split as ionex_split, split_even_dt as ionex_split_even_dt, split_mut as ionex_split_mut,
-};
+use ionex::{split_even_dt as ionex_split_even_dt, split_mut as ionex_split_mut};
 
-use doris::{
-    split as doris_split, split_even_dt as doris_split_even_dt, split_mut as doris_split_mut,
-};
+use doris::{split_even_dt as doris_split_even_dt, split_mut as doris_split_mut};
 
-impl Split for Rinex {
-    fn split(&self, t: Epoch) -> (Self, Self) {
-        let (h0, h1) = self.header.split(t);
-        let (p0, p1) = self.production.split(t);
-
-        let (r0, r1) = if let Some(r) = self.record.as_obs() {
-            let (r0, r1) = obs_split(r, t);
-            (Record::ObsRecord(r0), Record::ObsRecord(r1))
-        } else if let Some(r) = self.record.as_nav() {
-            let (r0, r1) = nav_split(r, t);
-            (Record::NavRecord(r0), Record::NavRecord(r1))
-        } else if let Some(r) = self.record.as_clock() {
-            let (r0, r1) = clock_split(r, t);
-            (Record::ClockRecord(r0), Record::ClockRecord(r1))
-        } else if let Some(r) = self.record.as_ionex() {
-            let (r0, r1) = ionex_split(r, t);
-            (Record::IonexRecord(r0), Record::IonexRecord(r1))
-        } else if let Some(r) = self.record.as_doris() {
-            let (r0, r1) = doris_split(r, t);
-            (Record::DorisRecord(r0), Record::DorisRecord(r1))
-        } else if let Some(r) = self.record.as_meteo() {
-            let (r0, r1) = meteo_split(r, t);
-            (Record::MeteoRecord(r0), Record::MeteoRecord(r1))
-        } else {
-            (
-                Record::ObsRecord(Default::default()),
-                Record::ObsRecord(Default::default()),
-            )
-        };
-
-        // TODO: improve this
-        //  split comments timewise
-        //  implement Split for Header
-        //  implement Split for production attributes
-        (
-            Rinex {
-                record: r0,
-                header: h0,
-                production: p0,
-                comments: self.comments.clone(),
-            },
-            Rinex {
-                record: r1,
-                header: h1,
-                production: p1,
-                comments: self.comments.clone(),
-            },
-        )
-    }
-
+impl QcSplit for Rinex {
     fn split_mut(&mut self, t: Epoch) -> Self {
         self.header.program = Some(format!(
             "rs-rust v{}",

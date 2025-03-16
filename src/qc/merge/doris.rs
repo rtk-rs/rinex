@@ -1,6 +1,6 @@
-use crate::{doris::Record, prelude::qc::MergeError};
+use crate::{doris::Record, prelude::qc::QcMergeError};
 
-pub fn merge_mut(rec: &mut Record, rhs: &Record) -> Result<(), MergeError> {
+pub fn merge_mut(rec: &mut Record, rhs: &Record) -> Result<(), QcMergeError> {
     for (k, v) in rhs.iter() {
         if let Some(lhs) = rec.get_mut(&k) {
             for (k, v) in v.signals.iter() {

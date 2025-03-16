@@ -3,6 +3,7 @@
 use crate::{
     observation::Record,
     observation::SNR,
+    prelude::qc::{QcMaskOperand, QcSubset},
     prelude::{Constellation, Observable},
 };
 

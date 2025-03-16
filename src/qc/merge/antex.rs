@@ -1,11 +1,11 @@
 use crate::{
     antex::{FrequencyDependentData, Record},
-    prelude::{qc::MergeError, Carrier},
+    prelude::{qc::QcMergeError, Carrier},
 };
 
 use std::collections::HashMap;
 
-pub fn merge_mut(rec: &mut Record, rhs: &Record) -> Result<(), MergeError> {
+pub fn merge_mut(rec: &mut Record, rhs: &Record) -> Result<(), QcMergeError> {
     for (antenna, subset) in rhs.iter() {
         for (carrier, freqdata) in subset.iter() {
             /*
