@@ -57,8 +57,8 @@ impl Ephemeris {
 #[cfg(test)]
 mod test {
 
-    use crate::prelude::{Version, SV};
     use crate::navigation::{Ephemeris, NavMessageType, OrbitItem};
+    use crate::prelude::{Version, SV};
 
     use std::io::BufWriter;
     use std::str::FromStr;
@@ -67,7 +67,6 @@ mod test {
 
     #[test]
     fn ephemeris_formatting() {
-
         let g01 = SV::from_str("G01").unwrap();
         let version = Version::from_str("2.0").unwrap();
         let msgtype = NavMessageType::LNAV;
@@ -82,19 +81,19 @@ mod test {
                 ("3".to_string(), OrbitItem::F64(-3.14e-9)),
                 ("4".to_string(), OrbitItem::F64(-1.1017)),
                 ("5".to_string(), OrbitItem::F64(-1.366203)),
-            ].into_iter().collect()
+            ]
+            .into_iter()
+            .collect(),
         };
 
         let mut buf = BufWriter::new(Utf8Buffer::new(1024));
 
-        ephemeris.format(&mut buf, g01, version, msgtype)
-            .unwrap();
+        ephemeris.format(&mut buf, g01, version, msgtype).unwrap();
 
         let content = buf.into_inner().unwrap().to_ascii_utf8();
         assert_eq!(
-            content,
-            " 17  1  1  0  0  0.0000000  0 10G03G08G14G16G22G23G26G27G31G32\n",
-"-5.154609680176e-04-6.708145150469e-11 0.000000000000e+00
+            content, " 17  1  1  0  0  0.0000000  0 10G03G08G14G16G22G23G26G27G31G32\n",
+            "-5.154609680176e-04-6.708145150469e-11 0.000000000000e+00
      1.000000000000e+00-4.140000000000e+02-3.140000000000e-09-1.101700000000e+00
     -1.366203000000e-05"
         );
