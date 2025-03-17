@@ -8,7 +8,7 @@ impl Rinex {
     /// ```
     /// use rinex::prelude::Rinex;
     ///
-    /// let meteo = Rinex::from_file("test_resources/MET/V2/abvi0010.15m")
+    /// let meteo = Rinex::from_file("data/MET/V2/abvi0010.15m")
     ///     .unwrap();
     ///
     /// for (epoch, value) in meteo.temperature_iter() {
@@ -20,7 +20,7 @@ impl Rinex {
     /// ```
     /// use rinex::prelude::Rinex;
     ///
-    /// let doris = Rinex::from_gzip_file("test_resources/DOR/V3/cs2rx18164.gz")
+    /// let doris = Rinex::from_gzip_file("data/DOR/V3/cs2rx18164.gz")
     ///     .unwrap();
     ///
     /// for (epoch, value) in doris.temperature_iter() {

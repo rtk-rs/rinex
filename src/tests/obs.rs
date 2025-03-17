@@ -11,7 +11,7 @@ use std::{fs::remove_file, path::Path, str::FromStr};
 #[test]
 fn v2_aopr0010_17o() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("OBS")
         .join("V2")
         .join("aopr0010.17o");
@@ -51,7 +51,7 @@ fn v2_aopr0010_17o() {
 #[test]
 fn v2_npaz3550_21o() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("OBS")
         .join("V2")
         .join("npaz3550.21o");
@@ -92,7 +92,7 @@ fn v2_npaz3550_21o() {
 #[test]
 fn v2_rovn0010_21o() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("OBS")
         .join("V2")
         .join("rovn0010.21o");
@@ -146,7 +146,7 @@ fn v2_rovn0010_21o() {
 #[test]
 fn v3_duth0630() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("OBS")
         .join("V3")
         .join("DUTH0630.22O");
@@ -202,7 +202,7 @@ fn v3_duth0630() {
 #[test]
 fn v4_kms300dnk_r_2022_v3crx() {
     let test_resource = env!("CARGO_MANIFEST_DIR").to_owned()
-        + "/test_resources/CRNX/V3/KMS300DNK_R_20221591000_01H_30S_MO.crx";
+        + "/data/CRNX/V3/KMS300DNK_R_20221591000_01H_30S_MO.crx";
 
     let dut = Rinex::from_file(&test_resource).unwrap();
 
@@ -242,7 +242,7 @@ fn v4_kms300dnk_r_2022_v3crx() {
 #[ignore] // TODO
 fn v2_kosg0010_95o() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("OBS")
         .join("V2")
         .join("KOSG0010.95O");
@@ -292,7 +292,7 @@ fn v2_kosg0010_95o() {
 #[test]
 fn v2_ajac3550() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("OBS")
         .join("V2")
         .join("AJAC3550.21O");
@@ -543,7 +543,7 @@ fn v2_ajac3550() {
 #[test]
 fn v3_noa10630() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("OBS")
         .join("V3")
         .join("NOA10630.22O");

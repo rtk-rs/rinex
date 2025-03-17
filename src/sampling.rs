@@ -36,7 +36,7 @@ impl Rinex {
     /// Returns dominant sampling period, expressed as [Duration], by actual data analysis.
     /// ```
     /// use rinex::prelude::*;
-    /// let rnx = Rinex::from_file("test_resources/MET/V2/abvi0010.15m")
+    /// let rnx = Rinex::from_file("data/MET/V2/abvi0010.15m")
     ///     .unwrap();
     /// assert_eq!(
     ///     rnx.dominant_sampling_interval(),
@@ -61,7 +61,7 @@ impl Rinex {
     /// use rinex::prelude::*;
     /// use itertools::Itertools;
     /// use std::collections::HashMap;
-    /// let rinex = Rinex::from_file("test_resources/OBS/V2/AJAC3550.21O")
+    /// let rinex = Rinex::from_file("data/OBS/V2/AJAC3550.21O")
     ///     .unwrap();
     ///  assert!(
     ///     rinex.sampling_histogram().sorted().eq(vec![
@@ -108,7 +108,7 @@ impl Rinex {
     /// ```
     /// use std::str::FromStr;
     /// use rinex::prelude::{Rinex, Epoch, Duration};
-    /// let rinex = Rinex::from_file("test_resources/MET/V2/abvi0010.15m")
+    /// let rinex = Rinex::from_file("data/MET/V2/abvi0010.15m")
     ///     .unwrap();
     ///
     /// // when tolerance is set to None,
@@ -186,7 +186,7 @@ mod test {
     #[cfg(feature = "flate2")]
     fn glacier_20240506_dominant_sample_rate() {
         let rnx = Rinex::from_gzip_file(format!(
-            "{}/test_resources/OBS/V3/240506_glacier_station.obs.gz",
+            "{}/data/OBS/V3/240506_glacier_station.obs.gz",
             env!("CARGO_MANIFEST_DIR")
         ))
         .unwrap();

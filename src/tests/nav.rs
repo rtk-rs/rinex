@@ -10,8 +10,7 @@ use std::{path::PathBuf, str::FromStr};
 
 #[test]
 fn v2_amel0010_21g() {
-    let test_resource =
-        env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/NAV/V2/amel0010.21g";
+    let test_resource = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/NAV/V2/amel0010.21g";
 
     let dut = Rinex::from_file(&test_resource).unwrap();
 
@@ -121,10 +120,9 @@ fn v2_amel0010_21g() {
 #[test]
 #[cfg(feature = "flate2")]
 fn v2_cbw10010_21n() {
-    let test_resources =
-        env!("CARGO_MANIFEST_DIR").to_owned() + "/test_resources/NAV/V2/cbw10010.21n.gz";
+    let data = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/NAV/V2/cbw10010.21n.gz";
 
-    let dut = Rinex::from_gzip_file(&test_resources).unwrap();
+    let dut = Rinex::from_gzip_file(&data).unwrap();
 
     generic_navigation_test(
         &dut,
@@ -233,8 +231,8 @@ fn v2_cbw10010_21n() {
 
 #[test]
 fn v3_amel00nld_r_2021() {
-    let test_resource = env!("CARGO_MANIFEST_DIR").to_owned()
-        + "/test_resources/NAV/V3/AMEL00NLD_R_20210010000_01D_MN.rnx";
+    let test_resource =
+        env!("CARGO_MANIFEST_DIR").to_owned() + "/data/NAV/V3/AMEL00NLD_R_20210010000_01D_MN.rnx";
 
     let rinex = Rinex::from_file(&test_resource).unwrap();
 
@@ -416,7 +414,7 @@ fn v3_amel00nld_r_2021() {
 #[cfg(feature = "flate2")]
 fn v3_brdc00gop_r_2021_gz() {
     let test_resource = env!("CARGO_MANIFEST_DIR").to_owned()
-        + "/test_resources/NAV/V3/BRDC00GOP_R_20210010000_01D_MN.rnx.gz";
+        + "/data/NAV/V3/BRDC00GOP_R_20210010000_01D_MN.rnx.gz";
 
     let dut = Rinex::from_gzip_file(&test_resource).unwrap();
 
@@ -440,7 +438,7 @@ fn v3_brdc00gop_r_2021_gz() {
 #[cfg(feature = "flate2")]
 fn v3_esbc00dnk_r2020() {
     let test_resource = env!("CARGO_MANIFEST_DIR").to_owned()
-        + "/test_resources/NAV/V3/ESBC00DNK_R_20201770000_01D_MN.rnx.gz";
+        + "/data/NAV/V3/ESBC00DNK_R_20201770000_01D_MN.rnx.gz";
 
     let dut = Rinex::from_gzip_file(&test_resource).unwrap();
 
@@ -576,7 +574,7 @@ fn v3_esbc00dnk_r2020() {
 #[cfg(feature = "flate2")]
 fn nav_v4_kms300dnk_r2022() {
     let test_resource = env!("CARGO_MANIFEST_DIR").to_owned()
-        + "/test_resources/NAV/V4/KMS300DNK_R_20221591000_01H_MN.rnx.gz";
+        + "/data/NAV/V4/KMS300DNK_R_20221591000_01H_MN.rnx.gz";
 
     let dut = Rinex::from_gzip_file(&test_resource).unwrap();
 
@@ -699,7 +697,7 @@ fn nav_v4_kms300dnk_r2022() {
 fn v4_brd400dlr_s2023() {
     let path = PathBuf::new()
         .join(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("NAV")
         .join("V4")
         .join("BRD400DLR_S_20230710000_01D_MN.rnx.gz");
@@ -968,7 +966,7 @@ fn v4_brd400dlr_s2023() {
 // #[cfg(feature = "nav")]
 // fn toe_glo() {
 //     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-//         .join("test_resources")
+//         .join("data")
 //         .join("NAV")
 //         .join("V2")
 //         .join("dlf10010.21g");
@@ -1003,7 +1001,7 @@ fn nav_toe_gal_bds() {
     let mut tests_passed = 0;
 
     let path = format!(
-        "{}/test_resources/NAV/V3/AMEL00NLD_R_20210010000_01D_MN.rnx",
+        "{}/data/NAV/V3/AMEL00NLD_R_20210010000_01D_MN.rnx",
         env!("CARGO_MANIFEST_DIR")
     );
 
@@ -1041,7 +1039,7 @@ fn nav_toe_gal_bds() {
 fn nav_v3_ionospheric_corr() {
     let path = PathBuf::new()
         .join(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("NAV")
         .join("V3")
         .join("CBW100NLD_R_20210010000_01D_MN.rnx");
@@ -1098,11 +1096,7 @@ fn nav_v4_messages() {
         "KMS300DNK_R_20221591000_01H_MN.rnx.gz",
         "BRD400DLR_S_20230710000_01D_MN.rnx.gz",
     ] {
-        let fullpath = format!(
-            "{}/test_resources/NAV/V4/{}",
-            env!("CARGO_MANIFEST_DIR"),
-            fp
-        );
+        let fullpath = format!("{}/data/NAV/V4/{}", env!("CARGO_MANIFEST_DIR"), fp);
 
         let rinex = Rinex::from_gzip_file(&fullpath).unwrap();
 
@@ -1194,7 +1188,7 @@ fn nav_v4_messages() {
 fn nav_v2_iono_alphabeta_and_toe() {
     let path = PathBuf::new()
         .join(env!("CARGO_MANIFEST_DIR"))
-        .join("test_resources")
+        .join("data")
         .join("NAV")
         .join("V2")
         .join("cbw10010.21n.gz");

@@ -8,10 +8,8 @@ mod test {
     #[test]
     #[cfg(feature = "flate2")]
     fn obs_gnss_v3_esbcdnk() {
-        let rnx = Rinex::from_gzip_file(
-            "test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz",
-        )
-        .unwrap();
+        let rnx = Rinex::from_gzip_file("data/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
+            .unwrap();
 
         let mask = Filter::mask(
             MaskOperand::Equals,
@@ -38,7 +36,7 @@ mod test {
 
     #[test]
     fn obs_sv_v3_duth0630() {
-        let rnx = Rinex::from_file("test_resources/OBS/V3/DUTH0630.22O").unwrap();
+        let rnx = Rinex::from_file("data/OBS/V3/DUTH0630.22O").unwrap();
         let mask = Filter::mask(
             MaskOperand::Equals,
             FilterItem::SvItem(vec![
@@ -52,7 +50,7 @@ mod test {
 
     #[test]
     fn obs_gnss_v3_duth0630() {
-        let mut rnx = Rinex::from_file("test_resources/OBS/V3/DUTH0630.22O").unwrap();
+        let mut rnx = Rinex::from_file("data/OBS/V3/DUTH0630.22O").unwrap();
         let mask = Filter::mask(
             MaskOperand::Equals,
             FilterItem::ConstellationItem(vec![Constellation::GPS]),
@@ -62,7 +60,7 @@ mod test {
     }
     #[test]
     fn meteo_obsrv_v2_clar0020() {
-        let rnx = Rinex::from_file("test_resources/MET/V2/clar0020.00m").unwrap();
+        let rnx = Rinex::from_file("data/MET/V2/clar0020.00m").unwrap();
         assert_eq!(rnx.observables_iter().count(), 3);
 
         let pressure = Filter::mask(
@@ -97,7 +95,7 @@ mod test {
 
     #[test]
     fn obs_observ_v3_duth0630() {
-        let rinex = Rinex::from_file("test_resources/OBS/V3/DUTH0630.22O").unwrap();
+        let rinex = Rinex::from_file("data/OBS/V3/DUTH0630.22O").unwrap();
 
         let total = rinex.observables_iter().count();
         assert_eq!(total, 12);
@@ -140,7 +138,7 @@ mod test {
 
     #[test]
     fn meteo_time_v2_cari0010() {
-        let rnx = Rinex::from_file("test_resources/MET/V2/cari0010.07m").unwrap();
+        let rnx = Rinex::from_file("data/MET/V2/cari0010.07m").unwrap();
 
         let mask = Filter::mask(
             MaskOperand::GreaterThan,
@@ -173,7 +171,7 @@ mod test {
 
     #[test]
     fn obs_epoch_v3_vlns0630() {
-        let rinex = Rinex::from_file("test_resources/CRNX/V3/VLNS0630.22D").unwrap();
+        let rinex = Rinex::from_file("data/CRNX/V3/VLNS0630.22D").unwrap();
 
         let before = Filter::greater_than("2022-03-03T00:00:00 GPST").unwrap();
         let first_eq = Filter::greater_equals("2022-03-04T00:00:00 GPST").unwrap();
@@ -244,10 +242,8 @@ mod test {
     #[test]
     #[cfg(feature = "flate2")]
     fn obs_epoch_v3_esbc00dnk() {
-        let rinex = Rinex::from_gzip_file(
-            "test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz",
-        )
-        .unwrap();
+        let rinex = Rinex::from_gzip_file("data/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
+            .unwrap();
         let last_eq = Filter::equals("2020-06-25T23:59:30 GPST").unwrap();
         let last_geq = Filter::greater_equals("2020-06-25T23:59:30 GPST").unwrap();
         let last_gt = Filter::greater_than("2020-06-25T23:59:30 GPST").unwrap();
@@ -296,7 +292,7 @@ mod test {
 
     #[test]
     fn obs_signals_v3_duth0630() {
-        let rinex = Rinex::from_file("test_resources/OBS/V3/DUTH0630.22O").unwrap();
+        let rinex = Rinex::from_file("data/OBS/V3/DUTH0630.22O").unwrap();
         let total = rinex.carrier_iter().count();
         assert_eq!(total, 4);
 

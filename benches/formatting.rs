@@ -43,7 +43,7 @@ fn benchmark(c: &mut Criterion) {
     let mut buffer = BufWriter::new(Utf8Buffer::new(4096));
 
     // Small RINEX OBS (V2)
-    let rinex = Rinex::from_file("test_resources/OBS/V2/rovn0010.21o").unwrap();
+    let rinex = Rinex::from_file("data/OBS/V2/rovn0010.21o").unwrap();
 
     formatting_grp.bench_function("OBS/V2", |b| {
         b.iter(|| {
@@ -52,7 +52,7 @@ fn benchmark(c: &mut Criterion) {
     });
 
     // Small RINEX OBS (V3)
-    let rinex = Rinex::from_file("test_resources/OBS/V3/DUTH0630.22O").unwrap();
+    let rinex = Rinex::from_file("data/OBS/V3/DUTH0630.22O").unwrap();
 
     formatting_grp.bench_function("OBS/V3", |b| {
         b.iter(|| {

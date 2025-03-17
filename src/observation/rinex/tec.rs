@@ -76,7 +76,7 @@ mod test {
         let gamma = 1.0 / 40.308;
 
         let path = format!(
-            "{}/test_resources/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
+            "{}/data/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx",
             env!("CARGO_MANIFEST_DIR"),
         );
 

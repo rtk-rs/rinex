@@ -10,7 +10,7 @@ impl Rinex {
     /// Returns true if this [Rinex] format is [RinexType::MeteoData].
     /// ```
     /// use rinex::prelude::Rinex;
-    /// let rinex = Rinex::from_file("test_resources/MET/V2/abvi0010.15m")
+    /// let rinex = Rinex::from_file("data/MET/V2/abvi0010.15m")
     ///     .unwrap();
     /// assert!(rinex.is_meteo_rinex());
     /// ```

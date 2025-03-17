@@ -8,7 +8,7 @@ mod decimation {
     #[cfg(feature = "flate2")]
     fn obs_dt_decimation() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources")
+            .join("data")
             .join("CRNX")
             .join("V3")
             .join("ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz");
@@ -39,7 +39,7 @@ mod decimation {
     #[cfg(feature = "flate2")]
     fn meteo_dt_decimation() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources")
+            .join("data")
             .join("MET")
             .join("V3")
             .join("POTS00DEU_R_20232540000_01D_05M_MM.rnx.gz");
@@ -71,7 +71,7 @@ mod decimation {
     #[cfg(feature = "flate2")]
     fn nav_dt_decimation() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("test_resources")
+            .join("data")
             .join("NAV")
             .join("V3")
             .join("ESBC00DNK_R_20201770000_01D_MN.rnx.gz");

@@ -15,85 +15,136 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  linter:
-    name: Linter 
+  build:
+    name: Build 
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      name: Install Rust
       with:
-        toolchain: stable
-        override: true
+        submodules: recursive
+        fetch-depth: 0
+    
     - uses: actions-rs/cargo@v1
       name: Linter 
       with:
         command: fmt
         args: --all -- --check
-
-  build:
-    name: Build 
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - name: Workspace default
-            opts: -r
-          - name: Workspace All-features
-            opts: --all-features
-          - name: RINEX Default
-            opts: -r
-          - name: RINEX Observations
-            opts: --features "obs"
-          - name: RINEX Navigation
-            opts: --features "nav"
-          - name: RINEX QC
-            opts: --features "qc"
-          - name: RINEX Meteo
-            opts: --features "meteo"
-          - name: RINEX Clock
-            opts: --features "clock"
-          - name: ANTEX
-            opts: --features "antex"
-          - name: DORIS RINEX
-            opts: --features "doris"
-          - name: RINEX Processing
-            opts: --features "processing"
-          - name: RINEX Full
-            opts: --features "full"
-          - name: RINEX All-features
-            opts: --all-features
-
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      name: Install Rust
-      with:
-        toolchain: stable
-        override: true
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-
-    - name: ${{ matrix.name }} 
-      run: |
-        cargo clean && cargo update && cargo build ${{ matrix.opts }}
-   
-  tests:
-    name: Tests
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
+    
     - uses: actions-rs/toolchain@v1
       name: Install Rust
       with:
         toolchain: stable
         override: true
     
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
+    - uses: actions-rs/cargo@v1
+      name: Build (default)
+      with:
+        command: build
+        args: -r
+    
+    - uses: actions-rs/cargo@v1
+      name: Clean
+      with:
+        command: clean
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (all features)
+      with:
+        command: build
+        args: --all-features
+    
+    - uses: actions-rs/cargo@v1
+      name: Clean
+      with:
+        command: clean
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (Observation)
+      with:
+        command: build
+        args: --features obs
+    
+    - uses: actions-rs/cargo@v1
+      name: Clean
+      with:
+        command: clean
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (Navigation)
+      with:
+        command: build
+        args: --features nav
+    
+    - uses: actions-rs/cargo@v1
+      name: Clean
+      with:
+        command: clean
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (Meteo)
+      with:
+        command: build
+        args: --features meteo
+    
+    - uses: actions-rs/cargo@v1
+      name: Clean
+      with:
+        command: clean
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (Clock)
+      with:
+        command: build
+        args: --features clock
+    
+    - uses: actions-rs/cargo@v1
+      name: Clean
+      with:
+        command: clean
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (DORIS)
+      with:
+        command: build
+        args: --features doris
+    
+    - uses: actions-rs/cargo@v1
+      name: Clean
+      with:
+        command: clean
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (ANTEX)
+      with:
+        command: build
+        args: --features antex
+
+    - uses: actions-rs/cargo@v1
+      name: Clean
+      with:
+        command: clean
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (Qc)
+      with:
+        command: build
+        args: --features qc
+    
+    - uses: actions-rs/cargo@v1
+      name: Clean
+      with:
+        command: clean
+    
+    - uses: actions-rs/cargo@v1
+      name: Build (Processing)
+      with:
+        command: build
+        args: --features processing
+    
+    - uses: actions-rs/cargo@v1
+      name: Clean
+      with:
+        command: clean
     
     - uses: actions-rs/cargo@v1
       name: Test (all features)
@@ -106,15 +157,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+    
     - uses: actions-rs/toolchain@v1
       name: Install nightly
       with:
         toolchain: nightly
         override: true
-    
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
     
     - name: Documentation
       run: |

@@ -89,7 +89,7 @@ mod test {
     fn v3_lines_iter() {
         let mut last_passed = false;
 
-        let fd = File::open("../test_resources/OBS/V3/DUTH0630.22O").unwrap();
+        let fd = File::open("../data/OBS/V3/DUTH0630.22O").unwrap();
         let reader = BufReader::new(fd);
 
         for (nth, line) in reader.lines().enumerate() {
@@ -125,7 +125,7 @@ mod test {
     fn v3_lengthy_lines_iter() {
         let mut last_passed = false;
 
-        let fd = File::open("../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz").unwrap();
+        let fd = File::open("../data/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz").unwrap();
         let reader = Reader::new(fd);
 
         for (nth, line) in reader.lines().enumerate() {

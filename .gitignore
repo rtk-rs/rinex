@@ -2,8 +2,6 @@ debug/
 target/
 logs/
 
-test_resources/
-
 Cargo.lock
 
 *.csv
