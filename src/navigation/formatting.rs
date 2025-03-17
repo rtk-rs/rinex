@@ -9,6 +9,13 @@ use crate::{
     prelude::{Constellation, Header},
 };
 
+/// Special BufWriter to rework the ASCII stream
+/// and make it NAV compatible
+pub(crate) struct NavBufWriter<W, const M: usize> {
+    buffer: [u8; M],
+    writer: W,
+}
+
 fn format_epoch_v2v3<W: Write>(
     w: &mut BufWriter<W>,
     k: &NavKey,
@@ -188,13 +195,14 @@ mod test {
 
     use super::{format_epoch_v2v3, format_epoch_v4};
     use crate::navigation::{NavFrameType, NavKey, NavMessageType};
-    use crate::prelude::{Epoch, SV};
+    use crate::prelude::{Epoch, Constellation, SV};
     use crate::tests::formatting::Utf8Buffer;
     use std::io::BufWriter;
     use std::str::FromStr;
 
     #[test]
     fn nav_fmt_v2v3() {
+        let gal = Constellation::Galileo;
         let buf = Utf8Buffer::new(1024);
         let mut writer = BufWriter::new(buf);
 
@@ -205,7 +213,7 @@ mod test {
             msgtype: NavMessageType::from_str("LNAV").unwrap(),
         };
 
-        format_epoch_v2v3(&mut writer, &key).unwrap();
+        format_epoch_v2v3(&mut writer, &key, true, &gal).unwrap();
 
         let inner = writer.into_inner().unwrap();
 

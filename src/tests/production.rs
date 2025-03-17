@@ -135,7 +135,6 @@ mod test {
 
     #[test]
     #[cfg(feature = "flate2")]
-    #[ignore]
     fn nav_v2() {
         let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/NAV/V2/";
         for file in std::fs::read_dir(folder).unwrap() {
