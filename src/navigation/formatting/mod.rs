@@ -9,12 +9,7 @@ use crate::{
     prelude::{Constellation, Header},
 };
 
-/// Special BufWriter to rework the ASCII stream
-/// and make it NAV compatible
-pub(crate) struct NavBufWriter<W, const M: usize> {
-    buffer: [u8; M],
-    writer: W,
-}
+pub(crate) mod buffer;
 
 fn format_epoch_v2v3<W: Write>(
     w: &mut BufWriter<W>,
