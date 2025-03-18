@@ -3,7 +3,6 @@ pub mod orbits;
 
 mod earth_orientation;
 mod ephemeris;
-mod formatting;
 mod frame;
 mod health;
 mod ionosphere;
@@ -11,6 +10,8 @@ mod message;
 mod parsing;
 mod rinex;
 mod system_time;
+
+pub(crate) mod formatting;
 
 pub(crate) use formatting::format;
 pub(crate) use parsing::{is_new_epoch, parse_epoch};

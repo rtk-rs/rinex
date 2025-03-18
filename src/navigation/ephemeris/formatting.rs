@@ -1,6 +1,8 @@
 //! Ephemeris message formatting
 use crate::{
-    navigation::{orbits::closest_nav_standards, Ephemeris, NavMessageType},
+    navigation::{
+        formatting::ascii::AsciiString, orbits::closest_nav_standards, Ephemeris, NavMessageType,
+    },
     prelude::{Constellation, SV},
     FormattingError, Version,
 };
@@ -9,9 +11,9 @@ use std::io::{BufWriter, Write};
 
 impl Ephemeris {
     /// Formats [Ephemeris] according to RINEX standards
-    pub(crate) fn format<W: Write>(
+    pub(crate) fn format(
         &self,
-        w: &mut BufWriter<W>,
+        string: &mut String,
         sv: SV,
         version: Version,
         msgtype: NavMessageType,
@@ -32,22 +34,33 @@ impl Ephemeris {
 
         // starts with (clock_bias, drift, rate)
         // epoch has already been buffered
-        write!(
-            w,
-            "{:.17E} {:.17E} {:.17E}\n",
+        let formatted = format!(
+            "{:17.12E} {:17.12E} {:17.12E}\n",
             self.clock_bias, self.clock_drift, self.clock_drift_rate
-        )?;
+        );
+
+        let ascii = AsciiString::from_str(&formatted);
+        string.push_str(&ascii.to_string());
 
         // following standard specs
         let data_fields = &standard_specs.items;
         for i in 0..data_fields.len() {
-            write!(w, "0.000000000000D+00")?;
-            if let Some(value) = self.get_orbit_f64(data_fields[i].0) {
-                write!(w, "0.000000000000D+00")?;
+            let formatted = if let Some(value) = self.get_orbit_f64(data_fields[i].0) {
+                if (i % 4) == 0 {
+                    format!("  {:19.12E}", value)
+                } else {
+                    format!("{:19.12E}", value)
+                }
             } else {
-                // standardized missing field
-                write!(w, "0.000000000000D+00")?;
-            }
+                if (i % 4) == 0 {
+                    format!("  {:19.12E}", 0.0)
+                } else {
+                    format!("{:19.12E}", 0.0)
+                }
+            };
+
+            let ascii = AsciiString::from_str(&formatted);
+            string.push_str(&ascii.to_string());
         }
 
         Ok(())
@@ -86,16 +99,17 @@ mod test {
             .collect(),
         };
 
-        let mut buf = BufWriter::new(Utf8Buffer::new(1024));
+        let mut content = String::new();
 
-        ephemeris.format(&mut buf, g01, version, msgtype).unwrap();
+        ephemeris
+            .format(&mut content, g01, version, msgtype)
+            .unwrap();
 
-        let content = buf.into_inner().unwrap().to_ascii_utf8();
         assert_eq!(
-            content, " 17  1  1  0  0  0.0000000  0 10G03G08G14G16G22G23G26G27G31G32\n",
-            "-5.154609680176e-04-6.708145150469e-11 0.000000000000e+00
-     1.000000000000e+00-4.140000000000e+02-3.140000000000e-09-1.101700000000e+00
-    -1.366203000000e-05"
+            content,
+            "-5.154609680176E-04-6.708145150469E-11 0.000000000000E+00
+     1.000000000000E+00-4.140000000000E+02-3.140000000000E-09-1.101700000000E+00
+    -1.366203000000E-05"
         );
     }
 }

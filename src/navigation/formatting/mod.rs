@@ -5,11 +5,12 @@ use std::io::{BufWriter, Write};
 use crate::{
     epoch::epoch_decompose as epoch_decomposition,
     error::FormattingError,
-    navigation::{NavFrameType, NavKey, Record},
+    navigation::formatting::ascii::AsciiString,
+    navigation::{NavFrame, NavFrameType, NavKey, Record},
     prelude::{Constellation, Header},
 };
 
-pub(crate) mod buffer;
+pub(crate) mod ascii;
 
 fn format_epoch_v2v3<W: Write>(
     w: &mut BufWriter<W>,
@@ -72,54 +73,6 @@ fn format_epoch_v4<W: Write>(w: &mut BufWriter<W>, k: &NavKey) -> std::io::Resul
     }
 }
 
-// /*
-//  * When formatting floating point number in Navigation RINEX,
-//  * exponent are expected to be in the %02d form,
-//  * but Rust is only capable of formating %d (AFAIK).
-//  * With this macro, we simply rework all exponents encountered in a string
-//  */
-// fn double_exponent_digits(content: &str) -> String {
-//     // replace "eN " with "E+0N"
-//     let re = Regex::new(r"e\d{1} ").unwrap();
-//     let lines = re.replace_all(content, |caps: &Captures| format!("E+0{}", &caps[0][1..]));
-//
-//     // replace "eN" with "E+0N"
-//     let re = Regex::new(r"e\d{1}").unwrap();
-//     let lines = re.replace_all(&lines, |caps: &Captures| format!("E+0{}", &caps[0][1..]));
-//
-//     // replace "e-N " with "E-0N"
-//     let re = Regex::new(r"e-\d{1} ").unwrap();
-//     let lines = re.replace_all(&lines, |caps: &Captures| format!("E-0{}", &caps[0][2..]));
-//
-//     // replace "e-N" with "e-0N"
-//     let re = Regex::new(r"e-\d{1}").unwrap();
-//     let lines = re.replace_all(&lines, |caps: &Captures| format!("E-0{}", &caps[0][2..]));
-//
-//     lines.to_string()
-// }
-
-// /*
-//  * Reworks generated/formatted line to match standards
-//  */
-// fn fmt_rework(major: u8, lines: &str) -> String {
-//     /*
-//      * There's an issue when formatting the exponent 00 in XXXXX.E00
-//      * Rust does not know how to format an exponent on multiples digits,
-//      * and RINEX expects two.
-//      * If we try to rework this line, it may corrupt some SVNN fields.
-//      */
-//     let mut lines = double_exponent_digits(lines);
-//
-//     if major < 3 {
-//         /*
-//          * In old RINEX, D+00 D-01 is used instead of E+00 E-01
-//          */
-//         lines = lines.replace("E-", "D-");
-//         lines = lines.replace("E+", "D+");
-//     }
-//     lines.to_string()
-// }
-
 pub fn format<W: Write>(
     writer: &mut BufWriter<W>,
     rec: &Record,
@@ -133,6 +86,8 @@ pub fn format<W: Write>(
     let file_constell = header
         .constellation
         .ok_or(FormattingError::NoConstellationDefinition)?;
+
+    let mut formatted_string = String::with_capacity(128);
 
     // in chronological order
     for epoch in rec.iter().map(|(k, _v)| k.epoch).unique().sorted() {
@@ -170,14 +125,17 @@ pub fn format<W: Write>(
                     }
 
                     // format entry
-                    if let Some(eph) = v.as_ephemeris() {
-                        eph.format(writer, k.sv, version, k.msgtype)?;
-                    }
-                    // other format not supported yet
-                    // else if let Some(eop) = v.as_earth_orientation() {
-                    // } else if let Some(sto) = v.as_system_time() {
-                    // } else if let Some(ion) = v.as_ionosphere_model() {
-                    // }
+                    match v {
+                        NavFrame::EPH(eph) => {
+                            eph.format(&mut formatted_string, k.sv, version, k.msgtype)?
+                        },
+                        _ => {},
+                    };
+
+                    let ascii = AsciiString::from_str(&formatted_string);
+                    write!(writer, "{}", ascii)?;
+
+                    formatted_string.clear();
                 }
             }
         }
