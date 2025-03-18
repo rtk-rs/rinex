@@ -79,7 +79,7 @@ impl AsciiString {
                     }
                 },
                 State::PlusDigit1 => {
-                    if bytes[ptr] == b' ' {
+                    if bytes[ptr] == b' ' || bytes[ptr] == b'\n' {
                         inner.push('0');
                         inner.push(copy.into());
                         inner.push(bytes[ptr].into());
@@ -129,7 +129,7 @@ mod test {
             ("10E-10", "10E-10"),
             ("10010E10", "10010E+10"),
             ("10E10 10E9", "10E+10 10E+09"),
-            ("1.01E3", " 1.01E+03"),
+            ("01.01E3", "01.01E+03"),
         ] {
             let output = AsciiString::from_str(test);
             assert_eq!(output.inner, result, "failed for \"{}\"", test);

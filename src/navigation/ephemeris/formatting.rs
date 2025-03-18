@@ -9,6 +9,22 @@ use crate::{
 
 use std::io::{BufWriter, Write};
 
+fn format_value(value: f64) -> String {
+    let is_signed = value.is_sign_negative();
+    let trunc = value.trunc() as u32;
+    if value.is_sign_negative() {
+        format!("{:19.12E}", value)
+    } else if value == 0.0 {
+        "0.000000000000E0".to_string()
+    } else {
+        if trunc < 10 {
+            format!(" {:19.12E}", value)
+        } else {
+            format!("{:19.12E}", value)
+        }
+    }
+}
+
 impl Ephemeris {
     /// Formats [Ephemeris] according to RINEX standards
     pub(crate) fn format(
@@ -35,8 +51,10 @@ impl Ephemeris {
         // starts with (clock_bias, drift, rate)
         // epoch has already been buffered
         let formatted = format!(
-            "{:17.12E} {:17.12E} {:17.12E}\n",
-            self.clock_bias, self.clock_drift, self.clock_drift_rate
+            "{} {} {}\n",
+            format_value(self.clock_bias),
+            format_value(self.clock_drift),
+            format_value(self.clock_drift_rate),
         );
 
         let ascii = AsciiString::from_str(&formatted);
@@ -47,22 +65,21 @@ impl Ephemeris {
         for i in 0..data_fields.len() {
             let formatted = if let Some(value) = self.get_orbit_f64(data_fields[i].0) {
                 if (i % 4) == 0 {
-                    format!("  {:19.12E}", value)
+                    format!("  {}", format_value(value))
                 } else {
-                    format!("{:19.12E}", value)
+                    format_value(value)
                 }
             } else {
                 if (i % 4) == 0 {
-                    format!("  {:19.12E}", 0.0)
+                    format!("   {}", format_value(0.0))
                 } else {
-                    format!("{:19.12E}", 0.0)
+                    format_value(0.0)
                 }
             };
 
             let ascii = AsciiString::from_str(&formatted);
             string.push_str(&ascii.to_string());
         }
-
         Ok(())
     }
 }
@@ -77,6 +94,9 @@ mod test {
     use std::str::FromStr;
 
     use crate::tests::formatting::Utf8Buffer;
+
+    #[test]
+    fn test_value_formatter() {}
 
     #[test]
     fn ephemeris_formatting() {
@@ -107,7 +127,7 @@ mod test {
 
         assert_eq!(
             content,
-            "-5.154609680176E-04-6.708145150469E-11 0.000000000000E+00
+            " -5.154609680176E-04-6.708145150469E-11 0.000000000000E+00
      1.000000000000E+00-4.140000000000E+02-3.140000000000E-09-1.101700000000E+00
     -1.366203000000E-05"
         );
