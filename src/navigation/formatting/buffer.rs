@@ -9,37 +9,40 @@ use crate::{
     prelude::{Constellation, Header},
 };
 
-/// Special BufWriter to rework the ASCII stream
-/// and make it NAV compatible
-pub struct NavBufWriter<W: Write> {
-    writer: W,
-    len: usize,
-    input: String,
-    output: String,
-    copy: String,
-    exponent_size: usize,
-}
-
 #[derive(Debug, Clone, Default, PartialEq)]
-pub enum State {
+enum State {
     #[default]
     Nominal,
-    InsideExponent,
+    Exponent,
+    PlusDigit1,
+    MinusDigit1,
+    MinusDigit2,
+}
+
+/// Special BufWriter to rework the ASCII stream
+/// and make it 100% NAV compatible
+pub struct NavBufWriter<W: Write> {
+    copy: u8,
+    pub writer: W,
+    state: State,
+    input: String,
+    output: String,
+    to_write: usize,
+    exponent_size: usize,
 }
 
 impl<W: Write> Write for NavBufWriter<W> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         // append to pending list
         let ascii = String::from_utf8_lossy(&buf);
-        self.input.push_str(&ascii);
-        self.len += ascii.len();
+        self.input = ascii.to_string();
+        self.process();
 
-        // process
-        self.run();
-
-        // update & return
-
-        Ok(size)
+        // update
+        let written = self.writer.write(self.output.as_bytes())?;
+        self.output = self.output[written..].to_string();
+        self.to_write -= written;
+        Ok(written)
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
@@ -48,71 +51,80 @@ impl<W: Write> Write for NavBufWriter<W> {
 }
 
 impl<W: Write> NavBufWriter<W> {
-    fn run(&mut self) -> usize {
-        let mut size = 0;
-        let bytes = self.input.as_bytes();
-
-        // process all bytes
-        for i in 0..self.len {
-            match self.state {
-                State::InsideExponent => {
-                    if bytes[i] == b' ' {
-                        self.state = State::Nominal;
-                    } else {
-                    }
-                },
-                State::Nominal => {
-                    if bytes[i] == b'e' || bytes[i] == b'E' {
-                        self.state = State::InsideExponent;
-                    }
-                },
-            }
-            size += 1;
-        }
-
-        return;
+    pub fn into_inner(&self) -> &W {
+        &self.writer
     }
 
-    // e-0 => e-00
-    // e0 => e+00
-    fn buffer_format(s: &mut String) {
-        let len = s.len();
-
-        let cloned = s.clone();
-        let bytes = cloned.as_bytes();
-        let str_bytes = cloned.as_str();
-
+    fn process(&mut self) {
         let mut ptr = 0;
+        let len = self.input.len();
+        let bytes = self.input.as_bytes();
         loop {
-            if bytes[ptr] == b'e' || bytes[ptr] == b'E' {
-                if ptr < len - 1 {
-                    if bytes[ptr + 1].is_ascii_digit() {
-                        if ptr < len - 2 {
-                            if bytes[ptr + 2].is_ascii_digit() {
-                                s.insert(ptr + 1, '+');
-                                //s.replace_range(ptr +1.., &str_bytes[i+1..]);
-                            }
-                        }
+            match self.state {
+                State::Nominal => {
+                    if bytes[ptr] == b'e' || bytes[ptr] == b'E' {
+                        self.state = State::Exponent;
                     }
-                }
+                    self.output.push(bytes[ptr].into());
+                    ptr += 1;
+                },
+                State::Exponent => {
+                    if bytes[ptr] == b'-' {
+                        self.output.push('-');
+                        self.state = State::MinusDigit1;
+                    } else {
+                        self.output.push('+');
+                        self.copy = bytes[ptr];
+                        self.state = State::PlusDigit1;
+                    }
+                    ptr += 1;
+                },
+                State::PlusDigit1 => {
+                    if bytes[ptr] == b' ' {
+                        self.output.push('0');
+                        self.output.push(self.copy.into());
+                        self.output.push(bytes[ptr].into());
+                    } else {
+                        self.output.push(self.copy.into());
+                        self.output.push(bytes[ptr].into());
+                    }
+                    self.state = State::Nominal;
+                    ptr += 1;
+                },
+                State::MinusDigit1 => {
+                    self.copy = bytes[ptr];
+                    self.state = State::MinusDigit2;
+                    ptr += 1;
+                },
+                State::MinusDigit2 => {
+                    if bytes[ptr] == b' ' {
+                        self.output.push('0');
+                        self.output.push(self.copy.into());
+                    } else {
+                        self.output.push(self.copy.into());
+                        self.output.push(bytes[ptr].into());
+                    }
+                    self.state = State::Nominal;
+                    ptr += 1;
+                },
             }
-
-            ptr += 1;
             if ptr == len {
                 break;
             }
         }
+        self.to_write = self.output.len();
     }
 
     /// Create a new [NavBufWriter] dedicated to Navigation RINEX formatting
     pub fn new(writer: W) -> Self {
         Self {
             writer,
+            copy: 0,
+            to_write: 0,
             exponent_size: 0,
             state: State::default(),
             input: String::with_capacity(256),
             output: String::with_capacity(256),
-            exponent_digits: String::with_capacity(8),
         }
     }
 }
@@ -121,22 +133,29 @@ impl<W: Write> NavBufWriter<W> {
 mod test {
     use super::NavBufWriter;
     use crate::tests::formatting::Utf8Buffer;
+    use std::io::{BufWriter, Write};
 
     #[test]
     fn test_nav_buffer() {
-        let mut buf = NavBufWriter::new(Utf8Buffer::new(1024));
+        let utf8_buf = Utf8Buffer::new(1024);
+        let mut buf = NavBufWriter::new(utf8_buf);
 
-        for (test, result) in [
-            (
-                "ABCAZDAZDCADQSMLKMLKO°0AZD00AZDKKKAZDK",
-                "ABCAZDAZDCADQSMLKMLKO°0AZD00AZDKKKAZDK",
-            ),
-            ("00110e10", "00110e+10"),
-            ("00220e1", "00220e+01"),
+        for (test, size, result) in [
+            ("ABCAZDAZDCADQSML", 16, "ABCAZDAZDCADQSML"),
+            ("10e10", 6, "10e+10"),
+            ("10e-10", 6, "10e-10"),
+            ("10010e10", 9, "10010e+10"),
+            ("10e10 10e9", 9, "10e+10 10+e09"),
         ] {
             let mut s = test.to_string();
-            NavBufWriter::<Utf8Buffer>::buffer_format(&mut s);
-            assert_eq!(s, result);
+
+            let written = buf.write(s.as_bytes()).unwrap();
+
+            assert_eq!(written, size);
+
+            let utf8buf = buf.into_inner();
+            let utf8 = utf8buf.to_ascii_utf8();
+            assert_eq!(utf8, result);
         }
     }
 }
