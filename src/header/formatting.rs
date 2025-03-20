@@ -102,7 +102,7 @@ impl Header {
                 if major == 2 && index == 0 {
                     kb.format_v2_header(w)?;
                 } else if major == 3 {
-                    kb.format_v3_header(w, constellation)?;
+                    kb.format_v3_header(w, *constellation)?;
                 }
             } else if let Some(ng) = model.as_nequick_g() {
                 if major == 3 {

@@ -203,30 +203,67 @@ impl KbModel {
     pub fn format_v3_header<W: Write>(
         &self,
         w: &mut BufWriter<W>,
-        constellation: &Constellation,
+        constellation: Constellation,
     ) -> Result<(), FormattingError> {
-        let formatted = format!(
-            "{}A  {} {} {} {}",
-            constellation,
-            NavFormatter::new_iono_alpha_beta(self.alpha.0),
-            NavFormatter::new_iono_alpha_beta(self.alpha.1),
-            NavFormatter::new_iono_alpha_beta(self.alpha.2),
-            NavFormatter::new_iono_alpha_beta(self.alpha.3),
-        );
+        // QZSS + IRNSS : truncated cases
+        let formatted = if constellation == Constellation::QZSS {
+            format!(
+                "QZSA  {} {} {} {}",
+                NavFormatter::new_iono_alpha_beta(self.alpha.0),
+                NavFormatter::new_iono_alpha_beta(self.alpha.1),
+                NavFormatter::new_iono_alpha_beta(self.alpha.2),
+                NavFormatter::new_iono_alpha_beta(self.alpha.3),
+            )
+        } else if constellation == Constellation::IRNSS {
+            format!(
+                "IRNA  {} {} {} {}",
+                NavFormatter::new_iono_alpha_beta(self.alpha.0),
+                NavFormatter::new_iono_alpha_beta(self.alpha.1),
+                NavFormatter::new_iono_alpha_beta(self.alpha.2),
+                NavFormatter::new_iono_alpha_beta(self.alpha.3),
+            )
+        } else {
+            format!(
+                "{:X}A  {} {} {} {}",
+                constellation,
+                NavFormatter::new_iono_alpha_beta(self.alpha.0),
+                NavFormatter::new_iono_alpha_beta(self.alpha.1),
+                NavFormatter::new_iono_alpha_beta(self.alpha.2),
+                NavFormatter::new_iono_alpha_beta(self.alpha.3),
+            )
+        };
 
         write!(w, "{}\n", fmt_rinex(&formatted, "IONOSPHERIC CORR"))?;
 
-        let formatted = format!(
-            "{}B  {} {} {} {}",
-            constellation,
-            NavFormatter::new_iono_alpha_beta(self.beta.0),
-            NavFormatter::new_iono_alpha_beta(self.beta.1),
-            NavFormatter::new_iono_alpha_beta(self.beta.2),
-            NavFormatter::new_iono_alpha_beta(self.beta.3),
-        );
+        // QZSS + IRNSS : truncated cases
+        let formatted = if constellation == Constellation::QZSS {
+            format!(
+                "QZSB  {} {} {} {}",
+                NavFormatter::new_iono_alpha_beta(self.beta.0),
+                NavFormatter::new_iono_alpha_beta(self.beta.1),
+                NavFormatter::new_iono_alpha_beta(self.beta.2),
+                NavFormatter::new_iono_alpha_beta(self.beta.3),
+            )
+        } else if constellation == Constellation::IRNSS {
+            format!(
+                "IRNB  {} {} {} {}",
+                NavFormatter::new_iono_alpha_beta(self.beta.0),
+                NavFormatter::new_iono_alpha_beta(self.beta.1),
+                NavFormatter::new_iono_alpha_beta(self.beta.2),
+                NavFormatter::new_iono_alpha_beta(self.beta.3),
+            )
+        } else {
+            format!(
+                "{:X}B  {} {} {} {}",
+                constellation,
+                NavFormatter::new_iono_alpha_beta(self.beta.0),
+                NavFormatter::new_iono_alpha_beta(self.beta.1),
+                NavFormatter::new_iono_alpha_beta(self.beta.2),
+                NavFormatter::new_iono_alpha_beta(self.beta.3),
+            )
+        };
 
         write!(w, "{}\n", fmt_rinex(&formatted, "IONOSPHERIC CORR"))?;
-
         Ok(())
     }
 }
