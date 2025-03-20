@@ -146,8 +146,6 @@ mod test {
 
     #[test]
     #[cfg(feature = "flate2")]
-    // TODO: PB at IONOCORR Nequick-G parsing &/or formatting
-    #[ignore]
     fn nav_v3() {
         let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/NAV/V3/";
         for file in std::fs::read_dir(folder).unwrap() {

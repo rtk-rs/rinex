@@ -254,7 +254,7 @@ mod test {
 
         let utf8_ascii = inner.to_ascii_utf8();
 
-        assert_eq!(&utf8_ascii, "E01 2023 01 01 00 00 00");
+        assert_eq!(&utf8_ascii, "01 23 01 01 00 00  0.0");
     }
 
     #[test]
