@@ -5,12 +5,41 @@ use std::io::{BufWriter, Write};
 use crate::{
     epoch::epoch_decompose as epoch_decomposition,
     error::FormattingError,
-    navigation::formatting::ascii::AsciiString,
     navigation::{NavFrame, NavFrameType, NavKey, Record},
     prelude::{Constellation, Header},
 };
 
-pub(crate) mod ascii;
+pub(crate) struct NavFormatter(f64);
+
+impl NavFormatter {
+    pub fn new(val: f64) -> Self {
+        Self(val)
+    }
+}
+
+impl std::fmt::Display for NavFormatter {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let value = self.0;
+        let sign_str = if value.is_sign_positive() { " " } else { "" };
+        let formatted = format!("{:15.12E}", value);
+
+        // reformat exponent
+        let parts = formatted.split('E').collect::<Vec<_>>();
+
+        if parts.len() == 2 {
+            let (base, exponent) = (parts[0], parts[1]);
+            let exp_sign = if exponent.starts_with('-') { "-" } else { "+" };
+            let exp_value = exponent
+                .trim_start_matches(&['+', '-'][..])
+                .parse::<i32>()
+                .unwrap();
+            let formatted_exponent = format!("{}{:02}", exp_sign, exp_value);
+            write!(f, "{}{}E{}", sign_str, base, formatted_exponent)
+        } else {
+            write!(f, "{}", formatted)
+        }
+    }
+}
 
 fn format_epoch_v2v3<W: Write>(
     w: &mut BufWriter<W>,
@@ -18,23 +47,28 @@ fn format_epoch_v2v3<W: Write>(
     v2: bool,
     file_constell: &Constellation,
 ) -> std::io::Result<()> {
-    let (yyyy, m, d, hh, mm, ss, _) = epoch_decomposition(k.epoch);
+    let (yyyy, m, d, hh, mm, ss, nanos) = epoch_decomposition(k.epoch);
+
+    let decis = nanos / 100_000;
 
     if v2 && *file_constell != Constellation::Mixed {
-        // single constell V2
-        // Constellation is omitted, only PRN#
+        write!(
+            w,
+            "{:02} {:02} {:02} {:02} {:02} {:02} {:2}.{:01}",
+            k.sv.prn,
+            yyyy - 2000,
+            m,
+            d,
+            hh,
+            mm,
+            ss,
+            decis
+        )
+    } else {
         write!(
             w,
             "{:x} {:04} {:02} {:02} {:02} {:02} {:02}",
             k.sv, yyyy, m, d, hh, mm, ss
-        )
-    } else {
-        // Mixed constell or modern NAV
-        // Constellation + PRN#
-        write!(
-            w,
-            "{:02} {:04} {:02} {:02} {:02} {:02} {:02}",
-            k.sv.prn, yyyy, m, d, hh, mm, ss
         )
     }
 }
@@ -87,8 +121,6 @@ pub fn format<W: Write>(
         .constellation
         .ok_or(FormattingError::NoConstellationDefinition)?;
 
-    let mut formatted_string = String::with_capacity(128);
-
     // in chronological order
     for epoch in rec.iter().map(|(k, _v)| k.epoch).unique().sorted() {
         // per sorted SV
@@ -126,16 +158,9 @@ pub fn format<W: Write>(
 
                     // format entry
                     match v {
-                        NavFrame::EPH(eph) => {
-                            eph.format(&mut formatted_string, k.sv, version, k.msgtype)?
-                        },
+                        NavFrame::EPH(eph) => eph.format(writer, k.sv, version, k.msgtype)?,
                         _ => {},
                     };
-
-                    let ascii = AsciiString::from_str(&formatted_string);
-                    write!(writer, "{}", ascii)?;
-
-                    formatted_string.clear();
                 }
             }
         }
@@ -146,12 +171,28 @@ pub fn format<W: Write>(
 #[cfg(test)]
 mod test {
 
-    use super::{format_epoch_v2v3, format_epoch_v4};
+    use super::{format_epoch_v2v3, format_epoch_v4, NavFormatter};
     use crate::navigation::{NavFrameType, NavKey, NavMessageType};
     use crate::prelude::{Constellation, Epoch, SV};
     use crate::tests::formatting::Utf8Buffer;
     use std::io::BufWriter;
     use std::str::FromStr;
+
+    #[test]
+    fn nav_formatter() {
+        for (value, expected) in [
+            (0.0, " 0.000000000000E+00"),
+            (1.0, " 1.000000000000E+00"),
+            (9.9, " 9.900000000000E+00"),
+            (-1.0, "-1.000000000000E+00"),
+            (-10.0, "-1.000000000000E+01"),
+            (-0.123, "-1.230000000000E-01"),
+            (0.123, " 1.230000000000E-01"),
+        ] {
+            let formatted = NavFormatter(value);
+            assert_eq!(formatted.to_string(), expected);
+        }
+    }
 
     #[test]
     fn nav_fmt_v2v3() {
