@@ -123,19 +123,25 @@ pub fn format<W: Write>(
 
     // in chronological order
     for epoch in rec.iter().map(|(k, _v)| k.epoch).unique().sorted() {
-        // per sorted SV
-        for sv in rec
+        // per sorted constellations
+        for constell in rec
             .iter()
-            .filter_map(|(k, _v)| if k.epoch == epoch { Some(k.sv) } else { None })
+            .filter_map(|(k, _v)| {
+                if k.epoch == epoch {
+                    Some(k.sv.constellation)
+                } else {
+                    None
+                }
+            })
             .unique()
             .sorted()
         {
-            // per sorted frame type
-            for frmtype in rec
+            // per sorted SV
+            for sv in rec
                 .iter()
                 .filter_map(|(k, _v)| {
-                    if k.epoch == epoch && k.sv == sv {
-                        Some(k.frmtype)
+                    if k.epoch == epoch && k.sv.constellation == constell {
+                        Some(k.sv)
                     } else {
                         None
                     }
@@ -143,24 +149,38 @@ pub fn format<W: Write>(
                 .unique()
                 .sorted()
             {
-                // format this entry
-                if let Some((k, v)) = rec
+                // per sorted frame type
+                for frmtype in rec
                     .iter()
-                    .filter(|(k, _v)| k.epoch == epoch && k.sv == sv && k.frmtype == frmtype)
-                    .reduce(|k, _| k)
+                    .filter_map(|(k, _v)| {
+                        if k.epoch == epoch && k.sv == sv {
+                            Some(k.frmtype)
+                        } else {
+                            None
+                        }
+                    })
+                    .unique()
+                    .sorted()
                 {
-                    // format epoch
-                    if v4 {
-                        format_epoch_v4(writer, k)?;
-                    } else {
-                        format_epoch_v2v3(writer, k, v2, &file_constell)?;
-                    }
+                    // format this entry
+                    if let Some((k, v)) = rec
+                        .iter()
+                        .filter(|(k, _v)| k.epoch == epoch && k.sv == sv && k.frmtype == frmtype)
+                        .reduce(|k, _| k)
+                    {
+                        // format epoch
+                        if v4 {
+                            format_epoch_v4(writer, k)?;
+                        } else {
+                            format_epoch_v2v3(writer, k, v2, &file_constell)?;
+                        }
 
-                    // format entry
-                    match v {
-                        NavFrame::EPH(eph) => eph.format(writer, k.sv, version, k.msgtype)?,
-                        _ => {},
-                    };
+                        // format entry
+                        match v {
+                            NavFrame::EPH(eph) => eph.format(writer, k.sv, version, k.msgtype)?,
+                            _ => {},
+                        };
+                    }
                 }
             }
         }
