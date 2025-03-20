@@ -1,9 +1,13 @@
 use crate::{
     epoch::parse_in_timescale as parse_epoch_in_timescale,
+    error::FormattingError,
     prelude::{Epoch, ParsingError, TimeScale},
 };
 
-use std::str::FromStr;
+use std::{
+    io::{BufWriter, Write},
+    str::FromStr,
+};
 
 /// BDGIM Model payload
 #[derive(Debug, Copy, Clone, Default, PartialEq, PartialOrd)]
@@ -58,8 +62,4 @@ impl BdModel {
 
         Ok((epoch, Self { alpha }))
     }
-    // /* converts self to meters of delay */
-    // pub(crate) fn meters_delay(&self, freq: f64) -> f64 {
-    //     0.0_f64
-    // }
 }

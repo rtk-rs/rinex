@@ -1,5 +1,7 @@
 //! RINEX header formatting
 
+use gnss::constellation;
+
 use crate::{
     fmt_comment, fmt_rinex,
     header::Header,
@@ -13,6 +15,8 @@ impl Header {
     /// Formats [Header] into [Write]able interface, using efficient buffering.
     pub fn format<W: Write>(&self, w: &mut BufWriter<W>) -> Result<(), FormattingError> {
         const NUM_GLO_CHANNELS_PER_LINE: usize = 8;
+
+        let major = self.version.major;
 
         if let Some(obs) = &self.obs {
             if let Some(crinex) = &obs.crinex {
@@ -90,6 +94,21 @@ impl Header {
                 "GLONASS SLOT / FRQ #",
                 width = 79 - 9 - (modulo + 1) * 6
             )?;
+        }
+
+        // KB model
+        for (index, (constellation, model)) in self.ionod_corrections.iter().enumerate() {
+            if let Some(kb) = model.as_klobuchar() {
+                if major == 2 && index == 0 {
+                    kb.format_v2_header(w)?;
+                } else if major == 3 {
+                    kb.format_v3_header(w, *constellation)?;
+                }
+            } else if let Some(ng) = model.as_nequick_g() {
+                if major == 3 {
+                    ng.format_header(w, constellation)?;
+                }
+            }
         }
 
         //TODO
