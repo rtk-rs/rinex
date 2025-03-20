@@ -1,11 +1,17 @@
 use crate::{
     epoch::parse_in_timescale as parse_epoch_in_timescale,
-    prelude::{Epoch, ParsingError, TimeScale},
+    error::FormattingError,
+    fmt_rinex,
+    navigation::formatting::NavFormatter,
+    prelude::{Constellation, Epoch, ParsingError, TimeScale},
 };
 
 use bitflags::bitflags;
 
-use std::str::FromStr;
+use std::{
+    io::{BufWriter, Write},
+    str::FromStr,
+};
 
 bitflags! {
     #[derive(Debug, Default, Clone, Copy)]
@@ -69,6 +75,26 @@ impl NgModel {
     // pub(crate) fn meters_delay(&self, freq: f64) -> f64 {
     //     0.0_f64
     // }
+
+    /// Format this [NgModel] for a V3 [Constellation] header.
+    pub fn format_header<W: Write>(
+        &self,
+        w: &mut BufWriter<W>,
+        constellation: &Constellation,
+    ) -> Result<(), FormattingError> {
+        let formatted = format!(
+            "{:X}   {} {} {} {}",
+            constellation,
+            NavFormatter::new_iono_alpha_beta(self.a.0),
+            NavFormatter::new_iono_alpha_beta(self.a.1),
+            NavFormatter::new_iono_alpha_beta(self.a.2),
+            NavFormatter::new_iono_alpha_beta(self.region.bits() as f64),
+        );
+
+        write!(w, "{}\n", fmt_rinex(&formatted, "IONOSPHERIC CORR"))?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

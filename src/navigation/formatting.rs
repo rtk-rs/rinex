@@ -5,17 +5,93 @@ use std::io::{BufWriter, Write};
 use crate::{
     epoch::epoch_decompose as epoch_decomposition,
     error::FormattingError,
-    navigation::{NavFrameType, NavKey, Record},
-    prelude::Header,
+    navigation::{NavFrame, NavFrameType, NavKey, Record},
+    prelude::{Constellation, Header},
 };
 
-fn format_epoch_v2v3<W: Write>(w: &mut BufWriter<W>, k: &NavKey) -> std::io::Result<()> {
-    let (yyyy, m, d, hh, mm, ss, _) = epoch_decomposition(k.epoch);
-    write!(
-        w,
-        "{:x} {:04} {:02} {:02} {:02} {:02} {:02}",
-        k.sv, yyyy, m, d, hh, mm, ss
-    )
+pub(crate) struct NavFormatter {
+    value: f64,
+    width: usize,
+    precision: usize,
+}
+
+impl NavFormatter {
+    pub fn new(value: f64) -> Self {
+        Self {
+            value,
+            width: 15,
+            precision: 12,
+        }
+    }
+
+    pub fn new_iono_alpha_beta(value: f64) -> Self {
+        Self {
+            value,
+            width: 3,
+            precision: 4,
+        }
+    }
+}
+
+impl std::fmt::Display for NavFormatter {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let value = self.value;
+        let sign_str = if value.is_sign_positive() { " " } else { "" };
+        let formatted = format!(
+            "{:width$.precision$E}",
+            value,
+            width = self.width,
+            precision = self.precision
+        );
+
+        // reformat exponent
+        let parts = formatted.split('E').collect::<Vec<_>>();
+
+        if parts.len() == 2 {
+            let (base, exponent) = (parts[0], parts[1]);
+            let exp_sign = if exponent.starts_with('-') { "-" } else { "+" };
+            let exp_value = exponent
+                .trim_start_matches(&['+', '-'][..])
+                .parse::<i32>()
+                .unwrap();
+            let formatted_exponent = format!("{}{:02}", exp_sign, exp_value);
+            write!(f, "{}{}E{}", sign_str, base, formatted_exponent)
+        } else {
+            write!(f, "{}", formatted)
+        }
+    }
+}
+
+fn format_epoch_v2v3<W: Write>(
+    w: &mut BufWriter<W>,
+    k: &NavKey,
+    v2: bool,
+    file_constell: &Constellation,
+) -> std::io::Result<()> {
+    let (yyyy, m, d, hh, mm, ss, nanos) = epoch_decomposition(k.epoch);
+
+    let decis = nanos / 100_000;
+
+    if v2 && *file_constell != Constellation::Mixed {
+        write!(
+            w,
+            "{:02} {:02} {:02} {:02} {:02} {:02} {:2}.{:01}",
+            k.sv.prn,
+            yyyy - 2000,
+            m,
+            d,
+            hh,
+            mm,
+            ss,
+            decis
+        )
+    } else {
+        write!(
+            w,
+            "{:x} {:04} {:02} {:02} {:02} {:02} {:02}",
+            k.sv, yyyy, m, d, hh, mm, ss
+        )
+    }
 }
 
 fn format_epoch_v4<W: Write>(w: &mut BufWriter<W>, k: &NavKey) -> std::io::Result<()> {
@@ -52,76 +128,41 @@ fn format_epoch_v4<W: Write>(w: &mut BufWriter<W>, k: &NavKey) -> std::io::Resul
     }
 }
 
-// /*
-//  * When formatting floating point number in Navigation RINEX,
-//  * exponent are expected to be in the %02d form,
-//  * but Rust is only capable of formating %d (AFAIK).
-//  * With this macro, we simply rework all exponents encountered in a string
-//  */
-// fn double_exponent_digits(content: &str) -> String {
-//     // replace "eN " with "E+0N"
-//     let re = Regex::new(r"e\d{1} ").unwrap();
-//     let lines = re.replace_all(content, |caps: &Captures| format!("E+0{}", &caps[0][1..]));
-//
-//     // replace "eN" with "E+0N"
-//     let re = Regex::new(r"e\d{1}").unwrap();
-//     let lines = re.replace_all(&lines, |caps: &Captures| format!("E+0{}", &caps[0][1..]));
-//
-//     // replace "e-N " with "E-0N"
-//     let re = Regex::new(r"e-\d{1} ").unwrap();
-//     let lines = re.replace_all(&lines, |caps: &Captures| format!("E-0{}", &caps[0][2..]));
-//
-//     // replace "e-N" with "e-0N"
-//     let re = Regex::new(r"e-\d{1}").unwrap();
-//     let lines = re.replace_all(&lines, |caps: &Captures| format!("E-0{}", &caps[0][2..]));
-//
-//     lines.to_string()
-// }
-
-// /*
-//  * Reworks generated/formatted line to match standards
-//  */
-// fn fmt_rework(major: u8, lines: &str) -> String {
-//     /*
-//      * There's an issue when formatting the exponent 00 in XXXXX.E00
-//      * Rust does not know how to format an exponent on multiples digits,
-//      * and RINEX expects two.
-//      * If we try to rework this line, it may corrupt some SVNN fields.
-//      */
-//     let mut lines = double_exponent_digits(lines);
-//
-//     if major < 3 {
-//         /*
-//          * In old RINEX, D+00 D-01 is used instead of E+00 E-01
-//          */
-//         lines = lines.replace("E-", "D-");
-//         lines = lines.replace("E+", "D+");
-//     }
-//     lines.to_string()
-// }
-
 pub fn format<W: Write>(
     writer: &mut BufWriter<W>,
     rec: &Record,
     header: &Header,
 ) -> Result<(), FormattingError> {
-    let v4 = header.version.major > 3;
+    let version = header.version;
 
-    // timeframe in chronological order
+    let v2 = version.major < 3;
+    let v4 = version.major > 3;
+
+    let file_constell = header
+        .constellation
+        .ok_or(FormattingError::NoConstellationDefinition)?;
+
+    // in chronological order
     for epoch in rec.iter().map(|(k, _v)| k.epoch).unique().sorted() {
-        // per SV sorted
-        for sv in rec
+        // per sorted constellations
+        for constell in rec
             .iter()
-            .filter_map(|(k, _v)| if k.epoch == epoch { Some(k.sv) } else { None })
+            .filter_map(|(k, _v)| {
+                if k.epoch == epoch {
+                    Some(k.sv.constellation)
+                } else {
+                    None
+                }
+            })
             .unique()
             .sorted()
         {
-            // per sorted frame type
-            for frmtype in rec
+            // per sorted SV
+            for sv in rec
                 .iter()
                 .filter_map(|(k, _v)| {
-                    if k.epoch == epoch && k.sv == sv {
-                        Some(k.frmtype)
+                    if k.epoch == epoch && k.sv.constellation == constell {
+                        Some(k.sv)
                     } else {
                         None
                     }
@@ -129,20 +170,37 @@ pub fn format<W: Write>(
                 .unique()
                 .sorted()
             {
-                if let Some((k, v)) = rec
+                // per sorted frame type
+                for frmtype in rec
                     .iter()
-                    .filter(|(k, _v)| k.epoch == epoch && k.sv == sv && k.frmtype == frmtype)
-                    .reduce(|k, _| k)
+                    .filter_map(|(k, _v)| {
+                        if k.epoch == epoch && k.sv == sv {
+                            Some(k.frmtype)
+                        } else {
+                            None
+                        }
+                    })
+                    .unique()
+                    .sorted()
                 {
-                    if v4 {
-                        format_epoch_v4(writer, k)?;
-                    } else {
-                        format_epoch_v2v3(writer, k)?;
-                    }
-                    if let Some(eph) = v.as_ephemeris() {
-                    } else if let Some(eop) = v.as_earth_orientation() {
-                    } else if let Some(sto) = v.as_system_time() {
-                    } else if let Some(ion) = v.as_ionosphere_model() {
+                    // format this entry
+                    if let Some((k, v)) = rec
+                        .iter()
+                        .filter(|(k, _v)| k.epoch == epoch && k.sv == sv && k.frmtype == frmtype)
+                        .reduce(|k, _| k)
+                    {
+                        // format epoch
+                        if v4 {
+                            format_epoch_v4(writer, k)?;
+                        } else {
+                            format_epoch_v2v3(writer, k, v2, &file_constell)?;
+                        }
+
+                        // format entry
+                        match v {
+                            NavFrame::EPH(eph) => eph.format(writer, k.sv, version, k.msgtype)?,
+                            _ => {},
+                        };
                     }
                 }
             }
@@ -154,15 +212,32 @@ pub fn format<W: Write>(
 #[cfg(test)]
 mod test {
 
-    use super::{format_epoch_v2v3, format_epoch_v4};
+    use super::{format_epoch_v2v3, format_epoch_v4, NavFormatter};
     use crate::navigation::{NavFrameType, NavKey, NavMessageType};
-    use crate::prelude::{Epoch, SV};
+    use crate::prelude::{Constellation, Epoch, SV};
     use crate::tests::formatting::Utf8Buffer;
     use std::io::BufWriter;
     use std::str::FromStr;
 
     #[test]
+    fn nav_formatter() {
+        for (value, expected) in [
+            (0.0, " 0.000000000000E+00"),
+            (1.0, " 1.000000000000E+00"),
+            (9.9, " 9.900000000000E+00"),
+            (-1.0, "-1.000000000000E+00"),
+            (-10.0, "-1.000000000000E+01"),
+            (-0.123, "-1.230000000000E-01"),
+            (0.123, " 1.230000000000E-01"),
+        ] {
+            let formatted = NavFormatter::new(value);
+            assert_eq!(formatted.to_string(), expected);
+        }
+    }
+
+    #[test]
     fn nav_fmt_v2v3() {
+        let gal = Constellation::Galileo;
         let buf = Utf8Buffer::new(1024);
         let mut writer = BufWriter::new(buf);
 
@@ -173,13 +248,13 @@ mod test {
             msgtype: NavMessageType::from_str("LNAV").unwrap(),
         };
 
-        format_epoch_v2v3(&mut writer, &key).unwrap();
+        format_epoch_v2v3(&mut writer, &key, true, &gal).unwrap();
 
         let inner = writer.into_inner().unwrap();
 
         let utf8_ascii = inner.to_ascii_utf8();
 
-        assert_eq!(&utf8_ascii, "E01 2023 01 01 00 00 00");
+        assert_eq!(&utf8_ascii, "01 23 01 01 00 00  0.0");
     }
 
     #[test]

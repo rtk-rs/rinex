@@ -173,6 +173,8 @@ pub enum FormattingError {
     OutputError(#[from] IoError),
     #[error("missing constellation information")]
     NoConstellationDefinition,
+    #[error("missing navigation standard specs")]
+    MissingNavigationStandards,
     #[error("undefined observables")]
     UndefinedObservables,
     #[error("missing observable definition")]

@@ -95,11 +95,12 @@ use flate2::{read::GzDecoder, write::GzEncoder, Compression as GzCompression};
 #[cfg(feature = "clock")]
 use std::collections::BTreeMap;
 
-use epoch::epoch_decompose;
-use hatanaka::CRINEX;
-use observable::Observable;
-
-use production::{DataSource, DetailedProductionAttributes, ProductionAttributes, FFU, PPU};
+use crate::{
+    epoch::epoch_decompose,
+    hatanaka::CRINEX,
+    observable::Observable,
+    production::{DataSource, DetailedProductionAttributes, ProductionAttributes, FFU, PPU},
+};
 
 /// Package to include all basic structures
 pub mod prelude {

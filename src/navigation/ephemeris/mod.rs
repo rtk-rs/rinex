@@ -1,3 +1,4 @@
+mod formatting;
 mod parsing;
 
 #[cfg(feature = "log")]
