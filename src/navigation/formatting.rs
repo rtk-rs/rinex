@@ -9,19 +9,40 @@ use crate::{
     prelude::{Constellation, Header},
 };
 
-pub(crate) struct NavFormatter(f64);
+pub(crate) struct NavFormatter {
+    value: f64,
+    width: usize,
+    precision: usize,
+}
 
 impl NavFormatter {
-    pub fn new(val: f64) -> Self {
-        Self(val)
+    pub fn new(value: f64) -> Self {
+        Self {
+            value,
+            width: 15,
+            precision: 12,
+        }
+    }
+
+    pub fn new_iono_alpha_beta(value: f64) -> Self {
+        Self {
+            value,
+            width: 3,
+            precision: 4,
+        }
     }
 }
 
 impl std::fmt::Display for NavFormatter {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let value = self.0;
+        let value = self.value;
         let sign_str = if value.is_sign_positive() { " " } else { "" };
-        let formatted = format!("{:15.12E}", value);
+        let formatted = format!(
+            "{:width$.precision$E}",
+            value,
+            width = self.width,
+            precision = self.precision
+        );
 
         // reformat exponent
         let parts = formatted.split('E').collect::<Vec<_>>();
@@ -209,7 +230,7 @@ mod test {
             (-0.123, "-1.230000000000E-01"),
             (0.123, " 1.230000000000E-01"),
         ] {
-            let formatted = NavFormatter(value);
+            let formatted = NavFormatter::new(value);
             assert_eq!(formatted.to_string(), expected);
         }
     }
