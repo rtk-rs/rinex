@@ -206,18 +206,26 @@ impl KbModel {
         constellation: &Constellation,
     ) -> Result<(), FormattingError> {
         let formatted = format!(
-            "{}A   {:.5E} {:.5E} {:.5E} {:5} ",
-            constellation, self.alpha.0, self.alpha.1, self.alpha.2, self.alpha.3,
+            "{}A  {} {} {} {}",
+            constellation,
+            NavFormatter::new_iono_alpha_beta(self.alpha.0),
+            NavFormatter::new_iono_alpha_beta(self.alpha.1),
+            NavFormatter::new_iono_alpha_beta(self.alpha.2),
+            NavFormatter::new_iono_alpha_beta(self.alpha.3),
         );
 
-        write!(w, "{}", fmt_rinex(&formatted, "IONOSPHERIC CORR"))?;
+        write!(w, "{}\n", fmt_rinex(&formatted, "IONOSPHERIC CORR"))?;
 
         let formatted = format!(
-            "{}B   {:.5E} {:.5E} {:.5E} {:5} ",
-            constellation, self.beta.0, self.beta.1, self.beta.2, self.beta.3,
+            "{}B  {} {} {} {}",
+            constellation,
+            NavFormatter::new_iono_alpha_beta(self.beta.0),
+            NavFormatter::new_iono_alpha_beta(self.beta.1),
+            NavFormatter::new_iono_alpha_beta(self.beta.2),
+            NavFormatter::new_iono_alpha_beta(self.beta.3),
         );
 
-        write!(w, "{}", fmt_rinex(&formatted, "IONOSPHERIC CORR"))?;
+        write!(w, "{}\n", fmt_rinex(&formatted, "IONOSPHERIC CORR"))?;
 
         Ok(())
     }
