@@ -18,13 +18,13 @@ mod station;
 pub(crate) use formatting::format;
 pub(crate) use parsing::{is_new_epoch, parse_epoch};
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod decim;
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod mask;
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod repair;
 
 pub use header::HeaderFields;

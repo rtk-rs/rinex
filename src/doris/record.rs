@@ -11,7 +11,7 @@ use crate::{
     prelude::TimeScale,
 };
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 use qc_traits::{DecimationFilter, DecimationFilterType, FilterItem, MaskFilter, MaskOperand};
 
 #[cfg(feature = "serde")]
@@ -175,7 +175,7 @@ pub(crate) fn parse_epoch(
     Ok(((epoch, flag), buffer))
 }
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) fn doris_mask_mut(rec: &mut Record, mask: &MaskFilter) {
     match mask.operand {
         MaskOperand::Equals => match &mask.item {
@@ -208,7 +208,7 @@ pub(crate) fn doris_mask_mut(rec: &mut Record, mask: &MaskFilter) {
     }
 }
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) fn doris_decim_mut(rec: &mut Record, f: &DecimationFilter) {
     if f.item.is_some() {
         todo!("targetted decimation not supported yet");

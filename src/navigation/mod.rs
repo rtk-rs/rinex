@@ -26,13 +26,13 @@ pub use crate::navigation::{
     system_time::SystemTime,
 };
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod mask; // mask Trait implementation
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod decim; // decim Trait implementation
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod repair; // repair Trait implementation
 
 #[cfg(feature = "serde")]

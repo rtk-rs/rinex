@@ -7,7 +7,7 @@ use crate::{
     prelude::{Epoch, ParsingError, TimeScale, Version, SV},
 };
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 use qc_traits::{DecimationFilter, DecimationFilterType, FilterItem, MaskFilter, MaskOperand};
 
 /// [`ClockKey`] describes each [`ClockProfile`] at a specific [Epoch].
@@ -309,7 +309,7 @@ pub(crate) fn fmt_epoch(epoch: &Epoch, key: &ClockKey, prof: &ClockProfile) -> S
     lines
 }
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) fn clock_mask_mut(rec: &mut Record, mask: &MaskFilter) {
     match mask.operand {
         MaskOperand::Equals => match &mask.item {
@@ -351,7 +351,7 @@ pub(crate) fn clock_mask_mut(rec: &mut Record, mask: &MaskFilter) {
     }
 }
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) fn clock_decim_mut(rec: &mut Record, f: &DecimationFilter) {
     if f.item.is_some() {
         todo!("targetted decimation not supported yet");

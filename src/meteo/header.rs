@@ -9,7 +9,7 @@ use crate::prelude::FormattingError;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 use qc_traits::{FilterItem, MaskFilter, MaskOperand};
 
 use crate::{meteo::Sensor, prelude::Observable};
@@ -63,7 +63,7 @@ impl HeaderFields {
     }
 }
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 impl HeaderFields {
     pub(crate) fn mask_mut(&mut self, f: &MaskFilter) {
         match f.operand {

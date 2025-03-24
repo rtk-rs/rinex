@@ -14,13 +14,13 @@ use std::collections::BTreeMap;
 pub(crate) use formatting::format;
 pub(crate) use parsing::{is_new_epoch, parse_epoch};
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod mask; // mask Trait implementation
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod decim; // decim Trait implementation
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) mod repair; // repair Trait implementation
 
 #[cfg(feature = "serde")]

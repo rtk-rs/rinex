@@ -13,22 +13,22 @@ mod rinex;
 mod system;
 mod tec;
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 mod decim;
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 mod mask;
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 mod repair;
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) use decim::decim_mut;
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) use mask::mask_mut;
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 pub(crate) use repair::repair_mut;
 
 pub use coordinates::QuantizedCoordinates;

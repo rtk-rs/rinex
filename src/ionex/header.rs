@@ -15,10 +15,10 @@ use std::{
     io::{BufWriter, Write},
 };
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 use qc_traits::{FilterItem, MaskFilter, MaskOperand};
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 use crate::prelude::TimeScale;
 
 /// IONEX specific [HeaderFields]
@@ -305,7 +305,7 @@ impl HeaderFields {
     }
 }
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 impl HeaderFields {
     /// Modifies [HeaderFields] by applying [MaskFilter] with mutable access.
     pub(crate) fn mask_mut(&mut self, f: &MaskFilter) {

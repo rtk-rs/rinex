@@ -204,10 +204,10 @@ pub mod prod {
 use carrier::Carrier;
 use prelude::*;
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 use qc_traits::{MaskFilter, Masking};
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 use crate::{
     clock::record::clock_mask_mut, doris::mask::mask_mut as doris_mask_mut,
     header::processing::header_mask_mut, ionex::mask_mut as ionex_mask_mut,
@@ -1310,8 +1310,8 @@ impl Rinex {
     }
 }
 
-#[cfg(feature = "processing")]
-#[cfg_attr(docsrs, doc(cfg(feature = "processing")))]
+#[cfg(feature = "qc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "qc")))]
 impl Masking for Rinex {
     fn mask(&self, f: &MaskFilter) -> Self {
         let mut s = self.clone();

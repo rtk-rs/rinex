@@ -13,10 +13,10 @@ use std::{
 
 use itertools::Itertools;
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 use std::str::FromStr;
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 use qc_traits::{FilterItem, MaskFilter, MaskOperand};
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -198,7 +198,7 @@ impl HeaderFields {
     }
 }
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "qc")]
 impl HeaderFields {
     /// Modifies in place Self, when applying preprocessing filter ops
     pub(crate) fn mask_mut(&mut self, f: &MaskFilter) {
