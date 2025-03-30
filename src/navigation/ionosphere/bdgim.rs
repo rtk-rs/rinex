@@ -1,13 +1,9 @@
 use crate::{
     epoch::parse_in_timescale as parse_epoch_in_timescale,
-    error::FormattingError,
     prelude::{Epoch, ParsingError, TimeScale},
 };
 
-use std::{
-    io::{BufWriter, Write},
-    str::FromStr,
-};
+use std::str::FromStr;
 
 /// BDGIM Model payload
 #[derive(Debug, Copy, Clone, Default, PartialEq, PartialOrd)]

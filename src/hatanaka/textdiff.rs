@@ -70,7 +70,6 @@ impl TextDiff {
     pub fn compress(&mut self, data: &str) -> &str {
         let len = data.len();
         let mut buf_len = self.buffer.len();
-        let min_len = std::cmp::min(len, buf_len);
 
         if buf_len > len {
             // special case: shrink history
@@ -87,7 +86,7 @@ impl TextDiff {
 
             while let Some(buffered) = buffered.next() {
                 let byte = bytes.next().unwrap();
-                let mut compressed = compressed.next().unwrap();
+                let compressed = compressed.next().unwrap();
                 if byte == buffered {
                     *compressed = b' ';
                 } else {
