@@ -384,11 +384,6 @@ fn parse_signals_v2(
                     Ok(unsigned) => {
                         lli = LliFlags::from_bits(unsigned);
                     },
-                    #[cfg(feature = "log")]
-                    Err(e) => {
-                        //error!("parse_sig(v2) - lli: {}", e);
-                    },
-                    #[cfg(not(feature = "log"))]
                     Err(_) => {},
                 }
             }
