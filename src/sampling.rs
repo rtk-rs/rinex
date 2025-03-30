@@ -179,11 +179,11 @@ impl Rinex {
 }
 
 #[cfg(test)]
+#[cfg(feature = "flate2")]
 mod test {
     use crate::prelude::Rinex;
 
     #[test]
-    #[cfg(feature = "flate2")]
     fn glacier_20240506_dominant_sample_rate() {
         let rnx = Rinex::from_gzip_file(format!(
             "{}/data/OBS/V3/240506_glacier_station.obs.gz",

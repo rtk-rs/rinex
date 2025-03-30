@@ -42,8 +42,8 @@ pub fn format<W: Write>(
         grid.longitude.spacing,
     );
 
-    let mut nth_map = 0;
-    let mut has_h = false;
+    let nth_map = 0;
+    let has_h = false;
     let mut has_rms = false;
 
     for t in record.keys().map(|k| k.epoch).unique().sorted() {

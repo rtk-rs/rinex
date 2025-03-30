@@ -1,7 +1,5 @@
 //! RINEX header formatting
 
-use gnss::constellation;
-
 use crate::{
     fmt_comment, fmt_rinex,
     header::Header,
