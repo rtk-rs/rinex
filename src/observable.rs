@@ -118,10 +118,143 @@ impl Observable {
         }
     }
 
-    /// Tries to reconstruct a [Carrier] signal from this [Observable].
-    /// This will work if our database knows this [Self::code].
-    pub fn carrier(&self, c: Constellation) -> Result<Carrier, Error> {
+    /// Tries to convert into [Carrier] frequency.
+    pub fn to_carrier(&self, c: Constellation) -> Result<Carrier, Error> {
         Carrier::from_observable(c, self)
+    }
+
+    /// Tries to create a Pseudo Range [Observable] from
+    /// provided signal frequency in MHz and provided [Constellation].
+    /// This requires a 1kHz accuracy on given frequency.
+    pub fn from_pseudo_range_frequency_mega_hz(
+        constellation: Constellation,
+        freq_mhz: f64,
+    ) -> Result<Self, Error> {
+        let carrier = Carrier::from_frequency_mega_hz(freq_mhz)?;
+
+        match constellation {
+            Constellation::GPS => match carrier {
+                Carrier::L1 => return Ok(Self::PseudoRange("C1C".to_string())),
+                Carrier::L2 => return Ok(Self::PseudoRange("C2C".to_string())),
+                Carrier::L5 => return Ok(Self::PseudoRange("C5X".to_string())),
+                _ => return Err(Error::UnknownGPSFrequency),
+            },
+            Constellation::Galileo => match carrier {
+                Carrier::L1 => return Ok(Self::PseudoRange("C1C".to_string())),
+                Carrier::L5 => return Ok(Self::PseudoRange("C5X".to_string())),
+                Carrier::E6 => return Ok(Self::PseudoRange("C6X".to_string())),
+                Carrier::E5b => return Ok(Self::PseudoRange("C7X".to_string())),
+                Carrier::E5a5b => return Ok(Self::PseudoRange("C8X".to_string())),
+                _ => return Err(Error::UnknownGalileoFrequency),
+            },
+            Constellation::QZSS => match carrier {
+                Carrier::L1 => return Ok(Self::PseudoRange("C1C".to_string())),
+                Carrier::L2 => return Ok(Self::PseudoRange("C2X".to_string())),
+                Carrier::L5 => return Ok(Self::PseudoRange("C5X".to_string())),
+                Carrier::E6 => return Ok(Self::PseudoRange("C6X".to_string())),
+                _ => return Err(Error::UnknownQzssFrequency),
+            },
+            Constellation::BeiDou => match carrier {
+                Carrier::B1 => return Ok(Self::PseudoRange("C2X".to_string())),
+                Carrier::L1 => return Ok(Self::PseudoRange("C1X".to_string())),
+                Carrier::L5 => return Ok(Self::PseudoRange("C5X".to_string())),
+                Carrier::E5b => return Ok(Self::PseudoRange("C7X".to_string())),
+                Carrier::E5a5b => return Ok(Self::PseudoRange("C8X".to_string())),
+                Carrier::B3 => return Ok(Self::PseudoRange("C6X".to_string())),
+                _ => return Err(Error::UnknownBDSFrequency),
+            },
+            Constellation::Glonass => match carrier {
+                Carrier::G1(_) => return Ok(Self::PseudoRange("C1C".to_string())),
+                Carrier::G2(_) => return Ok(Self::PseudoRange("C2X".to_string())),
+                Carrier::G3 => return Ok(Self::PseudoRange("C3X".to_string())),
+                Carrier::G1a => return Ok(Self::PseudoRange("C4X".to_string())),
+                Carrier::G2a => return Ok(Self::PseudoRange("C6X".to_string())),
+                _ => return Err(Error::UnknownGlonassFrequency),
+            },
+            Constellation::IRNSS => match carrier {
+                Carrier::L5 => return Ok(Self::PseudoRange("C5X".to_string())),
+                Carrier::S => return Ok(Self::PseudoRange("C9X".to_string())),
+                _ => return Err(Error::UnknownIRNSSFrequency),
+            },
+            _ => {},
+        }
+
+        if constellation.is_sbas() {
+            match carrier {
+                Carrier::L1 => Ok(Self::PseudoRange("C1C".to_string())),
+                Carrier::L5 => Ok(Self::PseudoRange("C5X".to_string())),
+                _ => Err(Error::UnknownSBASFrequency),
+            }
+        } else {
+            Err(Error::UnknownFrequency)
+        }
+    }
+
+    /// Tries to create a Phase Range [Observable] from
+    /// provided signal frequency in MHz and provided [Constellation].
+    /// This requires a 1kHz accuracy on given frequency.
+    pub fn from_phase_range_frequency_mega_hz(
+        constellation: Constellation,
+        freq_mhz: f64,
+    ) -> Result<Self, Error> {
+        let carrier = Carrier::from_frequency_mega_hz(freq_mhz)?;
+
+        match constellation {
+            Constellation::GPS => match carrier {
+                Carrier::L1 => return Ok(Self::PhaseRange("L1C".to_string())),
+                Carrier::L2 => return Ok(Self::PhaseRange("L2C".to_string())),
+                Carrier::L5 => return Ok(Self::PhaseRange("L5X".to_string())),
+                _ => return Err(Error::UnknownGPSFrequency),
+            },
+            Constellation::Galileo => match carrier {
+                Carrier::L1 => return Ok(Self::PhaseRange("L1C".to_string())),
+                Carrier::L5 => return Ok(Self::PhaseRange("L5X".to_string())),
+                Carrier::E6 => return Ok(Self::PhaseRange("L6X".to_string())),
+                Carrier::E5b => return Ok(Self::PhaseRange("L7X".to_string())),
+                Carrier::E5a5b => return Ok(Self::PhaseRange("L8X".to_string())),
+                _ => return Err(Error::UnknownGalileoFrequency),
+            },
+            Constellation::QZSS => match carrier {
+                Carrier::L1 => return Ok(Self::PhaseRange("L1C".to_string())),
+                Carrier::L2 => return Ok(Self::PhaseRange("L2X".to_string())),
+                Carrier::L5 => return Ok(Self::PhaseRange("L5X".to_string())),
+                Carrier::E6 => return Ok(Self::PhaseRange("L6X".to_string())),
+                _ => return Err(Error::UnknownQzssFrequency),
+            },
+            Constellation::BeiDou => match carrier {
+                Carrier::B1 => return Ok(Self::PhaseRange("L2X".to_string())),
+                Carrier::L1 => return Ok(Self::PhaseRange("L1X".to_string())),
+                Carrier::L5 => return Ok(Self::PhaseRange("L5X".to_string())),
+                Carrier::E5b => return Ok(Self::PhaseRange("L7X".to_string())),
+                Carrier::E5a5b => return Ok(Self::PhaseRange("L8X".to_string())),
+                Carrier::B3 => return Ok(Self::PhaseRange("L6X".to_string())),
+                _ => return Err(Error::UnknownBDSFrequency),
+            },
+            Constellation::Glonass => match carrier {
+                Carrier::G1(_) => return Ok(Self::PhaseRange("L1C".to_string())),
+                Carrier::G2(_) => return Ok(Self::PhaseRange("L2X".to_string())),
+                Carrier::G3 => return Ok(Self::PhaseRange("L3X".to_string())),
+                Carrier::G1a => return Ok(Self::PhaseRange("L4X".to_string())),
+                Carrier::G2a => return Ok(Self::PhaseRange("L6X".to_string())),
+                _ => return Err(Error::UnknownGlonassFrequency),
+            },
+            Constellation::IRNSS => match carrier {
+                Carrier::L5 => return Ok(Self::PhaseRange("L5X".to_string())),
+                Carrier::S => return Ok(Self::PhaseRange("L9X".to_string())),
+                _ => return Err(Error::UnknownIRNSSFrequency),
+            },
+            _ => {},
+        }
+
+        if constellation.is_sbas() {
+            match carrier {
+                Carrier::L1 => Ok(Self::PhaseRange("L1C".to_string())),
+                Carrier::L5 => Ok(Self::PhaseRange("L5X".to_string())),
+                _ => Err(Error::UnknownSBASFrequency),
+            }
+        } else {
+            Err(Error::UnknownFrequency)
+        }
     }
 
     /// Returns the code length (repetition period), expressed in seconds,
@@ -313,7 +446,7 @@ impl Observable {
     /// used in signal combinations
     pub(crate) fn is_l1_pivot(&self, constellation: Constellation) -> bool {
         if self.is_phase_range_observable() || self.is_pseudo_range_observable() {
-            if let Ok(carrier) = self.carrier(constellation) {
+            if let Ok(carrier) = self.to_carrier(constellation) {
                 matches!(
                     carrier,
                     Carrier::L1

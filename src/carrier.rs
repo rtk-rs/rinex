@@ -168,32 +168,61 @@ impl std::str::FromStr for Carrier {
 }
 
 impl Carrier {
-    /// Returns frequency associated to this channel in MHz
+    /// Returns [Carrier] frequency in Hz with 1kHz accuracy.
     pub fn frequency(&self) -> f64 {
         self.frequency_mega_hz() * 1.0E6
     }
 
+    /// Returns [Carrier] frequency in MHz with 1kHz accuracy.
     pub fn frequency_mega_hz(&self) -> f64 {
         match self {
-            Self::L1 | Self::E1 | Self::B1c | Self::B1a => 1575.42_f64,
-            Self::L2 => 1227.60_f64,
-            Self::L5 | Self::E5a | Self::B2a => 1176.45_f64,
-            Self::L6 => 1176.45_f64,
-            Self::E6 => 1278.75_f64,
+            Self::L1 | Self::E1 | Self::B1c | Self::B1a => 1575.420_f64,
+            Self::L2 => 1227.600_f64,
+            Self::L5 | Self::E5a | Self::B2a => 1176.450_f64,
+            Self::L6 => 1176.450_f64,
+            Self::E6 => 1278.750_f64,
             Self::E5b | Self::B2 | Self::B2b => 1207.140_f64,
             Self::E5a5b | Self::B2a2b => 1191.795_f64,
             Self::B1 => 1561.098_f64,
-            Self::B3 | Self::B3a => 1268.52_f64,
+            Self::B3 | Self::B3a => 1268.520_f64,
             Self::S => 2492.028_f64,
             Self::G1a => 1600.995_f64,
-            Self::G1(None) => 1602.0_f64,
-            Self::G1(Some(c)) => 1602.0_f64 + (*c as f64 * 9.0 / 16.0),
-            Self::G2a => 1248.06_f64,
-            Self::G2(None) => 1246.06_f64,
-            Self::G2(Some(c)) => 1246.06_f64 + (*c as f64 * 7.0 / 16.0),
+            Self::G1(None) => 1602.000_f64,
+            Self::G1(Some(c)) => 1602.000_f64 + (*c as f64 * 9.0 / 16.0),
+            Self::G2a => 1248.060_f64,
+            Self::G2(None) => 1246.060_f64,
+            Self::G2(Some(c)) => 1246.060_f64 + (*c as f64 * 7.0 / 16.0),
             Self::G3 => 1202.025_f64,
-            Self::S1 => 2036.25,
-            Self::U2 => 401.25,
+            Self::S1 => 2036.250,
+            Self::U2 => 401.250,
+        }
+    }
+
+    /// Builds [Constellation] [Carrier] frequency from value expressed in MHz.
+    /// This requires a 1kHz accuracy over provided value.
+    pub fn from_frequency_mega_hz(freq_mhz: f64) -> Result<Self, Error> {
+        if freq_mhz.is_sign_negative() {
+            return Err(Error::InvalidFrequency);
+        }
+
+        let freq_khz = (freq_mhz * 1.0E3) as u32;
+
+        match freq_khz {
+            1575_420 => Ok(Self::L1),
+            1227_600 => Ok(Self::L2),
+            1176_450 => Ok(Self::L5),
+            1207_140 => Ok(Self::E5b),
+            1191_795 => Ok(Self::E5a5b),
+            1278_750 => Ok(Self::E6),
+            1561_098 => Ok(Self::B1),
+            1268_520 => Ok(Self::B3),
+            2492_028 => Ok(Self::S),
+            1602_000 => Ok(Self::G1(None)),
+            1600_995 => Ok(Self::G1a),
+            1246_000 => Ok(Self::G2(None)),
+            1248_060 => Ok(Self::G2a),
+            1202_025 => Ok(Self::G3),
+            _ => Err(Error::UnknownFrequency),
         }
     }
 
