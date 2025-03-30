@@ -18,7 +18,7 @@ pub enum Carrier {
     L1,
     /// L2 (GPS, QZSS)
     L2,
-    /// L5 (GPS, SBAS), QZSS
+    /// L5 (GPS, SBAS, QZSS)
     L5,
     /// L6 (LEX) QZSS
     L6,
@@ -40,7 +40,7 @@ pub enum Carrier {
     E5b,
     /// E5a + E5b 1191 MHz
     E5a5b,
-    /// E6 (Galileo + QZSS military)
+    /// E6 (Galileo)
     E6,
     /// B1 (BDS 2/3)
     B1,
