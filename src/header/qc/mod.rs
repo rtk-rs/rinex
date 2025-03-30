@@ -1,6 +1,21 @@
 use crate::header::Header;
 
-use qc_traits::{html, Markup, QcHtmlReporting};
+mod decim;
+mod mask;
+
+use qc_traits::{html, Markup, QcFilter, QcFilterType, QcHtmlReporting, QcPreprocessing};
+
+use decim::decim_mut;
+use mask::mask_mut;
+
+impl QcPreprocessing for Header {
+    fn filter_mut(&mut self, f: &QcFilter) {
+        match f.filter {
+            QcFilterType::Decimation(decim) => decim_mut(decim, f.subset),
+            QcFilterType::Mask(mask) => mask_mut(mask, f.subset),
+        }
+    }
+}
 
 #[cfg(feature = "qc")]
 impl QcHtmlReporting for Header {

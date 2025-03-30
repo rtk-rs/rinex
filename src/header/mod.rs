@@ -26,9 +26,6 @@ mod parsing;
 #[cfg(feature = "qc")]
 mod qc;
 
-#[cfg(feature = "qc")]
-mod decim;
-
 #[cfg(feature = "nav")]
 use anise::{
     math::Vector6,
@@ -37,9 +34,6 @@ use anise::{
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
-
-#[cfg(feature = "qc")]
-pub(crate) mod processing;
 
 /// DCB compensation description
 #[derive(Debug, Clone, Default, PartialEq)]

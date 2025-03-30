@@ -5,12 +5,7 @@ impl QcSplit for Header {
         let mut rhs = self.clone();
 
         if let Some(obs) = &mut self.obs {
-            if let Some(timeof) = &mut obs.timeof_first_obs {
-                *timeof = std::cmp::min(*timeof, t);
-            }
-            if let Some(timeof) = &mut obs.timeof_last_obs {
-                *timeof = std::cmp::min(*timeof, t);
-            }
+            obs.split_mut(t);
         }
 
         if let Some(obs) = &mut rhs.obs {

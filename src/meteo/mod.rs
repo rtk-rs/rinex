@@ -15,13 +15,7 @@ pub(crate) use formatting::format;
 pub(crate) use parsing::{is_new_epoch, parse_epoch};
 
 #[cfg(feature = "qc")]
-pub(crate) mod mask; // mask Trait implementation
-
-#[cfg(feature = "qc")]
-pub(crate) mod decim; // decim Trait implementation
-
-#[cfg(feature = "qc")]
-pub(crate) mod repair; // repair Trait implementation
+mod qc;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

@@ -1,10 +1,12 @@
-use crate::{meteo::Record, prelude::Epoch};
-use qc_traits::{DecimationFilter, DecimationFilterType};
+use crate::{navigation::Record, prelude::Epoch};
 
-pub(crate) fn decim_mut(rec: &mut Record, f: &DecimationFilter) {
-    if f.item.is_some() {
-        todo!("targetted decimation not supported yet");
+use qc_traits::{QcDecimationFilter, QcSubset};
+
+pub fn decim_mut(rec: &mut Record, decim: QcDecimationFilter, subset: QcSubset) {
+    if subset != QcSubset::All {
+        panic!("scoped decimation not supported yet");
     }
+
     match f.filter {
         DecimationFilterType::Modulo(r) => {
             let mut i = 0;

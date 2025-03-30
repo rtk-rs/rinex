@@ -19,13 +19,7 @@ pub(crate) use formatting::format;
 pub(crate) use parsing::{is_new_epoch, parse_epoch};
 
 #[cfg(feature = "qc")]
-pub(crate) mod decim;
-
-#[cfg(feature = "qc")]
-pub(crate) mod mask;
-
-#[cfg(feature = "qc")]
-pub(crate) mod repair;
+pub(crate) mod qc;
 
 pub use header::HeaderFields;
 pub use station::Station;

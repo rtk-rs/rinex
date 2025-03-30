@@ -13,13 +13,7 @@ mod snr;
 pub use rinex::feature::{Combination, CombinationKey};
 
 #[cfg(feature = "qc")]
-pub(crate) mod mask; // mask Trait implementation
-
-#[cfg(feature = "qc")]
-pub(crate) mod decim; // decim Trait implementation
-
-#[cfg(feature = "qc")]
-pub(crate) mod repair; // repair Trait implementation
+pub(crate) mod qc;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

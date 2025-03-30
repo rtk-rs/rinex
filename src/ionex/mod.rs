@@ -14,22 +14,7 @@ mod system;
 mod tec;
 
 #[cfg(feature = "qc")]
-mod decim;
-
-#[cfg(feature = "qc")]
-mod mask;
-
-#[cfg(feature = "qc")]
-mod repair;
-
-#[cfg(feature = "qc")]
-pub(crate) use decim::decim_mut;
-
-#[cfg(feature = "qc")]
-pub(crate) use mask::mask_mut;
-
-#[cfg(feature = "qc")]
-pub(crate) use repair::repair_mut;
+mod qc;
 
 pub use coordinates::QuantizedCoordinates;
 pub use grid::Grid;

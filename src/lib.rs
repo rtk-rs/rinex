@@ -205,30 +205,15 @@ pub mod prod {
 use carrier::Carrier;
 use prelude::*;
 
-#[cfg(feature = "qc")]
-use qc_traits::{MaskFilter, Masking};
-
-#[cfg(feature = "qc")]
-use crate::{
-    clock::record::clock_mask_mut, doris::mask::mask_mut as doris_mask_mut,
-    header::processing::header_mask_mut, ionex::mask_mut as ionex_mask_mut,
-    meteo::mask::mask_mut as meteo_mask_mut, navigation::mask::mask_mut as navigation_mask_mut,
-    observation::mask::mask_mut as observation_mask_mut,
-};
-
 #[cfg(docsrs)]
 pub use bibliography::Bibliography;
 
-/*
- * returns true if given line is a comment
- */
+/// Returns true if forwarded line does match a standardized RINEX comment.
 pub(crate) fn is_rinex_comment(content: &str) -> bool {
     content.len() > 60 && content.trim_end().ends_with("COMMENT")
 }
 
-/*
- * macro to format one header line or a comment
- */
+/// RINEX formatting (to readable ASCII [String])
 pub(crate) fn fmt_rinex(content: &str, marker: &str) -> String {
     if content.len() < 60 {
         format!("{:<padding$}{}", content, marker, padding = 60)
@@ -248,9 +233,7 @@ pub(crate) fn fmt_rinex(content: &str, marker: &str) -> String {
     }
 }
 
-/*
- * macro to generate comments with standardized formatting
- */
+/// Returns RINEX formatted comment
 pub(crate) fn fmt_comment(content: &str) -> String {
     fmt_rinex(content, "COMMENT")
 }
@@ -1311,38 +1294,9 @@ impl Rinex {
     }
 }
 
-#[cfg(feature = "qc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "qc")))]
-impl Masking for Rinex {
-    fn mask(&self, f: &MaskFilter) -> Self {
-        let mut s = self.clone();
-        s.mask_mut(f);
-        s
-    }
-    fn mask_mut(&mut self, f: &MaskFilter) {
-        header_mask_mut(&mut self.header, f);
-        if let Some(rec) = self.record.as_mut_obs() {
-            observation_mask_mut(rec, f);
-        } else if let Some(rec) = self.record.as_mut_nav() {
-            navigation_mask_mut(rec, f);
-        } else if let Some(rec) = self.record.as_mut_clock() {
-            clock_mask_mut(rec, f);
-        } else if let Some(rec) = self.record.as_mut_meteo() {
-            meteo_mask_mut(rec, f);
-        } else if let Some(rec) = self.record.as_mut_doris() {
-            doris_mask_mut(rec, f);
-        } else if let Some(rec) = self.record.as_mut_ionex() {
-            ionex_mask_mut(rec, f);
-        }
-    }
-}
-
 #[cfg(feature = "clock")]
 use crate::clock::{ClockKey, ClockProfile, ClockProfileType};
 
-/*
- * Clock RINEX specific feature
- */
 #[cfg(feature = "clock")]
 #[cfg_attr(docsrs, doc(cfg(feature = "clock")))]
 impl Rinex {

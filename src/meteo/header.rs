@@ -6,12 +6,6 @@ use crate::prelude::FormattingError;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "qc")]
-use qc_traits::{FilterItem, MaskFilter, MaskOperand};
-
-#[cfg(feature = "processing")]
-use std::str::FromStr;
-
 use crate::{meteo::Sensor, prelude::Observable};
 
 /// Meteo specific header fields
@@ -60,48 +54,5 @@ impl HeaderFields {
         }
 
         Ok(())
-    }
-}
-
-#[cfg(feature = "qc")]
-impl HeaderFields {
-    pub(crate) fn mask_mut(&mut self, f: &MaskFilter) {
-        match f.operand {
-            MaskOperand::Equals => match &f.item {
-                FilterItem::ComplexItem(complex) => {
-                    // try to interprate as [Observable]
-                    let observables = complex
-                        .iter()
-                        .filter_map(|f| {
-                            if let Ok(ob) = Observable::from_str(f) {
-                                Some(ob)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<_>>();
-                    self.codes.retain(|c| observables.contains(&c));
-                },
-                _ => {},
-            },
-            MaskOperand::NotEquals => match &f.item {
-                FilterItem::ComplexItem(complex) => {
-                    // try to interprate as [Observable]
-                    let observables = complex
-                        .iter()
-                        .filter_map(|f| {
-                            if let Ok(ob) = Observable::from_str(f) {
-                                Some(ob)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<_>>();
-                    self.codes.retain(|c| !observables.contains(&c));
-                },
-                _ => {},
-            },
-            _ => {},
-        }
     }
 }

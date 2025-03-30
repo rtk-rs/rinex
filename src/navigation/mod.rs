@@ -11,6 +11,9 @@ mod parsing;
 mod rinex;
 mod system_time;
 
+#[cfg(feature = "qc")]
+mod qc;
+
 pub(crate) mod formatting;
 
 pub(crate) use formatting::format;
@@ -26,15 +29,6 @@ pub use crate::navigation::{
     orbits::OrbitItem,
     system_time::SystemTime,
 };
-
-#[cfg(feature = "qc")]
-pub(crate) mod mask; // mask Trait implementation
-
-#[cfg(feature = "qc")]
-pub(crate) mod decim; // decim Trait implementation
-
-#[cfg(feature = "qc")]
-pub(crate) mod repair; // repair Trait implementation
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
