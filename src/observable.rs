@@ -316,7 +316,12 @@ impl Observable {
             if let Ok(carrier) = self.carrier(constellation) {
                 matches!(
                     carrier,
-                    Carrier::L1 | Carrier::E1 | Carrier::G1(_) | Carrier::S1 | Carrier::B2I
+                    Carrier::L1
+                        | Carrier::E1
+                        | Carrier::G1(_)
+                        | Carrier::S1
+                        | Carrier::B1c
+                        | Carrier::B1a
                 )
             } else {
                 false

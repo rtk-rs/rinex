@@ -1,8 +1,5 @@
 //! Meteo specific Header fields
-use std::{
-    io::{BufWriter, Write},
-    str::FromStr,
-};
+use std::io::{BufWriter, Write};
 
 use crate::prelude::FormattingError;
 
@@ -11,6 +8,9 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "processing")]
 use qc_traits::{FilterItem, MaskFilter, MaskOperand};
+
+#[cfg(feature = "processing")]
+use std::str::FromStr;
 
 use crate::{meteo::Sensor, prelude::Observable};
 

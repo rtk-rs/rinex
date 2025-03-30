@@ -38,10 +38,12 @@ mod test {
         assert_eq!(antenna.calibration.method, CalibrationMethod::Chamber);
         assert_eq!(antenna.calibration.agency, "IGG, Univ. Bonn");
         assert_eq!(antenna.calibration.number, 1);
+
         assert_eq!(
             antenna.calibration.date,
             Epoch::from_str("2023-09-20T00:00:00 UTC").unwrap()
         );
+
         assert_eq!(
             antenna.zenith_grid,
             Linspace {
@@ -80,10 +82,11 @@ mod test {
 
         // B2B frequency
         assert!(
-            freq_data.get(&Carrier::B2B).is_some(),
+            freq_data.get(&Carrier::B2b).is_some(),
             "missing specs for B2B frequency"
         );
-        let b2b_specs = freq_data.get(&Carrier::B2B).unwrap();
+
+        let b2b_specs = freq_data.get(&Carrier::B2b).unwrap();
         assert_eq!(
             b2b_specs.apc_eccentricity,
             (0.32, -0.63, 160.39),
