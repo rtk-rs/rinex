@@ -1,6 +1,9 @@
 use crate::{
     epoch::parse_in_timescale as parse_epoch_in_timescale,
-    navigation::{orbits::closest_nav_standards, Ephemeris, NavMessageType, OrbitItem},
+    navigation::{
+        ephemeris::orbits::{closest_nav_standards, OrbitItem},
+        Ephemeris, NavMessageType,
+    },
     prelude::{Constellation, Epoch, ParsingError, TimeScale, Version, SV},
 };
 

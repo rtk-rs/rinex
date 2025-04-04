@@ -1,10 +1,7 @@
 //! Navigation module
-pub mod orbits;
-
 mod earth_orientation;
 mod ephemeris;
 mod frame;
-mod health;
 mod ionosphere;
 mod message;
 mod parsing;
@@ -20,10 +17,8 @@ pub use crate::navigation::{
     earth_orientation::EarthOrientation,
     ephemeris::Ephemeris,
     frame::{NavFrame, NavFrameType},
-    health::{GeoHealth, GloHealth, Health, IrnssHealth},
     ionosphere::{BdModel, IonosphereModel, KbModel, KbRegionCode, NgModel, NgRegionFlags},
     message::NavMessageType,
-    orbits::OrbitItem,
     system_time::SystemTime,
 };
 

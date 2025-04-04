@@ -1,5 +1,10 @@
 mod formatting;
+pub mod orbits;
 mod parsing;
+
+pub mod health;
+
+use orbits::OrbitItem;
 
 #[cfg(feature = "log")]
 use log::error;
@@ -11,10 +16,8 @@ mod kepler;
 #[cfg(feature = "nav")]
 use crate::prelude::nav::Almanac;
 
-use crate::{
-    navigation::OrbitItem,
-    prelude::{Constellation, Duration, Epoch, TimeScale, SV},
-};
+use crate::prelude::{Constellation, Duration, Epoch, TimeScale, SV};
+
 #[cfg(feature = "nav")]
 use anise::{
     astro::AzElRange,

@@ -5,11 +5,14 @@ use crate::{
     prelude::{Epoch, ParsingError, TimeScale},
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use std::str::FromStr;
 
 /// Earth Orientation Message
 #[derive(Debug, Clone, Default, PartialEq, PartialOrd)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct EarthOrientation {
     /// ((arc-sec), (arc-sec.day⁻¹), (arc-sec.day⁻²))
     pub x: (f64, f64, f64),
