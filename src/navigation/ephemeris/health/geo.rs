@@ -1,30 +1,14 @@
-use num_derive::FromPrimitive;
+use bitflags::bitflags;
 
-/// SBAS/GEO orbit health indication
-#[derive(Default, Debug, Clone, FromPrimitive, PartialEq, PartialOrd)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
-pub enum GeoHealth {
-    #[default]
-    Unknown = 0,
-    Reserved = 8,
-}
+#[cfg(feature = "serde")]
+use serde::Serialize;
 
-impl std::fmt::UpperExp for GeoHealth {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Self::Unknown => 0.fmt(f),
-            Self::Reserved => 8.fmt(f),
-        }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_geo() {
-        assert_eq!(GeoHealth::default(), GeoHealth::Unknown);
-        assert_eq!(format!("{:E}", GeoHealth::default()), "0E0");
+bitflags! {
+    /// GEO / SBAS SV health flags
+    #[derive(Default, Debug, Clone)]
+    #[derive(PartialEq, PartialOrd)]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
+    pub struct GeoHealth: u8 {
+        const RESERVED = 0x08;
     }
 }

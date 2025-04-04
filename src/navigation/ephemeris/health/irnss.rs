@@ -1,19 +1,13 @@
-use num_derive::FromPrimitive;
+use bitflags::bitflags;
 
-/// IRNSS orbit health indication
-#[derive(Default, Debug, Clone, FromPrimitive, PartialEq, PartialOrd)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
-pub enum IrnssHealth {
-    Healthy = 0,
-    #[default]
-    Unknown = 1,
-}
+#[cfg(feature = "serde")]
+use serde::Serialize;
 
-impl std::fmt::UpperExp for IrnssHealth {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Self::Healthy => 0.0_f64.fmt(f),
-            Self::Unknown => 1.0_f64.fmt(f),
-        }
+bitflags! {
+    /// IRNSS orbit health indication
+    #[derive(Default, Debug, Clone, PartialEq, PartialOrd)]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
+    pub struct IrnssHealth : u8 {
+        const UNKNOWN = 0x01;
     }
 }

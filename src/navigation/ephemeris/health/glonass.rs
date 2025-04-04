@@ -1,28 +1,19 @@
 use bitflags::bitflags;
-use num_derive::FromPrimitive;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
 
-/// GLO orbit health indication
-#[derive(Default, Debug, Clone, FromPrimitive, PartialEq, PartialOrd)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
-pub enum GlonassHealth {
-    Healthy = 0,
-    #[default]
-    Unhealthy = 4,
-}
-
-impl std::fmt::UpperExp for GlonassHealth {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Self::Healthy => 0_0_f64.fmt(f),
-            Self::Unhealthy => 4.0_f64.fmt(f),
-        }
+bitflags! {
+    /// Glonass SV health flags
+    #[derive(Default, Debug, Clone, PartialEq, PartialOrd)]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
+    pub struct GlonassHealth :u32 {
+        const UNHEALTHY = 0x04;
     }
 }
 
 bitflags! {
+    /// Glonass SV status flags
     #[derive(Default, Debug, Clone)]
     #[derive(PartialEq, PartialOrd)]
     #[cfg_attr(feature = "serde", derive(Serialize))]
@@ -37,16 +28,5 @@ bitflags! {
         const SAT5_ALMANAC = 0x10;
         const DATA_UPDATED = 0x20;
         const MK = 0x40;
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_glo() {
-        assert_eq!(GlonassHealth::default(), GlonassHealth::Unhealthy);
-        assert_eq!(format!("{:E}", GlonassHealth::default()), "4E0");
     }
 }

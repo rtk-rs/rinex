@@ -1,6 +1,7 @@
 //! NAV Orbits description, spanning all revisions and constellations
 use bitflags::bitflags;
 use num::FromPrimitive;
+use num_derive::FromPrimitive;
 use std::str::FromStr;
 
 use crate::{
@@ -36,15 +37,32 @@ pub enum OrbitItem {
     /// GPS or QZSS SV health
     GpsHealth(GpsHealth),
     /// SV health
-    GlonassHealth(GlonassHealth),
-    /// NAV4 Orbit7 status mask
-    GlonassStatus(GlonassStatus),
-    /// SV health
     GeoHealth(GeoHealth),
     /// SV health
     GalHealth(GalHealth),
     /// SV health
     IrnssHealth(IrnssHealth),
+    /// SV health
+    GlonassHealth(GlonassHealth),
+    /// NAV4 Orbit7 status mask
+    GlonassStatus(GlonassStatus),
+}
+
+impl std::fmt::Display for OrbitItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::U8(val) => write!(f, "{:02x}", val),
+            Self::I8(val) => write!(f, "{:02x}", val),
+            Self::U32(val) => write!(f, "{:08X}", val),
+            Self::F64(val) => write!(f, "{}", val),
+            Self::GpsHealth(val) => write!(f, "{:?}", val),
+            Self::GeoHealth(val) => write!(f, "{:?}", val),
+            Self::GalHealth(val) => write!(f, "{:?}", val),
+            Self::IrnssHealth(val) => write!(f, "{:?}", val),
+            Self::GlonassHealth(val) => write!(f, "{:?}", val),
+            Self::GlonassStatus(val) => write!(f, "{:?}", val),
+        }
+    }
 }
 
 impl From<u32> for OrbitItem {
@@ -110,14 +128,12 @@ impl OrbitItem {
                 let unsigned = float as u32;
                 match constellation {
                     Constellation::GPS | Constellation::QZSS => {
-                        let flag: GpsHealth =
-                            FromPrimitive::from_u32(unsigned).unwrap_or(GpsHealth::default());
-                        Ok(OrbitItem::GpsHealth(flag))
+                        let flags = GpsHealth::from_bits(unsigned as u32).unwrap_or_default();
+                        Ok(OrbitItem::GpsHealth(flags))
                     },
                     Constellation::Glonass => {
-                        let flag: GlonassHealth =
-                            FromPrimitive::from_u32(unsigned).unwrap_or(GlonassHealth::default());
-                        Ok(OrbitItem::GlonassHealth(flag))
+                        let flags = GlonassHealth::from_bits(unsigned as u32).unwrap_or_default();
+                        Ok(OrbitItem::GlonassHealth(flags))
                     },
                     Constellation::Galileo => {
                         let flags =
@@ -125,41 +141,22 @@ impl OrbitItem {
                         Ok(OrbitItem::GalHealth(flags))
                     },
                     Constellation::IRNSS => {
-                        let flag: IrnssHealth =
-                            FromPrimitive::from_u32(unsigned).unwrap_or(IrnssHealth::default());
-                        Ok(OrbitItem::IrnssHealth(flag))
+                        let flags = IrnssHealth::from_bits(unsigned as u8).unwrap_or_default();
+                        Ok(OrbitItem::IrnssHealth(flags))
                     },
                     c => {
                         if c.is_sbas() {
-                            let flag: GeoHealth = num::FromPrimitive::from_u32(unsigned)
-                                .unwrap_or(GeoHealth::default());
-                            Ok(OrbitItem::GeoHealth(flag))
+                            let flags = GeoHealth::from_bits(unsigned as u8).unwrap_or_default();
+                            Ok(OrbitItem::GeoHealth(flags))
                         } else {
-                            // Constellation::Mixed will not happen here,
-                            // it's always defined in the database
+                            // We're left with [Constellation::Mixed] which is not defined in the database.
                             unreachable!("unhandled case!");
                         }
                     },
                 }
             }, // "health"
-            _ => Err(ParsingError::NoNavigationDefinition),
-        }
-    }
 
-    /// Formats self following RINEX standards,
-    /// mainly used when producing a file
-    pub fn to_string(&self) -> String {
-        match self {
-            OrbitItem::U8(n) => format!("{:14.11E}", *n as f64),
-            OrbitItem::I8(n) => format!("{:14.11E}", *n as f64),
-            OrbitItem::U32(n) => format!("{:14.11E}", *n as f64),
-            OrbitItem::F64(f) => format!("{:14.11E}", f),
-            OrbitItem::GpsHealth(h) => format!("{:14.11E}", h),
-            OrbitItem::GlonassHealth(h) => format!("{:14.11E}", h),
-            OrbitItem::GeoHealth(h) => format!("{:14.11E}", h),
-            OrbitItem::IrnssHealth(h) => format!("{:14.11E}", h),
-            OrbitItem::GalHealth(h) => format!("{:14.11E}", h.bits() as f64),
-            OrbitItem::GlonassStatus(h) => format!("{:14.11E}", h.bits() as f64),
+            _ => Err(ParsingError::NoNavigationDefinition),
         }
     }
 
@@ -170,7 +167,12 @@ impl OrbitItem {
             OrbitItem::U8(val) => Some(*val as f64),
             OrbitItem::I8(val) => Some(*val as f64),
             OrbitItem::U32(val) => Some(*val as f64),
-            _ => None,
+            OrbitItem::GalHealth(flags) => Some(flags.bits() as f64),
+            OrbitItem::GpsHealth(flags) => Some(flags.bits() as f64),
+            OrbitItem::GeoHealth(flags) => Some(flags.bits() as f64),
+            OrbitItem::GlonassHealth(flags) => Some(flags.bits() as f64),
+            OrbitItem::GlonassStatus(status) => Some(status.bits() as f64),
+            OrbitItem::IrnssHealth(flags) => Some(flags.bits() as f64),
         }
     }
 
