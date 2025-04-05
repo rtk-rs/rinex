@@ -1,16 +1,16 @@
 //! NAV Orbits description, spanning all revisions and constellations
-use bitflags::bitflags;
-use num::FromPrimitive;
-use num_derive::FromPrimitive;
 use std::str::FromStr;
 
 use crate::{
-    navigation::ephemeris::health::{
-        gal::GalHealth,
-        geo::GeoHealth,
-        glonass::{GlonassHealth, GlonassStatus},
-        gps::GpsHealth,
-        irnss::IrnssHealth,
+    navigation::{
+        ephemeris::health::{
+            gal::GalHealth,
+            geo::GeoHealth,
+            glonass::{GlonassHealth, GlonassStatus},
+            gps::{Gpsl1cHealth, Gpsl1l2l5Health},
+            irnss::IrnssHealth,
+        },
+        NavMessageType,
     },
     prelude::ParsingError,
 };
@@ -34,8 +34,10 @@ pub enum OrbitItem {
     U32(u32),
     /// double precision data
     F64(f64),
-    /// GPS or QZSS SV health
-    GpsHealth(GpsHealth),
+    /// GPS [Gpsl1cHealth] flag
+    Gpsl1cHealth(Gpsl1cHealth),
+    /// GPS or QZSS [Gpsl1l2l5Health] flag
+    Gpsl1l2l5Health(Gpsl1l2l5Health),
     /// SV health
     GeoHealth(GeoHealth),
     /// SV health
@@ -55,9 +57,10 @@ impl std::fmt::Display for OrbitItem {
             Self::I8(val) => write!(f, "{:02x}", val),
             Self::U32(val) => write!(f, "{:08X}", val),
             Self::F64(val) => write!(f, "{}", val),
-            Self::GpsHealth(val) => write!(f, "{:?}", val),
             Self::GeoHealth(val) => write!(f, "{:?}", val),
             Self::GalHealth(val) => write!(f, "{:?}", val),
+            Self::Gpsl1cHealth(val) => write!(f, "{:?}", val),
+            Self::Gpsl1l2l5Health(val) => write!(f, "{:?}", val),
             Self::IrnssHealth(val) => write!(f, "{:?}", val),
             Self::GlonassHealth(val) => write!(f, "{:?}", val),
             Self::GlonassStatus(val) => write!(f, "{:?}", val),
@@ -80,73 +83,121 @@ impl From<f64> for OrbitItem {
 impl OrbitItem {
     /// Builds a [OrbitItem] from type descriptor and string content
     pub fn new(
-        type_desc: &str,
-        content: &str,
+        name_str: &str,
+        type_str: &str,
+        val_str: &str,
+        msgtype: &NavMessageType,
         constellation: Constellation,
     ) -> Result<OrbitItem, ParsingError> {
-        match type_desc {
+
+        // make it "rust" compatible
+        let float = f64::from_str(&val_str.replace('D', "e"))
+            .map_err(|_| ParsingError::OrbitFloatData)?;
+
+
+        // do not tolerate zero values for native types
+        match type_str {
+            "u8" | "i8" | "u32" | "f64" => {
+                if float == 0.0 {
+                    return Err(ParsingError::NavNullOrbit);
+                }
+            },
+        }
+
+        // handle native type right away & exit
+        let native_type = match type_str {
             "u8" => {
-                // float->unsigned conversion
-                let float = f64::from_str(&content.replace('D', "e"))
-                    .map_err(|_| ParsingError::OrbitUnsignedData)?;
-                Ok(OrbitItem::U8(float as u8))
+                let unsigned = float.round() as u8;
+                return Ok(OrbitItem::U8(unsigned));
             },
 
             "i8" => {
-                // float->signed conversion
-                let float = f64::from_str(&content.replace('D', "e"))
-                    .map_err(|_| ParsingError::OrbitSignedData)?;
-                Ok(OrbitItem::I8(float as i8))
+                let signed = float.round() as i8;
+                return Ok(OrbitItem::U8(signed));
             },
 
             "u32" => {
-                // float->signed conversion
-                let float = f64::from_str(&content.replace('D', "e"))
-                    .map_err(|_| ParsingError::OrbitUnsignedData)?;
-                Ok(OrbitItem::U32(float as u32))
+                let unsigned = float.round() as u32;
+                return Ok(OrbitItem::U8(unsigned));
             },
 
             "f64" => {
-                let float = f64::from_str(&content.replace('D', "e"))
-                    .map_err(|_| ParsingError::OrbitFloatData)?;
-                Ok(OrbitItem::F64(float))
+                return Ok(OrbitItem::F64(float));
             },
+            _ => {},
+        };
+
+        // handle complex types
+        match type_str {
+            "flag" => {
+                // bit flags interpretation
+                let unsigned = float.round() as u32;
+                
+                match name_str {
+                    "health" | "satH1"  => {
+                        // complex health flag interpretation
+
+                        // handle GEO case
+                        if constellation.is_sbas() {
+                            match msgtype {
+                                NavMessageType::LNAV => {
+
+                                },
+                            }
+                        }
+
+                        // other cases
+                        match (msgtype, constellation) {
+                            (NavMessageType::LNAV | NavMessageType::CNAV, Constellation::GPS | Constellation::QZSS) => {
+                                let flags = Gpsl1l2l5Health::from_bits(unsigned).unwrap_or_default();
+                                Ok(OrbitItem::Gpsl1l2l5Health(flags))
+                            },
+                            (NavMessageType::LNAV | NavMessageType::CNV2, Constellation::GPS | Constellation::QZSS) => {
+                                let flags = Gpsl1cHealth::from_bits(unsigned).unwrap_or_default();
+                                Ok(OrbitItem::Gpsl1l2l5Health(flags))
+                            },
+                            _ => {
+                                Err(ParsingError::NavHealthFlagDefinition)
+                            }
+                        }
+                    },
+                    _ => {
+                        Err(ParsingError::NavFlagsDefinition)
+                    },
+                }
+            },
+            _ => {
+                // unknown complex type
+                Err(ParsingError::NavUnknownComplexType)
+            }
+        }
 
             "gloStatus" => {
-                // float->unsigned conversion
-                let float = f64::from_str(&content.replace('D', "e"))
-                    .map_err(|_| ParsingError::OrbitUnsignedData)?;
-                let unsigned = float as u32;
+                let unsigned = float.round() as u32;
                 let status = GlonassStatus::from_bits(unsigned).unwrap_or(GlonassStatus::empty());
                 Ok(OrbitItem::GlonassStatus(status))
             },
 
-            "health" => {
-                // float->unsigned conversion
-                let float = f64::from_str(&content.replace('D', "e"))
-                    .map_err(|_| ParsingError::OrbitUnsignedData)?;
-                let unsigned = float as u32;
-                match constellation {
-                    Constellation::GPS | Constellation::QZSS => {
-                        let flags = GpsHealth::from_bits(unsigned as u32).unwrap_or_default();
-                        Ok(OrbitItem::GpsHealth(flags))
-                    },
+
+                
+
+                match (msgtype, constellation) {
                     Constellation::Glonass => {
-                        let flags = GlonassHealth::from_bits(unsigned as u32).unwrap_or_default();
+                        let flags = GlonassHealth::from_bits(unsigned).unwrap_or_default();
                         Ok(OrbitItem::GlonassHealth(flags))
                     },
                     Constellation::Galileo => {
                         let flags =
-                            GalHealth::from_bits(unsigned as u8).unwrap_or(GalHealth::empty());
+                            GalHealth::from_bits(unsigned).unwrap_or(GalHealth::empty());
                         Ok(OrbitItem::GalHealth(flags))
                     },
                     Constellation::IRNSS => {
-                        let flags = IrnssHealth::from_bits(unsigned as u8).unwrap_or_default();
+                        let flags = IrnssHealth::from_bits(unsigned).unwrap_or_default();
                         Ok(OrbitItem::IrnssHealth(flags))
                     },
                     c => {
                         if c.is_sbas() {
-                            let flags = GeoHealth::from_bits(unsigned as u8).unwrap_or_default();
+                            let flags = GeoHealth::from_bits(unsigned).unwrap_or_default();
                             Ok(OrbitItem::GeoHealth(flags))
                         } else {
                             // We're left with [Constellation::Mixed] which is not defined in the database.
@@ -154,92 +205,119 @@ impl OrbitItem {
                         }
                     },
                 }
-            }, // "health"
-
+            }, // "flag(s)"
             _ => Err(ParsingError::NoNavigationDefinition),
         }
     }
 
-    /// Unwraps OrbitItem as f64
-    pub fn as_f64(&self) -> Option<f64> {
+    /// True if this [OrbitItem] is a native type
+    pub(crate) fn is_native_type(&self) -> bool {
+        matches!(*self, 
+            OrbitItem::F64(_) 
+            | OrbitItem::U8(_)
+            | OrbitItem::I8(_)
+            | OrbitItem::U32(_)
+        )
+    }
+
+    /// Unwraps [OrbitItem] as [f64] (always feasible)
+    pub fn as_f64(&self) -> f64 {
         match self {
-            OrbitItem::F64(f) => Some(*f),
-            OrbitItem::U8(val) => Some(*val as f64),
-            OrbitItem::I8(val) => Some(*val as f64),
-            OrbitItem::U32(val) => Some(*val as f64),
-            OrbitItem::GalHealth(flags) => Some(flags.bits() as f64),
-            OrbitItem::GpsHealth(flags) => Some(flags.bits() as f64),
-            OrbitItem::GeoHealth(flags) => Some(flags.bits() as f64),
-            OrbitItem::GlonassHealth(flags) => Some(flags.bits() as f64),
-            OrbitItem::GlonassStatus(status) => Some(status.bits() as f64),
-            OrbitItem::IrnssHealth(flags) => Some(flags.bits() as f64),
+            OrbitItem::F64(f) => *f,
+            OrbitItem::U8(val) => *val as f64,
+            OrbitItem::I8(val) => *val as f64,
+            OrbitItem::U32(val) => *val as f64,
+            OrbitItem::GalHealth(flags) => flags.bits() as f64,
+            OrbitItem::GpsHealth(flags) => flags.bits() as f64,
+            OrbitItem::GeoHealth(flags) => flags.bits() as f64,
+            OrbitItem::IrnssHealth(flags) => flags.bits() as f64,
+            OrbitItem::GlonassHealth(flags) => flags.bits() as f64,
+            OrbitItem::GlonassStatus(status) => status.bits() as f64,
         }
     }
 
-    /// Unwraps self as u32 (if possible)
-    pub fn as_u32(&self) -> Option<u32> {
+    /// Unwraps [OrbitItem] as [u32] (always feasible)
+    pub fn as_u32(&self) -> u32 {
         match self {
-            OrbitItem::U32(v) => Some(*v),
-            OrbitItem::U8(val) => Some(*val as u32),
-            OrbitItem::I8(val) => Some(*val as u32),
-            OrbitItem::F64(val) => Some(val.round() as u32),
-            _ => None,
+            OrbitItem::U32(v) => *v,
+            OrbitItem::U8(val) => *val as u32,
+            OrbitItem::I8(val) => *val as u32,
+            OrbitItem::F64(val) => val.round() as u32,
+            OrbitItem::GalHealth(health) => health.bits(),
+            OrbitItem::GpsHealth(health) => health.bits(),
+            OrbitItem::GeoHealth(health) => health.bits(),
+            OrbitItem::IrnssHealth(health) => health.bits(),
+            OrbitItem::GlonassHealth(health) => health.bits(),
+            OrbitItem::GlonassStatus(status) => status.bits(),
         }
     }
 
-    /// Unwraps OrbitItem as u8
-    pub fn as_u8(&self) -> Option<u8> {
+    /// Unwraps [OrbitItem] as [u8] (always feasible)
+    pub fn as_u8(&self) -> u8 {
         match self {
-            OrbitItem::U8(u) => Some(*u),
-            OrbitItem::U32(val) => Some(*val as u8),
-            OrbitItem::I8(val) => Some(*val as u8),
-            OrbitItem::F64(val) => Some(val.round() as u8),
-            _ => None,
+            OrbitItem::U32(v) => *v as u8,
+            OrbitItem::U8(val) => *val,
+            OrbitItem::I8(val) => *val as u8,
+            OrbitItem::F64(val) => val.round() as u8,
+            OrbitItem::GalHealth(health) => health.bits() as u8,
+            OrbitItem::GpsHealth(health) => health.bits() as u8,
+            OrbitItem::GeoHealth(health) => health.bits() as u8,
+            OrbitItem::IrnssHealth(health) => health.bits() as u8,
+            OrbitItem::GlonassHealth(health) => health.bits() as u8,
+            OrbitItem::GlonassStatus(status) => status.bits()as u8,
         }
     }
 
-    /// Unwraps OrbitItem as i8
-    pub fn as_i8(&self) -> Option<i8> {
+    /// Unwraps [OrbitItem] as [i8] (always feasible)
+    pub fn as_i8(&self) -> i8 {
         match self {
-            OrbitItem::I8(i) => Some(*i),
-            _ => None,
+            OrbitItem::U32(v) => *v as i8,
+            OrbitItem::I8(val) => *val,
+            OrbitItem::U8(val) => *val as i8,
+            OrbitItem::F64(val) => val.round() as i8,
+            OrbitItem::GalHealth(health) => health.bits() as i8,
+            OrbitItem::GpsHealth(health) => health.bits() as i8,
+            OrbitItem::GeoHealth(health) => health.bits() as i8,
+            OrbitItem::IrnssHealth(health) => health.bits() as i8,
+            OrbitItem::GlonassHealth(health) => health.bits() as i8,
+            OrbitItem::GlonassStatus(status) => status.bits() as i8,
         }
     }
 
-    /// Unwraps Self as [GpsHealth] indication
-    pub fn as_gps_health(&self) -> Option<GpsHealth> {
+    /// Unwraps Self as [GpsHealth] flag (if feasible)
+    pub fn as_gps_health_flag(&self) -> Option<GpsHealth> {
         match self {
             OrbitItem::GpsHealth(h) => Some(h.clone()),
             _ => None,
         }
     }
 
-    /// Unwraps Self as GEO/SBAS orbit Health indication
-    pub fn as_geo_health(&self) -> Option<GeoHealth> {
+    /// Unwraps Self as [GeoHealth] flag (if feasible)
+    pub fn as_geo_health_flag(&self) -> Option<GeoHealth> {
         match self {
             OrbitItem::GeoHealth(h) => Some(h.clone()),
             _ => None,
         }
     }
 
-    /// Unwraps Self as GLO orbit Health indication
-    pub fn as_glo_health(&self) -> Option<GlonassHealth> {
+    /// Unwraps Self as [GlonassHealth] flag (if feasible)
+    pub fn as_glonass_health_flag(&self) -> Option<GlonassHealth> {
         match self {
             OrbitItem::GlonassHealth(h) => Some(h.clone()),
             _ => None,
         }
     }
 
-    /// Unwraps Self as GAL orbit Health indication
-    pub fn as_gal_health(&self) -> Option<GalHealth> {
+    /// Unwraps Self as [GalHealth] flag (if feasible)
+    pub fn as_galileo_health_flag(&self) -> Option<GalHealth> {
         match self {
             OrbitItem::GalHealth(h) => Some(*h),
             _ => None,
         }
     }
 
-    /// Unwraps Self as IRNSS orbit Health indication
-    pub fn as_irnss_health(&self) -> Option<IrnssHealth> {
+    /// Unwraps Self as [IrnssHealth] flag (if feasible)
+    pub fn as_irnss_health_flag(&self) -> Option<IrnssHealth> {
         match self {
             OrbitItem::IrnssHealth(h) => Some(h.clone()),
             _ => None,
@@ -510,16 +588,16 @@ mod test {
     #[test]
     fn test_db_item() {
         let e = OrbitItem::U8(10);
-        assert_eq!(e.as_u8(), Some(10));
+        assert_eq!(e.as_u8(), 10);
 
         let e = OrbitItem::F64(10.0);
-        assert_eq!(e.as_u8(), Some(10));
-        assert_eq!(e.as_u32(), Some(10));
-        assert_eq!(e.as_f64(), Some(10.0));
+        assert_eq!(e.as_u8(), 10);
+        assert_eq!(e.as_u32(), 10);
+        assert_eq!(e.as_f64(), 10.0);
 
         let e = OrbitItem::U32(1);
-        assert_eq!(e.as_u32(), Some(1));
-        assert_eq!(e.as_f64(), Some(1.0));
+        assert_eq!(e.as_u32(), 1);
+        assert_eq!(e.as_f64(), 1.0);
     }
 
     #[test]

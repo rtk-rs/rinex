@@ -128,6 +128,10 @@ pub enum ParsingError {
     NavMsgType,
     #[error("nav: unknown radio message")]
     NoNavigationDefinition,
+    #[error("nav: invalid health flag definition")]
+    NavHealthFlagDefinition,
+    #[error("nav: invalid / missing flag definition")]
+    NavFlagsDefinition,
     #[error("nav: unsigned radio field")]
     OrbitUnsignedData,
     #[error("nav: signed radio field")]

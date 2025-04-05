@@ -57,12 +57,12 @@ fn parse_orbits(
                 break;
             }
 
-            let (content, rem) = line.split_at(std::cmp::min(word_size, line.len()));
-            let content = content.trim();
+            let (val_str, rem) = line.split_at(std::cmp::min(word_size, line.len()));
+            let val_str = val_str.trim();
             // println!("CONTENT \"{}\"", content); // DEBUG
 
             // handle omitted fields
-            if content.is_empty() {
+            if val_str.is_empty() {
                 // omitted field
                 key_index += 1;
                 nb_missing = nb_missing.saturating_sub(1);
@@ -70,21 +70,7 @@ fn parse_orbits(
                 continue;
             }
 
-            // zeros mean unresolved/unknown fields
-            if content.starts_with("0.000000000000E+00") {
-                line = rem;
-                key_index += 1;
-                continue;
-            }
-
-            // zeros mean unresolved/unknown fields
-            if content.starts_with("0.000000000000D+00") {
-                line = rem;
-                key_index += 1;
-                continue;
-            }
-
-            if let Some((key, token)) = fields.get(key_index) {
+            if let Some((name_str, type_str)) = fields.get(key_index) {
                 //println!(
                 //    "Key \"{}\"(index: {}) | Token \"{}\" | Content \"{}\"",
                 //    key,
@@ -92,13 +78,17 @@ fn parse_orbits(
                 //    token,
                 //    content.trim()
                 //); //DEBUG
-                if !key.contains("spare") {
-                    if let Ok(item) = OrbitItem::new(token, content, constell) {
-                        // println!("found key=\"{}\" (type={}) value=\"{}\"", key, token, content); // DEBUG
-                        map.insert(key.to_string(), item);
+                if !name_str.contains("spare") {
+                    match OrbitItem::new(name_str, type_str, val_str, &msgtype, constell) {
+                        Ok(item) => {
+                            // println!("found key=\"{}\" (type={}) value=\"{}\"", key, token, content); // DEBUG
+                            map.insert(name_str.to_string(), item);
+                        },
+                        Err(_) => {},
                     }
                 }
             }
+
             key_index += 1;
             line = rem;
         }
@@ -390,6 +380,7 @@ mod test {
         assert_eq!(ephemeris.get_orbit_f64("i0"), Some(0.607169709798e-01));
         assert_eq!(ephemeris.get_orbit_f64("crc"), Some(-0.897671875000e+03));
         assert_eq!(ephemeris.get_orbit_f64("omega"), Some(0.154887266488e+00));
+
         assert_eq!(
             ephemeris.get_orbit_f64("omegaDot"),
             Some(-0.871464871438e-10)
@@ -397,16 +388,17 @@ mod test {
 
         assert_eq!(ephemeris.get_orbit_f64("idot"), Some(-0.940753471872e-09));
         assert_eq!(ephemeris.get_week(), Some(782));
-
         assert_eq!(
             ephemeris.get_orbit_f64("svAccuracy"),
             Some(0.200000000000e+01)
         );
         assert!(ephemeris.get_orbit_f64("satH1").is_none());
+        
         assert_eq!(
             ephemeris.get_orbit_f64("tgd1b1b3"),
             Some(-0.599999994133e-09)
         );
+        
         assert_eq!(
             ephemeris.get_orbit_f64("tgd2b2b3"),
             Some(-0.900000000000e-08)

@@ -8,7 +8,7 @@ bitflags! {
     #[derive(Default, Debug, Clone)]
     #[derive(PartialEq, PartialOrd)]
     #[cfg_attr(feature = "serde", derive(Serialize))]
-    pub struct GeoHealth: u8 {
-        const RESERVED = 0x08;
+    pub struct GeoHealth : u32 {
+        const RESERVED = 0x00000008;
     }
 }
