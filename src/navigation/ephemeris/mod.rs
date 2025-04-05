@@ -1,5 +1,11 @@
 mod formatting;
+pub mod orbits;
 mod parsing;
+
+/// Ephemeris NAV flags definitions & support
+pub mod flags;
+
+use orbits::OrbitItem;
 
 #[cfg(feature = "log")]
 use log::error;
@@ -11,10 +17,8 @@ mod kepler;
 #[cfg(feature = "nav")]
 use crate::prelude::nav::Almanac;
 
-use crate::{
-    navigation::OrbitItem,
-    prelude::{Constellation, Duration, Epoch, TimeScale, SV},
-};
+use crate::prelude::{Constellation, Duration, Epoch, TimeScale, SV};
+
 #[cfg(feature = "nav")]
 use anise::{
     astro::AzElRange,
@@ -48,16 +52,8 @@ impl Ephemeris {
     /// Returns abstract orbital parameter from readable description and
     /// interprated as f64.
     pub fn get_orbit_f64(&self, field: &str) -> Option<f64> {
-        if let Some(value) = self.orbits.get(field) {
-            let value = value.as_f64()?;
-            if value != 0.0 {
-                Some(value)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
+        let value = self.orbits.get(field)?;
+        Some(value.as_f64())
     }
 
     /// Add a new orbital parameters, encoded as f64.
@@ -69,7 +65,9 @@ impl Ephemeris {
     /// Try to retrieve week counter. This exists
     /// for all Constellations expect [Constellation::Glonass].
     pub(crate) fn get_week(&self) -> Option<u32> {
-        self.orbits.get("week").and_then(|value| value.as_u32())
+        self.orbits
+            .get("week")
+            .and_then(|value| Some(value.as_u32()))
     }
 
     /// Returns TGD (if value exists) as [Duration]
@@ -82,8 +80,7 @@ impl Ephemeris {
     /// with described channel.
     pub fn glonass_freq_channel(&self) -> Option<i8> {
         if let Some(value) = self.orbits.get("channel") {
-            let value = value.as_i8()?;
-            Some(value)
+            Some(value.as_i8())
         } else {
             None
         }

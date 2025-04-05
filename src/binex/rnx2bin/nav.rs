@@ -18,28 +18,28 @@ fn forge_gps_ephemeris_frame(_toc: &Epoch, sv: SV, eph: &Ephemeris) -> Option<Ep
     let clock_drift = eph.clock_drift as f32;
     let clock_drift_rate = eph.clock_drift_rate as f32;
 
-    let toe = eph.orbits.get("toe")?.as_f64()? as u16;
+    let toe = eph.orbits.get("toe")?.as_f64() as u16;
 
-    let cic = eph.orbits.get("cic")?.as_f64()? as f32;
-    let crc = eph.orbits.get("crc")?.as_f64()? as f32;
-    let cis = eph.orbits.get("cis")?.as_f64()? as f32;
-    let crs = eph.orbits.get("crs")?.as_f64()? as f32;
-    let cuc = eph.orbits.get("cuc")?.as_f64()? as f32;
-    let cus = eph.orbits.get("cus")?.as_f64()? as f32;
+    let cic = eph.orbits.get("cic")?.as_f64() as f32;
+    let crc = eph.orbits.get("crc")?.as_f64() as f32;
+    let cis = eph.orbits.get("cis")?.as_f64() as f32;
+    let crs = eph.orbits.get("crs")?.as_f64() as f32;
+    let cuc = eph.orbits.get("cuc")?.as_f64() as f32;
+    let cus = eph.orbits.get("cus")?.as_f64() as f32;
 
-    let e = eph.orbits.get("e")?.as_f64()?;
-    let m0_rad = eph.orbits.get("m0")?.as_f64()?;
-    let i0_rad = eph.orbits.get("i0")?.as_f64()?;
-    let sqrt_a = eph.orbits.get("sqrta")?.as_f64()?;
-    let omega_rad = eph.orbits.get("omega")?.as_f64()?;
-    let omega_0_rad = eph.orbits.get("omega0")?.as_f64()?;
-    let omega_dot_rad_s = eph.orbits.get("oemgaDot")?.as_f64()? as f32;
-    let i_dot_rad_s = eph.orbits.get("idot")?.as_f64()? as f32;
-    let delta_n_rad_s = eph.orbits.get("delta_n")?.as_f64()? as f32;
+    let e = eph.orbits.get("e")?.as_f64();
+    let m0_rad = eph.orbits.get("m0")?.as_f64();
+    let i0_rad = eph.orbits.get("i0")?.as_f64();
+    let sqrt_a = eph.orbits.get("sqrta")?.as_f64();
+    let omega_rad = eph.orbits.get("omega")?.as_f64();
+    let omega_0_rad = eph.orbits.get("omega0")?.as_f64();
+    let omega_dot_rad_s = eph.orbits.get("oemgaDot")?.as_f64() as f32;
+    let i_dot_rad_s = eph.orbits.get("idot")?.as_f64() as f32;
+    let delta_n_rad_s = eph.orbits.get("delta_n")?.as_f64() as f32;
 
-    let tgd = eph.orbits.get("tgd")?.as_f64()? as f32;
-    let iode = eph.orbits.get("iode")?.as_u32()? as i32;
-    let iodc = eph.orbits.get("iodc")?.as_u32()? as i32;
+    let tgd = eph.orbits.get("tgd")?.as_f64() as f32;
+    let iode = eph.orbits.get("iode")?.as_u32() as i32;
+    let iodc = eph.orbits.get("iodc")?.as_u32() as i32;
 
     Some(EphemerisFrame::GPS(GPSEphemeris {
         sv_prn: sv.prn,
@@ -79,19 +79,19 @@ fn forge_sbas_ephemeris_frame(_toc: &Epoch, sv: SV, eph: &Ephemeris) -> Option<E
     let clock_offset = eph.clock_bias;
     let clock_drift = eph.clock_drift;
 
-    let x_km = eph.orbits.get("satPosX")?.as_f64()?;
-    let vel_x_km = eph.orbits.get("velX")?.as_f64()?;
-    let acc_x_km = eph.orbits.get("accelX")?.as_f64()?;
+    let x_km = eph.orbits.get("satPosX")?.as_f64();
+    let vel_x_km = eph.orbits.get("velX")?.as_f64();
+    let acc_x_km = eph.orbits.get("accelX")?.as_f64();
 
-    let y_km = eph.orbits.get("satPosX")?.as_f64()?;
-    let vel_y_km = eph.orbits.get("velY")?.as_f64()?;
-    let acc_y_km = eph.orbits.get("accelY")?.as_f64()?;
+    let y_km = eph.orbits.get("satPosX")?.as_f64();
+    let vel_y_km = eph.orbits.get("velY")?.as_f64();
+    let acc_y_km = eph.orbits.get("accelY")?.as_f64();
 
-    let z_km = eph.orbits.get("satPosX")?.as_f64()?;
-    let vel_z_km = eph.orbits.get("velZ")?.as_f64()?;
-    let acc_z_km = eph.orbits.get("accelZ")?.as_f64()?;
+    let z_km = eph.orbits.get("satPosX")?.as_f64();
+    let vel_z_km = eph.orbits.get("velZ")?.as_f64();
+    let acc_z_km = eph.orbits.get("accelZ")?.as_f64();
 
-    let iodn = eph.orbits.get("iodn")?.as_u32()? as u8;
+    let iodn = eph.orbits.get("iodn")?.as_u8();
 
     Some(EphemerisFrame::SBAS(SBASEphemeris {
         sbas_prn,
@@ -121,27 +121,27 @@ fn forge_gal_ephemeris_frame(_toc: &Epoch, sv: SV, eph: &Ephemeris) -> Option<Ep
     let clock_drift = eph.clock_drift as f32;
     let clock_drift_rate = eph.clock_drift_rate as f32;
 
-    let cic = eph.orbits.get("cic")?.as_f64()? as f32;
-    let crc = eph.orbits.get("crc")?.as_f64()? as f32;
-    let cis = eph.orbits.get("cis")?.as_f64()? as f32;
-    let crs = eph.orbits.get("crs")?.as_f64()? as f32;
-    let cuc = eph.orbits.get("cuc")?.as_f64()? as f32;
-    let cus = eph.orbits.get("cus")?.as_f64()? as f32;
+    let cic = eph.orbits.get("cic")?.as_f64() as f32;
+    let crc = eph.orbits.get("crc")?.as_f64() as f32;
+    let cis = eph.orbits.get("cis")?.as_f64() as f32;
+    let crs = eph.orbits.get("crs")?.as_f64() as f32;
+    let cuc = eph.orbits.get("cuc")?.as_f64() as f32;
+    let cus = eph.orbits.get("cus")?.as_f64() as f32;
 
-    let e = eph.orbits.get("e")?.as_f64()?;
-    let m0_rad = eph.orbits.get("m0")?.as_f64()?;
-    let i0_rad = eph.orbits.get("i0")?.as_f64()?;
-    let sqrt_a = eph.orbits.get("sqrta")?.as_f64()?;
-    let omega_rad = eph.orbits.get("omega")?.as_f64()?;
-    let omega_0_rad = eph.orbits.get("omega0")?.as_f64()?;
+    let e = eph.orbits.get("e")?.as_f64();
+    let m0_rad = eph.orbits.get("m0")?.as_f64();
+    let i0_rad = eph.orbits.get("i0")?.as_f64();
+    let sqrt_a = eph.orbits.get("sqrta")?.as_f64();
+    let omega_rad = eph.orbits.get("omega")?.as_f64();
+    let omega_0_rad = eph.orbits.get("omega0")?.as_f64();
 
-    let omega_dot_rad_s = eph.orbits.get("oemgaDot")?.as_f64()? as f32;
+    let omega_dot_rad_s = eph.orbits.get("oemgaDot")?.as_f64() as f32;
     let omega_dot_semi_circles = omega_dot_rad_s;
 
-    let i_dot_rad_s = eph.orbits.get("idot")?.as_f64()? as f32;
+    let i_dot_rad_s = eph.orbits.get("idot")?.as_f64() as f32;
     let idot_semi_circles_s = i_dot_rad_s;
 
-    let delta_n_rad_s = eph.orbits.get("delta_n")?.as_f64()? as f32;
+    let delta_n_rad_s = eph.orbits.get("delta_n")?.as_f64() as f32;
     let delta_n_semi_circles_s = delta_n_rad_s;
 
     Some(EphemerisFrame::GAL(GALEphemeris {
@@ -180,17 +180,17 @@ fn forge_glo_ephemeris_frame(eph: &Ephemeris) -> Option<EphemerisFrame> {
     let clock_offset_s = eph.clock_bias;
     let clock_rel_freq_bias = eph.clock_drift;
 
-    let x_km = eph.orbits.get("satPosX")?.as_f64()?;
-    let vel_x_km = eph.orbits.get("velX")?.as_f64()?;
-    let acc_x_km = eph.orbits.get("accelX")?.as_f64()?;
+    let x_km = eph.orbits.get("satPosX")?.as_f64();
+    let vel_x_km = eph.orbits.get("velX")?.as_f64();
+    let acc_x_km = eph.orbits.get("accelX")?.as_f64();
 
-    let y_km = eph.orbits.get("satPosX")?.as_f64()?;
-    let vel_y_km = eph.orbits.get("velY")?.as_f64()?;
-    let acc_y_km = eph.orbits.get("accelY")?.as_f64()?;
+    let y_km = eph.orbits.get("satPosX")?.as_f64();
+    let vel_y_km = eph.orbits.get("velY")?.as_f64();
+    let acc_y_km = eph.orbits.get("accelY")?.as_f64();
 
-    let z_km = eph.orbits.get("satPosX")?.as_f64()?;
-    let vel_z_km = eph.orbits.get("velZ")?.as_f64()?;
-    let acc_z_km = eph.orbits.get("accelZ")?.as_f64()?;
+    let z_km = eph.orbits.get("satPosX")?.as_f64();
+    let vel_z_km = eph.orbits.get("velZ")?.as_f64();
+    let acc_z_km = eph.orbits.get("accelZ")?.as_f64();
 
     Some(EphemerisFrame::GLO(GLOEphemeris {
         slot: 0,
