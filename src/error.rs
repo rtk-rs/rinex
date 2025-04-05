@@ -130,6 +130,8 @@ pub enum ParsingError {
     NoNavigationDefinition,
     #[error("nav: invalid health flag definition")]
     NavHealthFlagDefinition,
+    #[error("nav: invalid data source flag definition")]
+    NavDataSourceDefinition,
     #[error("nav: invalid / missing flag definition")]
     NavFlagsDefinition,
     #[error("nav: unsigned radio field")]

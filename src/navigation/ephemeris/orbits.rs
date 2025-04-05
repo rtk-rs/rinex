@@ -4,7 +4,7 @@ use std::str::FromStr;
 use crate::{
     navigation::{
         ephemeris::health::{
-            gal::GalHealth,
+            gal::{GalHealth, GalDataSource},
             geo::GeoHealth,
             glonass::{GlonassHealth, GlonassStatus},
             gps::{Gpsl1cHealth, Gpsl1l2l5Health},
@@ -38,15 +38,17 @@ pub enum OrbitItem {
     Gpsl1cHealth(Gpsl1cHealth),
     /// GPS or QZSS [Gpsl1l2l5Health] flag
     Gpsl1l2l5Health(Gpsl1l2l5Health),
-    /// SV health
+    /// [GeoHealth] SV indication
     GeoHealth(GeoHealth),
-    /// SV health
+    /// [GalHealth] SV indication
     GalHealth(GalHealth),
-    /// SV health
+    /// [GalDataSource] signal indication
+    GalDataSource(GalDataSource),
+    /// [IrnssHealth] SV indication
     IrnssHealth(IrnssHealth),
-    /// SV health
+    /// [GlonassHealth] SV indication
     GlonassHealth(GlonassHealth),
-    /// NAV4 Orbit7 status mask
+    /// [GlonassStatus] NAV4 Orbit7 status flag
     GlonassStatus(GlonassStatus),
 }
 
@@ -140,24 +142,54 @@ impl OrbitItem {
                         // handle GEO case
                         if constellation.is_sbas() {
                             match msgtype {
-                                NavMessageType::LNAV => {
+                                NavMessageType::LNAV | NavMessageType::SBAS => {
+                                    let flags = GeoHealth::from_bits(unsigned)
+                                        .map_err(|_| ParsingError::NavHealthFlagsMapping)?;
 
+                                    return Ok(OrbitItem::GeoHealth(flags));
                                 },
+                                _ => {
+                                    return Err(ParsingError::NavHealthFlagDefinition)
+                                }
                             }
                         }
 
                         // other cases
                         match (msgtype, constellation) {
                             (NavMessageType::LNAV | NavMessageType::CNAV, Constellation::GPS | Constellation::QZSS) => {
-                                let flags = Gpsl1l2l5Health::from_bits(unsigned).unwrap_or_default();
+
+                                let flags = Gpsl1l2l5Health::from_bits(unsigned)
+                                .map_err(|_| ParsingError::NavHealthFlagsMapping)?;
+
                                 Ok(OrbitItem::Gpsl1l2l5Health(flags))
                             },
                             (NavMessageType::LNAV | NavMessageType::CNV2, Constellation::GPS | Constellation::QZSS) => {
-                                let flags = Gpsl1cHealth::from_bits(unsigned).unwrap_or_default();
+                                
+                                let flags = Gpsl1l2l5Health::from_bits(unsigned)
+                                .map_err(|_| ParsingError::NavHealthFlagsMapping)?;
+
                                 Ok(OrbitItem::Gpsl1l2l5Health(flags))
+                            },
+                            (NavMessageType::LNAV | NavMessageType::INAV | NavMessageType::FNAV, Constellation::Galileo) => {
+                                let flags = GalHealth::from_bits(unsigned)
+                                .map_err(|_| ParsingError::NavHealthFlagsMapping)?;
+
+                                Ok(OrbitItem::GalHealth(flags))
                             },
                             _ => {
                                 Err(ParsingError::NavHealthFlagDefinition)
+                            }
+                        }
+                    },
+                    "source" => {
+                        // complex signal source indication
+                        match (msgtype, constellation) {
+                            (NavMessageType::LNAV | NavMessageType::INAV | NavMessageType::FNAV, Constellation::Galileo) => {
+                                let flags = GalDataSource::from_bits(unsigned).unwrap_or_default();
+                                Ok(OrbitItem::GalDataSource(flags))
+                            },
+                            _ => {
+                                Err(ParsingError::NavDataSourceDefinition)
                             }
                         }
                     },

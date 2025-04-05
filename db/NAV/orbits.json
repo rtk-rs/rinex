@@ -297,7 +297,7 @@
             "velZ": "f64",
             "accelZ": "f64",
             "ageOp": "f64",
-            "status": "gloStatus",
+            "status": "flag",
             "L1L2GrpDelay": "f64",
             "urai": "f64",
             "almanacHealth": "flag"
@@ -363,7 +363,7 @@
             "omega": "f64",
             "omegaDot": "f64",
             "idot": "f64",
-            "dataSrc": "f64",
+            "source": "flag",
             "week": "u32",
             "sisa": "f64",
             "health": "flag",
