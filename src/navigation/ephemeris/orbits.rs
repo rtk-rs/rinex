@@ -199,7 +199,10 @@ impl OrbitItem {
 
                                 Ok(OrbitItem::GalHealth(flags))
                             },
-                            (NavMessageType::LNAV, Constellation::Glonass) => {
+                            (
+                                NavMessageType::LNAV | NavMessageType::FDMA,
+                                Constellation::Glonass,
+                            ) => {
                                 let flags = GlonassHealth::from_bits(unsigned)
                                     .ok_or(ParsingError::NavFlagsMapping)?;
 
@@ -232,7 +235,7 @@ impl OrbitItem {
                         // BDS H1 flag
                         match (msgtype, constellation) {
                             (
-                                NavMessageType::LNAV | NavMessageType::D1D2,
+                                NavMessageType::LNAV | NavMessageType::D1 | NavMessageType::D2,
                                 Constellation::BeiDou,
                             ) => {
                                 let flags = BdsSatH1::from_bits(unsigned)
@@ -307,14 +310,6 @@ impl OrbitItem {
             },
         }
     }
-
-    // /// True if this [OrbitItem] is a native type
-    // pub(crate) fn is_native_type(&self) -> bool {
-    //     matches!(
-    //         *self,
-    //         OrbitItem::F64(_) | OrbitItem::U8(_) | OrbitItem::I8(_) | OrbitItem::U32(_)
-    //     )
-    // }
 
     /// Unwraps [OrbitItem] as [f64] (always feasible)
     pub fn as_f64(&self) -> f64 {
@@ -593,7 +588,7 @@ mod test {
             let constellation = frame.constellation;
 
             for (name_str, type_str) in frame.items.iter() {
-                let val_str = "0.00000";
+                let val_str = "1.2345";
 
                 let e = OrbitItem::new(name_str, type_str, val_str, &nav_msg, constellation);
                 assert!(
@@ -800,9 +795,10 @@ mod test {
     #[test]
     fn test_orbit_channel_5() {
         let lnav = NavMessageType::LNAV;
+
         let _ = OrbitItem::new(
-            "i8",
             "channel",
+            "i8",
             "5.000000000000D+00",
             &lnav,
             Constellation::Glonass,

@@ -78,14 +78,12 @@ fn parse_orbits(
                 //    token,
                 //    content.trim()
                 //); //DEBUG
-                if !name_str.contains("spare") {
-                    match OrbitItem::new(name_str, type_str, val_str, &msgtype, constell) {
-                        Ok(item) => {
-                            // println!("found key=\"{}\" (type={}) value=\"{}\"", key, token, content); // DEBUG
-                            map.insert(name_str.to_string(), item);
-                        },
-                        Err(_) => {},
-                    }
+                match OrbitItem::new(name_str, type_str, val_str, &msgtype, constell) {
+                    Ok(item) => {
+                        // println!("found key=\"{}\" (type={}) value=\"{}\"", key, token, content); // DEBUG
+                        map.insert(name_str.to_string(), item);
+                    },
+                    Err(_) => {},
                 }
             }
 
@@ -324,7 +322,7 @@ mod test {
         );
 
         assert_eq!(ephemeris.get_orbit_f64("idot"), Some(1.839362331110e-10));
-        assert_eq!(ephemeris.get_orbit_f64("dataSrc"), Some(2.580000000000e+02));
+        assert_eq!(ephemeris.get_orbit_f64("source"), Some(2.580000000000e+02));
         assert_eq!(ephemeris.get_week(), Some(2111));
 
         assert_eq!(ephemeris.get_orbit_f64("sisa"), Some(3.120000000000e+00));
@@ -348,20 +346,24 @@ mod test {
      -.940753471872e-09  .000000000000e+00  .782000000000e+03  .000000000000e+00
       .200000000000e+01  .000000000000e+00 -.599999994133e-09 -.900000000000e-08
       .432000000000e+06  .000000000000e+00 0.000000000000e+00 0.000000000000e+00";
+
         let orbits = parse_orbits(
             Version::new(3, 0),
             NavMessageType::LNAV,
             Constellation::BeiDou,
             content.lines(),
         );
+
         assert!(orbits.is_ok());
         let orbits = orbits.unwrap();
+
         let ephemeris = Ephemeris {
             clock_bias: 0.0,
             clock_drift: 0.0,
             clock_drift_rate: 0.0,
             orbits,
         };
+
         assert_eq!(ephemeris.get_orbit_f64("aode"), Some(1.0));
         assert_eq!(ephemeris.get_orbit_f64("crs"), Some(1.18906250000e+01));
         assert_eq!(ephemeris.get_orbit_f64("deltaN"), Some(0.105325815814e-08));
@@ -380,7 +382,6 @@ mod test {
         assert_eq!(ephemeris.get_orbit_f64("i0"), Some(0.607169709798e-01));
         assert_eq!(ephemeris.get_orbit_f64("crc"), Some(-0.897671875000e+03));
         assert_eq!(ephemeris.get_orbit_f64("omega"), Some(0.154887266488e+00));
-
         assert_eq!(
             ephemeris.get_orbit_f64("omegaDot"),
             Some(-0.871464871438e-10)
@@ -389,10 +390,10 @@ mod test {
         assert_eq!(ephemeris.get_orbit_f64("idot"), Some(-0.940753471872e-09));
         assert_eq!(ephemeris.get_week(), Some(782));
         assert_eq!(
-            ephemeris.get_orbit_f64("svAccuracy"),
+            ephemeris.get_orbit_f64("accuracy"),
             Some(0.200000000000e+01)
         );
-        assert!(ephemeris.get_orbit_f64("satH1").is_none());
+        assert!(ephemeris.get_orbit_f64("satH1").is_some());
 
         assert_eq!(
             ephemeris.get_orbit_f64("tgd1b1b3"),

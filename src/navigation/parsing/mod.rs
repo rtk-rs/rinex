@@ -182,7 +182,7 @@ mod test {
         assert_eq!(ephemeris.clock_drift_rate, 7.38E4);
 
         let orbits = &ephemeris.orbits;
-        assert_eq!(orbits.len(), 9);
+        assert_eq!(orbits.len(), 10);
 
         for (k, v) in orbits.iter() {
             if k.eq("satPosX") {
@@ -247,7 +247,7 @@ mod test {
         assert_eq!(ephemeris.clock_drift_rate, 0.0);
 
         let orbits = &ephemeris.orbits;
-        assert_eq!(orbits.len(), 24);
+        assert_eq!(orbits.len(), 23);
 
         for (k, v) in orbits.iter() {
             if k.eq("aode") {
@@ -288,7 +288,7 @@ mod test {
             } else if k.eq("week") {
                 assert_eq!(v.as_u32(), 782);
             //SPARE
-            } else if k.eq("svAccuracy") {
+            } else if k.eq("accuracy") {
                 assert_eq!(v.as_f64(), 0.200000000000e+01);
             } else if k.eq("satH1") {
                 assert_eq!(v.as_f64(), 0.000000000000e+00);
@@ -338,7 +338,7 @@ mod test {
         assert_eq!(ephemeris.clock_drift_rate, 0.0);
 
         let orbits = &ephemeris.orbits;
-        assert_eq!(orbits.len(), 24);
+        assert_eq!(orbits.len(), 23);
 
         for (k, v) in orbits.iter() {
             if k.eq("iodnav") {
@@ -375,7 +375,7 @@ mod test {
                 assert_eq!(v.as_f64(), -0.518200156545e-08);
             } else if k.eq("idot") {
                 assert_eq!(v.as_f64(), -0.595381942905e-09);
-            } else if k.eq("dataSrc") {
+            } else if k.eq("source") {
                 assert_eq!(v.as_f64(), 0.258000000000e+03);
             } else if k.eq("week") {
                 assert_eq!(v.as_u32(), 2138);
@@ -425,7 +425,7 @@ mod test {
         assert_eq!(ephemeris.clock_drift_rate, 0.342000000000e+05);
 
         let orbits = &ephemeris.orbits;
-        assert_eq!(orbits.len(), 12);
+        assert_eq!(orbits.len(), 9);
 
         for (k, v) in orbits.iter() {
             if k.eq("satPosX") {
