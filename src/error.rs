@@ -128,12 +128,18 @@ pub enum ParsingError {
     NavMsgType,
     #[error("nav: unknown radio message")]
     NoNavigationDefinition,
-    #[error("nav: unsigned radio field")]
-    OrbitUnsignedData,
-    #[error("nav: signed radio field")]
-    OrbitSignedData,
-    #[error("nav: float radio field")]
-    OrbitFloatData,
+    #[error("nav: invalid health flag definition")]
+    NavHealthFlagDefinition,
+    #[error("nav: invalid bitfield")]
+    NavFlagsMapping,
+    #[error("nav: invalid data source flag definition")]
+    NavDataSourceDefinition,
+    #[error("nav: unknown complex type")]
+    NavUnknownComplexType,
+    #[error("nav: invalid / missing flag definition")]
+    NavFlagsDefinition,
+    #[error("nav: illegal null orbit field")]
+    NavNullOrbit,
     #[error("nav:ion klobuchar data")]
     KlobucharData,
     #[error("nav:ion nequick-g data")]

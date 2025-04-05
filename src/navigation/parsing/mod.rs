@@ -182,67 +182,33 @@ mod test {
         assert_eq!(ephemeris.clock_drift_rate, 7.38E4);
 
         let orbits = &ephemeris.orbits;
-        assert_eq!(orbits.len(), 9);
+        assert_eq!(orbits.len(), 10);
 
         for (k, v) in orbits.iter() {
             if k.eq("satPosX") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -1.488799804690E+03);
+                assert_eq!(v.as_f64(), -1.488799804690E+03);
             } else if k.eq("velX") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -2.196182250980E+00);
+                assert_eq!(v.as_f64(), -2.196182250980E+00);
             } else if k.eq("accelX") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 3.725290298460E-09);
+                assert_eq!(v.as_f64(), 3.725290298460E-09);
             } else if k.eq("health") {
-                let v = v.as_glo_health();
-                assert!(v.is_some());
+                assert!(v.as_glonass_health_flag().is_some());
             } else if k.eq("satPosY") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 1.292880712890E+04);
+                assert_eq!(v.as_f64(), 1.292880712890E+04);
             } else if k.eq("velY") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -2.049269676210E+00);
+                assert_eq!(v.as_f64(), -2.049269676210E+00);
             } else if k.eq("accelY") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.0);
+                assert_eq!(v.as_f64(), 0.0);
             } else if k.eq("channel") {
-                let v = v.as_i8();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 1);
+                assert_eq!(v.as_i8(), 1);
             } else if k.eq("satPosZ") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 2.193169775390E+04);
+                assert_eq!(v.as_f64(), 2.193169775390E+04);
             } else if k.eq("velZ") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 1.059645652770E+00);
+                assert_eq!(v.as_f64(), 1.059645652770E+00);
             } else if k.eq("accelZ") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -9.313225746150E-10);
+                assert_eq!(v.as_f64(), -9.313225746150E-10);
             } else if k.eq("ageOp") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.0);
+                assert_eq!(v.as_f64(), 0.0);
             } else {
                 panic!("Got unexpected key \"{}\" for GLOV2 record", k);
             }
@@ -281,131 +247,59 @@ mod test {
         assert_eq!(ephemeris.clock_drift_rate, 0.0);
 
         let orbits = &ephemeris.orbits;
-        assert_eq!(orbits.len(), 24);
+        assert_eq!(orbits.len(), 23);
 
         for (k, v) in orbits.iter() {
             if k.eq("aode") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.100000000000e+01);
+                assert_eq!(v.as_f64(), 0.100000000000e+01);
             } else if k.eq("crs") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.118906250000e+02);
+                assert_eq!(v.as_f64(), 0.118906250000e+02);
             } else if k.eq("deltaN") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.105325815814e-08);
+                assert_eq!(v.as_f64(), 0.105325815814e-08);
             } else if k.eq("m0") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.255139531119e+01);
+                assert_eq!(v.as_f64(), -0.255139531119e+01);
             } else if k.eq("cuc") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.169500708580e-06);
+                assert_eq!(v.as_f64(), 0.169500708580e-06);
             } else if k.eq("e") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.401772442274e-03);
+                assert_eq!(v.as_f64(), 0.401772442274e-03);
             } else if k.eq("cus") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.292365439236e-04);
+                assert_eq!(v.as_f64(), 0.292365439236e-04);
             } else if k.eq("sqrta") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.649346986580e+04);
+                assert_eq!(v.as_f64(), 0.649346986580e+04);
             } else if k.eq("toe") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.432000000000e+06);
+                assert_eq!(v.as_f64(), 0.432000000000e+06);
             } else if k.eq("cic") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.105705112219e-06);
+                assert_eq!(v.as_f64(), 0.105705112219e-06);
             } else if k.eq("omega0") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.277512444499e+01);
+                assert_eq!(v.as_f64(), -0.277512444499e+01);
             } else if k.eq("cis") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.211410224438e-06);
+                assert_eq!(v.as_f64(), -0.211410224438e-06);
             } else if k.eq("i0") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.607169709798e-01);
+                assert_eq!(v.as_f64(), 0.607169709798e-01);
             } else if k.eq("crc") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.897671875000e+03);
+                assert_eq!(v.as_f64(), -0.897671875000e+03);
             } else if k.eq("omega") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.154887266488e+00);
+                assert_eq!(v.as_f64(), 0.154887266488e+00);
             } else if k.eq("omegaDot") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.871464871438e-10);
+                assert_eq!(v.as_f64(), -0.871464871438e-10);
             } else if k.eq("idot") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.940753471872e-09);
+                assert_eq!(v.as_f64(), -0.940753471872e-09);
             // SPARE
             } else if k.eq("week") {
-                let v = v.as_u32();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 782);
+                assert_eq!(v.as_u32(), 782);
             //SPARE
-            } else if k.eq("svAccuracy") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.200000000000e+01);
+            } else if k.eq("accuracy") {
+                assert_eq!(v.as_f64(), 0.200000000000e+01);
             } else if k.eq("satH1") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.000000000000e+00);
+                assert_eq!(v.as_f64(), 0.000000000000e+00);
             } else if k.eq("tgd1b1b3") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.599999994133e-09);
+                assert_eq!(v.as_f64(), -0.599999994133e-09);
             } else if k.eq("tgd2b2b3") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.900000000000e-08);
+                assert_eq!(v.as_f64(), -0.900000000000e-08);
             } else if k.eq("t_tm") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.432000000000e+06);
+                assert_eq!(v.as_f64(), 0.432000000000e+06);
             } else if k.eq("aodc") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.000000000000e+00);
+                assert_eq!(v.as_f64(), 0.000000000000e+00);
             } else {
                 panic!("Got unexpected key \"{}\" for BDSV3 record", k);
             }
@@ -444,128 +338,58 @@ mod test {
         assert_eq!(ephemeris.clock_drift_rate, 0.0);
 
         let orbits = &ephemeris.orbits;
-        assert_eq!(orbits.len(), 24);
+        assert_eq!(orbits.len(), 23);
 
         for (k, v) in orbits.iter() {
             if k.eq("iodnav") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.130000000000e+02);
+                assert_eq!(v.as_f64(), 0.130000000000e+02);
             } else if k.eq("crs") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.435937500000e+02);
+                assert_eq!(v.as_f64(), 0.435937500000e+02);
             } else if k.eq("deltaN") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.261510892978e-08);
+                assert_eq!(v.as_f64(), 0.261510892978e-08);
             } else if k.eq("m0") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.142304064404e+00);
+                assert_eq!(v.as_f64(), -0.142304064404e+00);
             } else if k.eq("cuc") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.201165676117e-05);
+                assert_eq!(v.as_f64(), 0.201165676117e-05);
             } else if k.eq("e") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.226471573114e-03);
+                assert_eq!(v.as_f64(), 0.226471573114e-03);
             } else if k.eq("cus") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.109840184450e-04);
+                assert_eq!(v.as_f64(), 0.109840184450e-04);
             } else if k.eq("sqrta") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.544061822701e+04);
+                assert_eq!(v.as_f64(), 0.544061822701e+04);
             } else if k.eq("toe") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.468600000000e+06);
+                assert_eq!(v.as_f64(), 0.468600000000e+06);
             } else if k.eq("cic") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.111758708954e-07);
+                assert_eq!(v.as_f64(), 0.111758708954e-07);
             } else if k.eq("omega0") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.313008275208e+01);
+                assert_eq!(v.as_f64(), -0.313008275208e+01);
             } else if k.eq("cis") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.409781932831e-07);
+                assert_eq!(v.as_f64(), 0.409781932831e-07);
             } else if k.eq("i0") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.980287270202e+00);
+                assert_eq!(v.as_f64(), 0.980287270202e+00);
             } else if k.eq("crc") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.113593750000e+03);
+                assert_eq!(v.as_f64(), 0.113593750000e+03);
             } else if k.eq("omega") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.276495796017e+00);
+                assert_eq!(v.as_f64(), -0.276495796017e+00);
             } else if k.eq("omegaDot") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.518200156545e-08);
+                assert_eq!(v.as_f64(), -0.518200156545e-08);
             } else if k.eq("idot") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.595381942905e-09);
-            } else if k.eq("dataSrc") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.258000000000e+03);
+                assert_eq!(v.as_f64(), -0.595381942905e-09);
+            } else if k.eq("source") {
+                assert_eq!(v.as_f64(), 0.258000000000e+03);
             } else if k.eq("week") {
-                let v = v.as_u32();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 2138);
+                assert_eq!(v.as_u32(), 2138);
             //SPARE
             } else if k.eq("sisa") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.312000000000e+01);
+                assert_eq!(v.as_f64(), 0.312000000000e+01);
             } else if k.eq("health") {
-                let v = v.as_gal_health();
-                assert!(v.is_some());
+                assert!(v.as_galileo_health_flag().is_some());
             } else if k.eq("bgdE5aE1") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.232830643654e-09);
+                assert_eq!(v.as_f64(), 0.232830643654e-09);
             } else if k.eq("bgdE5bE1") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.000000000000e+00);
+                assert_eq!(v.as_f64(), 0.000000000000e+00);
             } else if k.eq("t_tm") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.469330000000e+06);
+                assert_eq!(v.as_f64(), 0.469330000000e+06);
             } else {
                 panic!("Got unexpected key \"{}\" for GALV3 record", k);
             }
@@ -601,67 +425,33 @@ mod test {
         assert_eq!(ephemeris.clock_drift_rate, 0.342000000000e+05);
 
         let orbits = &ephemeris.orbits;
-        assert_eq!(orbits.len(), 12);
+        assert_eq!(orbits.len(), 9);
 
         for (k, v) in orbits.iter() {
             if k.eq("satPosX") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.124900639648e+05);
+                assert_eq!(v.as_f64(), 0.124900639648e+05);
             } else if k.eq("velX") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.912527084351e+00);
+                assert_eq!(v.as_f64(), 0.912527084351e+00);
             } else if k.eq("accelX") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.000000000000e+00);
+                assert_eq!(v.as_f64(), 0.000000000000e+00);
             } else if k.eq("health") {
-                let v = v.as_glo_health();
-                assert!(v.is_some());
+                assert!(v.as_glonass_health_flag().is_some());
             } else if k.eq("satPosY") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.595546582031e+04);
+                assert_eq!(v.as_f64(), 0.595546582031e+04);
             } else if k.eq("velY") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.278496932983e+01);
+                assert_eq!(v.as_f64(), 0.278496932983e+01);
             } else if k.eq("accelY") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.000000000000e+00);
+                assert_eq!(v.as_f64(), 0.000000000000e+00);
             } else if k.eq("channel") {
-                let v = v.as_i8();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 5);
+                assert_eq!(v.as_i8(), 5);
             } else if k.eq("satPosZ") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.214479208984e+05);
+                assert_eq!(v.as_f64(), 0.214479208984e+05);
             } else if k.eq("velZ") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.131077289581e+01);
+                assert_eq!(v.as_f64(), -0.131077289581e+01);
             } else if k.eq("accelZ") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, -0.279396772385e-08);
+                assert_eq!(v.as_f64(), -0.279396772385e-08);
             } else if k.eq("ageOp") {
-                let v = v.as_f64();
-                assert!(v.is_some());
-                let v = v.unwrap();
-                assert_eq!(v, 0.000000000000e+00);
+                assert_eq!(v.as_f64(), 0.000000000000e+00);
             } else {
                 panic!("Got unexpected key \"{}\" for GLOV3 record", k);
             }

@@ -1,6 +1,9 @@
 use crate::{
     epoch::parse_in_timescale as parse_epoch_in_timescale,
-    navigation::{orbits::closest_nav_standards, Ephemeris, NavMessageType, OrbitItem},
+    navigation::{
+        ephemeris::orbits::{closest_nav_standards, OrbitItem},
+        Ephemeris, NavMessageType,
+    },
     prelude::{Constellation, Epoch, ParsingError, TimeScale, Version, SV},
 };
 
@@ -54,12 +57,12 @@ fn parse_orbits(
                 break;
             }
 
-            let (content, rem) = line.split_at(std::cmp::min(word_size, line.len()));
-            let content = content.trim();
+            let (val_str, rem) = line.split_at(std::cmp::min(word_size, line.len()));
+            let val_str = val_str.trim();
             // println!("CONTENT \"{}\"", content); // DEBUG
 
             // handle omitted fields
-            if content.is_empty() {
+            if val_str.is_empty() {
                 // omitted field
                 key_index += 1;
                 nb_missing = nb_missing.saturating_sub(1);
@@ -67,21 +70,7 @@ fn parse_orbits(
                 continue;
             }
 
-            // zeros mean unresolved/unknown fields
-            if content.starts_with("0.000000000000E+00") {
-                line = rem;
-                key_index += 1;
-                continue;
-            }
-
-            // zeros mean unresolved/unknown fields
-            if content.starts_with("0.000000000000D+00") {
-                line = rem;
-                key_index += 1;
-                continue;
-            }
-
-            if let Some((key, token)) = fields.get(key_index) {
+            if let Some((name_str, type_str)) = fields.get(key_index) {
                 //println!(
                 //    "Key \"{}\"(index: {}) | Token \"{}\" | Content \"{}\"",
                 //    key,
@@ -89,13 +78,15 @@ fn parse_orbits(
                 //    token,
                 //    content.trim()
                 //); //DEBUG
-                if !key.contains("spare") {
-                    if let Ok(item) = OrbitItem::new(token, content, constell) {
+                match OrbitItem::new(name_str, type_str, val_str, &msgtype, constell) {
+                    Ok(item) => {
                         // println!("found key=\"{}\" (type={}) value=\"{}\"", key, token, content); // DEBUG
-                        map.insert(key.to_string(), item);
-                    }
+                        map.insert(name_str.to_string(), item);
+                    },
+                    Err(_) => {},
                 }
             }
+
             key_index += 1;
             line = rem;
         }
@@ -331,7 +322,7 @@ mod test {
         );
 
         assert_eq!(ephemeris.get_orbit_f64("idot"), Some(1.839362331110e-10));
-        assert_eq!(ephemeris.get_orbit_f64("dataSrc"), Some(2.580000000000e+02));
+        assert_eq!(ephemeris.get_orbit_f64("source"), Some(2.580000000000e+02));
         assert_eq!(ephemeris.get_week(), Some(2111));
 
         assert_eq!(ephemeris.get_orbit_f64("sisa"), Some(3.120000000000e+00));
@@ -355,20 +346,24 @@ mod test {
      -.940753471872e-09  .000000000000e+00  .782000000000e+03  .000000000000e+00
       .200000000000e+01  .000000000000e+00 -.599999994133e-09 -.900000000000e-08
       .432000000000e+06  .000000000000e+00 0.000000000000e+00 0.000000000000e+00";
+
         let orbits = parse_orbits(
             Version::new(3, 0),
             NavMessageType::LNAV,
             Constellation::BeiDou,
             content.lines(),
         );
+
         assert!(orbits.is_ok());
         let orbits = orbits.unwrap();
+
         let ephemeris = Ephemeris {
             clock_bias: 0.0,
             clock_drift: 0.0,
             clock_drift_rate: 0.0,
             orbits,
         };
+
         assert_eq!(ephemeris.get_orbit_f64("aode"), Some(1.0));
         assert_eq!(ephemeris.get_orbit_f64("crs"), Some(1.18906250000e+01));
         assert_eq!(ephemeris.get_orbit_f64("deltaN"), Some(0.105325815814e-08));
@@ -394,16 +389,17 @@ mod test {
 
         assert_eq!(ephemeris.get_orbit_f64("idot"), Some(-0.940753471872e-09));
         assert_eq!(ephemeris.get_week(), Some(782));
-
         assert_eq!(
-            ephemeris.get_orbit_f64("svAccuracy"),
+            ephemeris.get_orbit_f64("accuracy"),
             Some(0.200000000000e+01)
         );
-        assert!(ephemeris.get_orbit_f64("satH1").is_none());
+        assert!(ephemeris.get_orbit_f64("satH1").is_some());
+
         assert_eq!(
             ephemeris.get_orbit_f64("tgd1b1b3"),
             Some(-0.599999994133e-09)
         );
+
         assert_eq!(
             ephemeris.get_orbit_f64("tgd2b2b3"),
             Some(-0.900000000000e-08)

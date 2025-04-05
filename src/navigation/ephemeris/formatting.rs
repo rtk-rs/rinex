@@ -1,7 +1,8 @@
 //! Ephemeris message formatting
 use crate::{
     navigation::{
-        formatting::NavFormatter, orbits::closest_nav_standards, Ephemeris, NavMessageType,
+        ephemeris::orbits::closest_nav_standards, formatting::NavFormatter, Ephemeris,
+        NavMessageType,
     },
     prelude::{Constellation, SV},
     FormattingError, Version,
@@ -68,7 +69,7 @@ impl Ephemeris {
 #[cfg(test)]
 mod test {
 
-    use crate::navigation::{Ephemeris, NavMessageType, OrbitItem};
+    use crate::navigation::{ephemeris::OrbitItem, Ephemeris, NavMessageType};
     use crate::prelude::{Version, SV};
 
     use std::io::BufWriter;

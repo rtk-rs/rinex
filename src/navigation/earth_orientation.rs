@@ -5,6 +5,9 @@ use crate::{
     prelude::{Epoch, ParsingError, TimeScale},
 };
 
+#[cfg(feature = "serde")]
+use serde::Serialize;
+
 use std::str::FromStr;
 
 /// Earth Orientation Message
