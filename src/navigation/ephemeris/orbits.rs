@@ -2,19 +2,16 @@
 use std::str::FromStr;
 
 use crate::{
-    navigation::{
-        ephemeris::flags::{
-            bds::{
-                BdsB1cIntegrity, BdsB2aB1cIntegrity, BdsB2bIntegrity, BdsHealth, BdsSatH1,
-                BdsSatelliteType,
-            },
-            gal::{GalDataSource, GalHealth},
-            geo::GeoHealth,
-            glonass::{GlonassHealth, GlonassHealth2, GlonassStatus},
-            gps::{GpsQzssl1cHealth, GpsQzssl1l2l5Health},
-            irnss::IrnssHealth,
+    navigation::ephemeris::flags::{
+        bds::{
+            BdsB1cIntegrity, BdsB2aB1cIntegrity, BdsB2bIntegrity, BdsHealth, BdsSatH1,
+            BdsSatelliteType,
         },
-        NavMessageType,
+        gal::{GalDataSource, GalHealth},
+        geo::GeoHealth,
+        glonass::{GlonassHealth, GlonassHealth2, GlonassStatus},
+        gps::{GpsQzssl1cHealth, GpsQzssl1l2l5Health},
+        irnss::IrnssHealth,
     },
     prelude::ParsingError,
 };
