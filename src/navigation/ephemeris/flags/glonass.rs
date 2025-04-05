@@ -12,17 +12,36 @@ bitflags! {
     }
 }
 
+bitflags! {
+    /// Subsidary 3-bit [GlonassHealth2] flags
+    #[derive(Default, Debug, Clone, PartialEq, PartialOrd)]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
+    pub struct GlonassHealth2 : u32 {
+        /// Attached Almanac is healthy.
+        const HEALTHY_ALMANAC = 0x00000001;
+        /// Almanac is being reported in this Ephemeris frame.
+        const ALAMANAC_IS_REPORTED = 0x00000002;
+        /// Should only be considered if GLO-M/K is
+        /// [GlonassStatus::glonass_mk_type_flag] from the general status is true.
+        const M_K_ONLY_L3_BIT = 0x00000004;
+    }
+}
+
 /// [GlonassStatus] 9-bit binary status mask
-#[derive(Default, Debug, Clone)]
-#[derive(PartialEq, PartialOrd)]
+#[derive(Default, Debug, Clone, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
-pub struct GlonassStatus(u32);
+pub struct GlonassStatus(pub(crate) u32);
+
+impl From<u32> for GlonassStatus {
+    fn from(val: u32) -> Self {
+        Self(val)
+    }
+}
 
 impl GlonassStatus {
-
     /// P1 bits 2-3 : update & valdity interval
     pub fn glonass_p2_update_validity_interval(&self) -> GlonassUpdateValidyInterval {
-        GlonassUpdateValidityInterval::from(self.0)
+        GlonassUpdateValidyInterval::from(self.0)
     }
 
     /// P2 bit 4: odd time interval
@@ -45,16 +64,14 @@ impl GlonassStatus {
         GlonassTimeOffsetSource::from(self.0)
     }
 
-    /// True if GLO-M/K flag is asserted 
+    /// True if GLO-M/K flag is asserted
     pub fn glonass_mk_type_flag(&self) -> bool {
         self.0 & 0x00000180 == 0x00000080
     }
-
 }
 
 /// [GlonassUpdateValidyInterval] 9-bit binary status mask
-#[derive(Default, Debug, Clone)]
-#[derive(PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 pub enum GlonassUpdateValidyInterval {
     /// Pending update (right now)
@@ -67,13 +84,34 @@ pub enum GlonassUpdateValidyInterval {
     HourValidity = 0x03,
 }
 
+impl From<u32> for GlonassUpdateValidyInterval {
+    fn from(val: u32) -> Self {
+        match val {
+            1 => Self::HalfHourValidity,
+            2 => Self::QuarterHourvalidity,
+            3 => Self::HourValidity,
+            _ => Self::PendingUpdate,
+        }
+    }
+}
+
 /// [GlonassTimeOffsetSource]
-#[derive(Default, Debug, Clone)]
-#[derive(PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 pub enum GlonassTimeOffsetSource {
     GroundSource = 0x00,
     GroundClockOnBoardGps = 0x01,
     OnBoardClockGroundGps = 0x02,
-    OnBoardCloakAndGps = 0x03,
+    OnBoardClockAndGps = 0x03,
+}
+
+impl From<u32> for GlonassTimeOffsetSource {
+    fn from(val: u32) -> Self {
+        match val {
+            1 => Self::GroundClockOnBoardGps,
+            2 => Self::OnBoardClockGroundGps,
+            3 => Self::OnBoardClockAndGps,
+            _ => Self::GroundSource,
+        }
+    }
 }

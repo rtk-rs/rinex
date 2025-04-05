@@ -29,13 +29,13 @@ bitflags! {
     #[derive(PartialEq, PartialOrd)]
     #[cfg_attr(feature = "serde", derive(Serialize))]
     pub struct GalDataSource : u32 {
-        /// [GalDataSouce::INAV_E1B] might be set in conjonction to
-        /// [GalDataSource::FNAV_E5B_I] if INAV messages were merged together. 
+        /// [GalDataSource::INAV_E1B] might be set in conjonction to
+        /// [GalDataSource::FNAV_E5B_I] if INAV messages were merged together.
         const INAV_E1B = 0x00000001;
         /// [GalDataSouce::FNAV_E5A_I] might be set in conjonction to
-        /// [GalDataSource::INAV_E1B] if INAV messages were merged together. 
-        const FNAV_E5A_I = 0x00000002; 
-        const FNAV_E5B_I = 0x00000004; 
+        /// [GalDataSource::INAV_E1B] if INAV messages were merged together.
+        const FNAV_E5A_I = 0x00000002;
+        const FNAV_E5B_I = 0x00000004;
         /// Reserved for Galileo internal use
         const GAL_RESERVED1 = 0x00000008;
         /// Reserved for Galileo internal use
@@ -47,6 +47,6 @@ bitflags! {
         /// [GalDataSource::TEMPORAL_SISA_E1_E5B] is asserted
         /// if the temporal information (provided ToC) and SISA field addresses
         /// E1 or E5B signal. Both asserted at the same time is illegal.
-        const TEMPORAL_SISA_E1_E5A= 0x00000200;
+        const TEMPORAL_SISA_E1_E5B= 0x00000200;
     }
 }

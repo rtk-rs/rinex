@@ -2,7 +2,8 @@ mod formatting;
 pub mod orbits;
 mod parsing;
 
-pub mod health;
+/// Ephemeris NAV flags definitions & support
+pub mod flags;
 
 use orbits::OrbitItem;
 
@@ -64,7 +65,9 @@ impl Ephemeris {
     /// Try to retrieve week counter. This exists
     /// for all Constellations expect [Constellation::Glonass].
     pub(crate) fn get_week(&self) -> Option<u32> {
-        self.orbits.get("week").and_then(|value| Some(value.as_u32()))
+        self.orbits
+            .get("week")
+            .and_then(|value| Some(value.as_u32()))
     }
 
     /// Returns TGD (if value exists) as [Duration]

@@ -393,12 +393,12 @@ mod test {
             Some(0.200000000000e+01)
         );
         assert!(ephemeris.get_orbit_f64("satH1").is_none());
-        
+
         assert_eq!(
             ephemeris.get_orbit_f64("tgd1b1b3"),
             Some(-0.599999994133e-09)
         );
-        
+
         assert_eq!(
             ephemeris.get_orbit_f64("tgd2b2b3"),
             Some(-0.900000000000e-08)

@@ -288,7 +288,7 @@
             "satPosX": "f64",
             "velX": "f64",
             "accelX": "f64",
-            "svHealth": "flag",
+            "health": "flag",
             "satPosY": "f64",
             "velY": "f64",
             "accelY": "f64",
@@ -300,7 +300,7 @@
             "status": "flag",
             "L1L2GrpDelay": "f64",
             "urai": "f64",
-            "almanacHealth": "flag"
+            "health2": "flag"
         }
     },
     {
@@ -688,7 +688,7 @@
             "omegaDot": "f64",
             "idot": "f64",
             "deltaN0Dot": "f64",
-            "satType": "f64",
+            "satType": "flag",
             "t_op": "f64",
             "sisa1_oe": "f64",
             "sisa1_ocb": "f64",
@@ -700,7 +700,7 @@
             "tgdB2ap": "f64",
             "sismai": "f64",
             "health": "flag",
-            "integrityB1C": "f64",
+            "integrity": "flag",
             "iodc": "f64",
             "t_tm": "f64",
             "spare2": "xxx",
@@ -745,7 +745,7 @@
             "tgdB2ap": "f64",
             "sismai": "f64",
             "health": "flag",
-            "integrityB2aB1C": "f64",
+            "integrity": "flag",
             "iodc": "f64",
             "t_tm": "f64",
             "spare2": "xxx",
@@ -786,7 +786,7 @@
             "sisa1_oc2": "f64",
             "sismai": "f64",
             "health": "flag",
-            "integrityB2b": "f64",
+            "integrity": "flag",
             "tgdB2bI": "f64",
             "t_tm": "f64"
         }

@@ -252,52 +252,36 @@ mod test {
         for (k, v) in orbits.iter() {
             if k.eq("aode") {
                 assert_eq!(v.as_f64(), 0.100000000000e+01);
-
             } else if k.eq("crs") {
                 assert_eq!(v.as_f64(), 0.118906250000e+02);
-            
             } else if k.eq("deltaN") {
                 assert_eq!(v.as_f64(), 0.105325815814e-08);
-            
             } else if k.eq("m0") {
                 assert_eq!(v.as_f64(), -0.255139531119e+01);
-            
             } else if k.eq("cuc") {
                 assert_eq!(v.as_f64(), 0.169500708580e-06);
-            
             } else if k.eq("e") {
                 assert_eq!(v.as_f64(), 0.401772442274e-03);
-            
             } else if k.eq("cus") {
                 assert_eq!(v.as_f64(), 0.292365439236e-04);
-            
             } else if k.eq("sqrta") {
                 assert_eq!(v.as_f64(), 0.649346986580e+04);
-            
             } else if k.eq("toe") {
                 assert_eq!(v.as_f64(), 0.432000000000e+06);
-            
             } else if k.eq("cic") {
                 assert_eq!(v.as_f64(), 0.105705112219e-06);
-            
             } else if k.eq("omega0") {
                 assert_eq!(v.as_f64(), -0.277512444499e+01);
-            
             } else if k.eq("cis") {
                 assert_eq!(v.as_f64(), -0.211410224438e-06);
-            
             } else if k.eq("i0") {
                 assert_eq!(v.as_f64(), 0.607169709798e-01);
-            
             } else if k.eq("crc") {
                 assert_eq!(v.as_f64(), -0.897671875000e+03);
-            
             } else if k.eq("omega") {
                 assert_eq!(v.as_f64(), 0.154887266488e+00);
-            
             } else if k.eq("omegaDot") {
                 assert_eq!(v.as_f64(), -0.871464871438e-10);
-            
             } else if k.eq("idot") {
                 assert_eq!(v.as_f64(), -0.940753471872e-09);
             // SPARE
@@ -446,42 +430,29 @@ mod test {
         for (k, v) in orbits.iter() {
             if k.eq("satPosX") {
                 assert_eq!(v.as_f64(), 0.124900639648e+05);
-            
             } else if k.eq("velX") {
                 assert_eq!(v.as_f64(), 0.912527084351e+00);
-            
             } else if k.eq("accelX") {
                 assert_eq!(v.as_f64(), 0.000000000000e+00);
-            
             } else if k.eq("health") {
                 assert!(v.as_glonass_health_flag().is_some());
-            
             } else if k.eq("satPosY") {
                 assert_eq!(v.as_f64(), 0.595546582031e+04);
-            
             } else if k.eq("velY") {
                 assert_eq!(v.as_f64(), 0.278496932983e+01);
-            
             } else if k.eq("accelY") {
                 assert_eq!(v.as_f64(), 0.000000000000e+00);
-            
             } else if k.eq("channel") {
                 assert_eq!(v.as_i8(), 5);
-            
             } else if k.eq("satPosZ") {
                 assert_eq!(v.as_f64(), 0.214479208984e+05);
-            
             } else if k.eq("velZ") {
                 assert_eq!(v.as_f64(), -0.131077289581e+01);
-            
             } else if k.eq("accelZ") {
                 assert_eq!(v.as_f64(), -0.279396772385e-08);
-            
             } else if k.eq("ageOp") {
                 assert_eq!(v.as_f64(), 0.000000000000e+00);
-            
-            }
-             else {
+            } else {
                 panic!("Got unexpected key \"{}\" for GLOV3 record", k);
             }
         }

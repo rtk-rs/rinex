@@ -6,13 +6,13 @@ use crate::{
 };
 
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use std::str::FromStr;
 
 /// Earth Orientation Message
 #[derive(Debug, Clone, Default, PartialEq, PartialOrd)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 pub struct EarthOrientation {
     /// ((arc-sec), (arc-sec.day⁻¹), (arc-sec.day⁻²))
     pub x: (f64, f64, f64),

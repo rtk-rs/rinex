@@ -3,19 +3,24 @@ use bitflags::bitflags;
 #[cfg(feature = "serde")]
 use serde::Serialize;
 
-/// [Gpsl1l2l5Health] flag as per the LNAV historical frame.
-#[derive(Default, Debug, Clone)]
-#[derive(PartialEq, PartialOrd)]
+/// [GpsQzssl1l2l5Health] flag as per the LNAV historical frame.
+#[derive(Default, Debug, Clone, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
-pub struct Gpsl1l2l5Health(u32);
+pub struct GpsQzssl1l2l5Health(pub(crate) u32);
 
-impl From<u32> for Gpsl1l2l5Health {
+impl From<u32> for GpsQzssl1l2l5Health {
     fn from(value: u32) -> Self {
-        Self.0 = value;
+        Self(value)
     }
 }
 
-impl Gpsl1l2l5Health {
+impl Into<u32> for GpsQzssl1l2l5Health {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
+
+impl GpsQzssl1l2l5Health {
     /// Satellite totally healthy
     pub fn healthy(&self) -> bool {
         self.0 == 0
@@ -36,13 +41,13 @@ impl Gpsl1l2l5Health {
         self.0 & 0x00000004 > 0
     }
 }
-    
+
 bitflags! {
-    /// [Gpsl1cHealth] L1 C/A sanity flag 
+    /// [GpsQzssl1cHealth] L1 C/A sanity flag
     #[derive(Default, Debug, Clone)]
     #[derive(PartialEq, PartialOrd)]
     #[cfg_attr(feature = "serde", derive(Serialize))]
-    pub struct Gpsl1cHealth : u32 {
+    pub struct GpsQzssl1cHealth : u32 {
         const UNHEALTHY = 0x00000001;
     }
 }
