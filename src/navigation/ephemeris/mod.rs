@@ -7,6 +7,14 @@ pub mod flags;
 
 use orbits::OrbitItem;
 
+use flags::{
+    bds::{BdsHealth, BdsSatH1},
+    gal::GalHealth,
+    geo::GeoHealth,
+    glonass::{GlonassHealth, GlonassHealth2},
+    gps::GpsQzssl1cHealth,
+};
+
 #[cfg(feature = "log")]
 use log::error;
 
@@ -74,6 +82,62 @@ impl Ephemeris {
     pub fn tgd(&self) -> Option<Duration> {
         let tgd_s = self.get_orbit_f64("tgd")?;
         Some(Duration::from_seconds(tgd_s))
+    }
+
+    /// Returns true if this [Ephemeris] declares attached SV as suitable for navigation.
+    pub fn sv_healthy(&self) -> bool {
+        let health = self.orbits.get("health");
+
+        if health.is_none() {
+            return false;
+        }
+
+        let health = health.unwrap();
+
+        if let Some(flag) = health.as_gps_qzss_l1l2l5_health_flag() {
+            flag.healthy()
+        } else if let Some(flag) = health.as_gps_qzss_l1c_health_flag() {
+            !flag.intersects(GpsQzssl1cHealth::UNHEALTHY)
+        } else if let Some(flag) = health.as_glonass_health_flag() {
+            // TODO: Status mask .. ?
+            if let Some(flag2) = self
+                .orbits
+                .get("health2")
+                .and_then(|item| Some(item.as_glonass_health2_flag().unwrap()))
+            {
+                !flag.intersects(GlonassHealth::UNHEALTHY)
+                    && flag2.intersects(GlonassHealth2::HEALTHY_ALMANAC)
+            } else {
+                !flag.intersects(GlonassHealth::UNHEALTHY)
+            }
+        } else if let Some(flag) = health.as_geo_health_flag() {
+            // TODO !
+            false
+        } else if let Some(flag) = health.as_bds_sat_h1_flag() {
+            !flag.intersects(BdsSatH1::UNHEALTHY)
+        } else if let Some(flag) = health.as_bds_health_flag() {
+            flag == BdsHealth::Healthy
+        } else {
+            false
+        }
+    }
+
+    /// Returns true if this [Ephemeris] declares this satellite as in testing mode. declared healthy (suitable
+    pub fn sv_in_testing(&self) -> bool {
+        let health = self.orbits.get("health");
+
+        if health.is_none() {
+            return false;
+        }
+
+        let health = health.unwrap();
+
+        // only exists for modern BDS at the moment
+        if let Some(flag) = health.as_bds_health_flag() {
+            flag == BdsHealth::UnhealthyTesting
+        } else {
+            false
+        }
     }
 
     /// Returns glonass frequency channel, in case this is a Glonass [Ephemeris] message,
