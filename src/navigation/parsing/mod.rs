@@ -290,7 +290,7 @@ mod test {
             //SPARE
             } else if k.eq("accuracy") {
                 assert_eq!(v.as_f64(), 0.200000000000e+01);
-            } else if k.eq("satH1") {
+            } else if k.eq("health") {
                 assert_eq!(v.as_f64(), 0.000000000000e+00);
             } else if k.eq("tgd1b1b3") {
                 assert_eq!(v.as_f64(), -0.599999994133e-09);

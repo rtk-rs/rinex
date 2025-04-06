@@ -393,7 +393,7 @@ mod test {
             ephemeris.get_orbit_f64("accuracy"),
             Some(0.200000000000e+01)
         );
-        assert!(ephemeris.get_orbit_f64("satH1").is_some());
+        assert!(ephemeris.get_orbit_f64("health").is_some());
 
         assert_eq!(
             ephemeris.get_orbit_f64("tgd1b1b3"),

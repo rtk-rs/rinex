@@ -209,9 +209,20 @@ impl OrbitItem {
                                 Ok(OrbitItem::GlonassHealth(flags))
                             },
                             (
+                                NavMessageType::LNAV | NavMessageType::D1 | NavMessageType::D2,
+                                Constellation::BeiDou,
+                            ) => {
+                                // BDS H1 flag
+                                let flags = BdsSatH1::from_bits(unsigned)
+                                    .ok_or(ParsingError::NavFlagsMapping)?;
+
+                                Ok(OrbitItem::BdsSatH1(flags))
+                            },
+                            (
                                 NavMessageType::CNV1 | NavMessageType::CNV2 | NavMessageType::CNV3,
                                 Constellation::BeiDou,
                             ) => {
+                                // Modern BDS flag
                                 let flags = BdsHealth::from(unsigned);
 
                                 Ok(OrbitItem::BdsHealth(flags))
@@ -227,21 +238,6 @@ impl OrbitItem {
                                     .ok_or(ParsingError::NavFlagsMapping)?;
 
                                 Ok(OrbitItem::GlonassHealth2(flags))
-                            },
-                            _ => Err(ParsingError::NavHealthFlagDefinition),
-                        }
-                    },
-                    "satH1" => {
-                        // BDS H1 flag
-                        match (msgtype, constellation) {
-                            (
-                                NavMessageType::LNAV | NavMessageType::D1 | NavMessageType::D2,
-                                Constellation::BeiDou,
-                            ) => {
-                                let flags = BdsSatH1::from_bits(unsigned)
-                                    .ok_or(ParsingError::NavFlagsMapping)?;
-
-                                Ok(OrbitItem::BdsSatH1(flags))
                             },
                             _ => Err(ParsingError::NavHealthFlagDefinition),
                         }
