@@ -534,12 +534,9 @@ pub(crate) fn closest_nav_standards(
     // start by trying to locate desired revision.
     // On each mismatch, we decrement and move on to next major/minor combination.
     let (mut major, mut minor): (u8, u8) = revision.into();
+
     loop {
-        // filter on both:
-        //  + Exact Constellation
-        //  + Exact NavMessageType
-        //  + Exact revision we're currently trying to locate
-        //    algorithm: decreasing, starting from desired revision
+        // Match constellation, message type & revision exactly
         let items: Vec<_> = database
             .iter()
             .filter(|item| {
@@ -556,7 +553,7 @@ pub(crate) fn closest_nav_standards(
                 //    we start @ minor = 10, which is
                 //    larger than most revisions we know
                 if major == 0 {
-                    // we're done: browsed all possibilities
+                    // we're done
                     break;
                 } else {
                     major -= 1;
@@ -569,6 +566,7 @@ pub(crate) fn closest_nav_standards(
             return Some(items[0]);
         }
     } // loop
+
     None
 }
 
@@ -669,6 +667,7 @@ mod test {
                 Version::new(3, 0),
                 NavMessageType::LNAV,
             ),
+            // NAV V4 (exact)
             (
                 Constellation::BeiDou,
                 Version::new(4, 0),
@@ -710,12 +709,14 @@ mod test {
             );
 
             let standards = found.unwrap();
+
             assert!(
                 standards.constellation == constellation,
                 "bad constellation identified \"{}\", expecting \"{}\"",
                 constellation,
                 standards.constellation
             );
+
             assert!(
                 standards.version == rev,
                 "should have matched {} V{} exactly, because it exists in DB",
@@ -744,8 +745,45 @@ mod test {
                 Version::new(3, 0),
                 NavMessageType::LNAV,
             ),
+            (
+                Constellation::BeiDou,
+                Version::new(4, 2),
+                Version::new(4, 0),
+                NavMessageType::CNV1,
+            ),
+            (
+                Constellation::BeiDou,
+                Version::new(4, 2),
+                Version::new(4, 0),
+                NavMessageType::CNV2,
+            ),
+            (
+                Constellation::BeiDou,
+                Version::new(4, 2),
+                Version::new(4, 0),
+                NavMessageType::CNV3,
+            ),
+            (
+                Constellation::Galileo,
+                Version::new(4, 2),
+                Version::new(4, 0),
+                NavMessageType::INAV,
+            ),
+            (
+                Constellation::QZSS,
+                Version::new(4, 2),
+                Version::new(4, 0),
+                NavMessageType::LNAV,
+            ),
+            (
+                Constellation::QZSS,
+                Version::new(4, 2),
+                Version::new(4, 0),
+                NavMessageType::CNAV,
+            ),
         ] {
             let found = closest_nav_standards(constellation, desired, msg);
+
             assert!(
                 found.is_some(),
                 "should have converged for \"{}\" V\"{}\" (\"{}\") to nearest frame revision",

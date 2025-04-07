@@ -2,7 +2,7 @@
 use crate::prelude::ParsingError;
 
 /// Current `RINEX` version supported to this day
-pub const SUPPORTED_VERSION: Version = Version { major: 4, minor: 0 };
+pub const SUPPORTED_VERSION: Version = Version { major: 4, minor: 2 };
 
 /// Version is used to describe RINEX standards revisions.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
