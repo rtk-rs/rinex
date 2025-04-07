@@ -14,7 +14,7 @@ pub struct Version {
 impl Default for Version {
     /// Builds a default `Version` object
     fn default() -> Self {
-        Version::new(4, 0)    
+        Version::new(4, 0)
     }
 }
 
@@ -113,7 +113,7 @@ impl Version {
 mod test {
     use super::*;
     use std::str::FromStr;
-    
+
     #[test]
     fn version() {
         let version = Version::from_str("1");
@@ -137,7 +137,7 @@ mod test {
         let version = Version::from_str("a.b");
         assert!(version.is_err());
     }
-    
+
     #[test]
     fn version_comparison() {
         let v_a = Version::from_str("1.2").unwrap();
@@ -145,7 +145,7 @@ mod test {
         assert!(v_b > v_a);
         assert!(v_b != v_a);
     }
-    
+
     #[test]
     fn version_arithmetics() {
         let version = Version::new(3, 2);
