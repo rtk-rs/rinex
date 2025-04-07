@@ -1,9 +1,6 @@
 //! `RINEX` revision description
 use crate::prelude::ParsingError;
 
-/// Current `RINEX` version supported to this day
-pub const SUPPORTED_VERSION: Version = Version { major: 4, minor: 2 };
-
 /// Version is used to describe RINEX standards revisions.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -17,7 +14,7 @@ pub struct Version {
 impl Default for Version {
     /// Builds a default `Version` object
     fn default() -> Self {
-        SUPPORTED_VERSION
+        Version::new(4, 0)    
     }
 }
 
@@ -106,19 +103,9 @@ impl std::str::FromStr for Version {
 }
 
 impl Version {
-    /// Builds a new `Version` object
+    /// Builds a new [Version]
     pub fn new(major: u8, minor: u8) -> Self {
         Self { major, minor }
-    }
-    /// Returns true if this version is supported
-    pub fn is_supported(&self) -> bool {
-        if self.major < SUPPORTED_VERSION.major {
-            true
-        } else if self.major == SUPPORTED_VERSION.major {
-            self.minor <= SUPPORTED_VERSION.minor
-        } else {
-            false
-        }
     }
 }
 
@@ -126,12 +113,9 @@ impl Version {
 mod test {
     use super::*;
     use std::str::FromStr;
+    
     #[test]
     fn version() {
-        let version = Version::default();
-        assert_eq!(version.major, SUPPORTED_VERSION.major);
-        assert_eq!(version.minor, SUPPORTED_VERSION.minor);
-
         let version = Version::from_str("1");
         assert!(version.is_ok());
         let version = version.unwrap();
@@ -153,18 +137,7 @@ mod test {
         let version = Version::from_str("a.b");
         assert!(version.is_err());
     }
-    #[test]
-    fn supported_version() {
-        let version = Version::default();
-        assert!(version.is_supported());
-        let version = SUPPORTED_VERSION;
-        assert!(version.is_supported());
-    }
-    #[test]
-    fn non_supported_version() {
-        let version = Version::new(5, 0);
-        assert!(!version.is_supported());
-    }
+    
     #[test]
     fn version_comparison() {
         let v_a = Version::from_str("1.2").unwrap();
@@ -172,6 +145,7 @@ mod test {
         assert!(v_b > v_a);
         assert!(v_b != v_a);
     }
+    
     #[test]
     fn version_arithmetics() {
         let version = Version::new(3, 2);
