@@ -142,7 +142,7 @@ hifitime = { version = "4.0.0", features = ["serde", "std"] }
 gnss-rs = { version = "2.3.5", features = ["serde", "domes", "cospar"] }
 gnss-qc-traits = { version = "0.1.1", features = ["html"], optional = true }
 
-maud = { version = "0.26", optional = true }
+maud = { version = "0.27", optional = true }
 
 # BINEX
 binex = { version = "0.4.2", optional = true }
