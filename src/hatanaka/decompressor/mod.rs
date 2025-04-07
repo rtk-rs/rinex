@@ -184,6 +184,10 @@ impl<const M: usize> DecompressorExpert<M> {
         let start = Self::sv_slice_start(self.v3, self.sv_ptr);
         let end = (start + 3).min(self.epoch_desc_len);
 
+        if end < start {
+            return None;
+        }
+
         if let Ok(sv) = SV::from_str(&self.epoch_descriptor[start..end].trim()) {
             Some(sv)
         } else {
@@ -250,8 +254,8 @@ impl<const M: usize> DecompressorExpert<M> {
             sv: Default::default(),
             state: Default::default(),
             epoch_diff: TextDiff::new(""),
-            obs_diff: HashMap::with_capacity(8), // cannot initialize yet
-            flags_diff: HashMap::with_capacity(8), // cannot initialize yet
+            obs_diff: HashMap::with_capacity(8),
+            flags_diff: HashMap::with_capacity(8),
             blanking_indexes: Vec::with_capacity(32),
             flags_buf: String::with_capacity(32),
             epoch_descriptor: String::with_capacity(256),
@@ -473,7 +477,9 @@ impl<const M: usize> DecompressorExpert<M> {
         self.first_epoch = false;
 
         // grab first sv
-        self.sv = self.next_sv().expect("bad recovered content (sv)");
+        self.sv = self
+            .next_sv()
+            .unwrap_or_else(|| panic!("Failed to grab SV from \"{}\"", self.epoch_descriptor));
 
         // cross check recovered content
         // &, at the same time, make sure we are ready to process any new SV
