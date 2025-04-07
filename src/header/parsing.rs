@@ -261,7 +261,6 @@ impl Header {
                  */
                 let vers = vers.trim();
                 version = Version::from_str(vers).or(Err(ParsingError::VersionParsing))?;
-
             } else if marker.contains("PGM / RUN BY / DATE") {
                 let (pgm, rem) = line.split_at(20);
                 let pgm = pgm.trim();
