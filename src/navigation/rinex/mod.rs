@@ -8,7 +8,7 @@ mod ut1; // feature dependent stuff
 
 use crate::{
     navigation::{
-        EarthOrientation, Ephemeris, NavFrame, NavFrameType, NavKey, NavMessageType, SystemTime,
+        EarthOrientation, Ephemeris, NavFrame, NavFrameType, NavKey, NavMessageType, TimeOffset,
     },
     prelude::{Epoch, Rinex, RinexType, SV},
 };
@@ -103,7 +103,7 @@ impl Rinex {
     /// This type of frames exists in NAV V4 only.
     pub fn nav_system_time_frames_iter(
         &self,
-    ) -> Box<dyn Iterator<Item = (&NavKey, &SystemTime)> + '_> {
+    ) -> Box<dyn Iterator<Item = (&NavKey, &TimeOffset)> + '_> {
         if let Some(rec) = self.record.as_nav() {
             Box::new(rec.iter().filter_map(|(k, v)| {
                 if k.frmtype == NavFrameType::SystemTimeOffset {

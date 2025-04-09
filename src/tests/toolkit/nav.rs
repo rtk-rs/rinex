@@ -1,5 +1,5 @@
 use crate::{
-    navigation::NavMessageType,
+    navigation::{HeaderFields, NavMessageType},
     prelude::{Constellation, Rinex, RinexType},
     tests::toolkit::{generic_rinex_test, sv_csv as sv_csv_parser, TimeFrame},
 };
@@ -40,6 +40,7 @@ pub fn generic_test(
 ) {
     assert!(dut.is_navigation_rinex());
 
+    let _ = dut.header.nav.as_ref().expect("missing header definition!");
     let _ = dut.record.as_nav().unwrap();
 
     let mut sv = sv_csv_parser(sv_csv);
@@ -119,7 +120,39 @@ pub fn generic_test(
     }
 }
 
+fn generic_header_comparison(dut: &HeaderFields, model: &HeaderFields) {
+    for t_offset in dut.time_offsets.iter() {
+        let mut found = false;
+        for rhs_t_offset in model.time_offsets.iter() {
+            if rhs_t_offset == t_offset {
+                found = true;
+            }
+        }
+
+        if !found {
+            panic!("Found expected time offset definition: {:?}", t_offset);
+        }
+    }
+
+    for t_offset in model.time_offsets.iter() {
+        let mut found = false;
+        for lhs_t_offset in dut.time_offsets.iter() {
+            if lhs_t_offset == t_offset {
+                found = true;
+            }
+        }
+
+        if !found {
+            panic!("Missing time offset definition: {:?}", t_offset);
+        }
+    }
+}
+
 pub fn generic_comparison(dut: &Rinex, model: &Rinex) {
+    let dut_header = dut.header.nav.as_ref().expect("missing dut header!");
+    let model_header = model.header.nav.as_ref().expect("missing model header!");
+    generic_header_comparison(&dut_header, &model_header);
+
     let dut = dut.record.as_nav().unwrap();
     let model = model.record.as_nav().unwrap();
 

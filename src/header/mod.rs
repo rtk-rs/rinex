@@ -10,6 +10,7 @@ use crate::{
     leap::Leap,
     marker::GeodeticMarker,
     meteo::HeaderFields as MeteoHeader,
+    navigation::HeaderFields as NavigationHeader,
     navigation::IonosphereModel,
     observation::HeaderFields as ObservationHeader,
     prelude::{Constellation, Duration, Epoch, COSPAR, SV},
@@ -129,6 +130,9 @@ pub struct Header {
     /// Observation RINEX specific fields
     #[cfg_attr(feature = "serde", serde(default))]
     pub obs: Option<ObservationHeader>,
+    /// NAV RINEX specific fields
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub nav: Option<NavigationHeader>,
     /// Meteo RINEX specific fields
     #[cfg_attr(feature = "serde", serde(default))]
     pub meteo: Option<MeteoHeader>,
@@ -176,6 +180,7 @@ impl Default for Header {
             doi: None,
             ionex: None,
             meteo: None,
+            nav: None,
             doris: None,
             clock: None,
             antex: None,

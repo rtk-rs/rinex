@@ -23,8 +23,16 @@ To contribute to either of our project or join our community, you way
 - All modern GNSS constellations, codes and signals
   - Surveying with GPS, Galileo, BeiDou and QZSS
 - Time scales: GPST, QZSST, BDT, GST, UTC, TAI
-- RINEX V4 full support
 - Efficient seamless compression and decompression
+- RINEX V4 full support, including
+  - new Ionospheric coorections
+  - new Time offset corrections
+  - precise Earth Orientation updates
+- Navigation supported in the following constellations
+  - GPS
+  - Galileo
+  - BeiDou
+  - QZSS
 - Most RINEX formats supported (see following table)
 - High Precision Clock RINEX products (for PPP)
 - DORIS (special RINEX)
@@ -33,7 +41,7 @@ To contribute to either of our project or join our community, you way
 
 ## Warnings :warning:
 
-- Navigation is currently not feasible with Glonass and IRNSS
+- Navigation is currently not feasible with Glonass, SBAS and IRNSS
 - File production might lack some features, mostly because we're currently focused on data processing
 
 ## Citation and referencing

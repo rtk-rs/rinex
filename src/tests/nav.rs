@@ -655,25 +655,33 @@ fn nav_v4_kms300dnk_r2022() {
             if k.sv == g26 {
                 assert_eq!(k.msgtype, NavMessageType::LNAV);
                 assert_eq!(k.frmtype, NavFrameType::SystemTimeOffset);
-                assert_eq!(v.system, "GPUT");
-                assert_eq!(v.utc, "UTC(USNO)");
+
+                assert_eq!(v.lhs, TimeScale::GPST);
+                assert_eq!(v.rhs, TimeScale::UTC);
+                // TODO assert_eq!(v.utc, "UTC(USNO)");
+
                 assert_eq!(
-                    v.a,
+                    v.polynomials,
                     (2.952840000000E+05, 9.313225746155E-10, 2.664535259100E-15)
                 );
+
                 tests_passed += 1;
             }
         } else if k.epoch == t1 {
             if k.sv == e01 {
                 assert_eq!(k.msgtype, NavMessageType::IFNV);
                 assert_eq!(k.frmtype, NavFrameType::SystemTimeOffset);
-                assert_eq!(v.system, "GAGP");
-                assert_eq!(v.utc, "");
-                assert_eq!(v.t_tm, 0);
+
+                assert_eq!(v.lhs, TimeScale::GST);
+                assert_eq!(v.rhs, TimeScale::GPST);
+                // TODO assert_eq!(v.utc, "");
+                // TODO assert_eq!(v.t_tm, 0);
+
                 assert_eq!(
-                    v.a,
+                    v.polynomials,
                     (2.952400000000E+05, 3.201421350241E-09, -4.440892098501E-15),
                 );
+
                 tests_passed += 1;
             }
         }
