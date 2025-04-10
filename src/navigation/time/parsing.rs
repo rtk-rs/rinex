@@ -147,8 +147,9 @@ impl TimeOffset {
 
     /// Parse [TimeOffset] from RINEXv4 standard
     pub fn parse_v4(line_1: &str, line_2: &str) -> Result<Self, ParsingError> {
-        let (epoch, rem) = line_1.split_at(23);
-        let (timescales, rem) = rem.split_at(5);
+        let (epoch, rem) = line_1.split_at(24);
+        let (timescales, rem) = rem.split_at(4);
+
         let (lhs, rhs) = Self::parse_lhs_rhs_timescales(timescales)?;
 
         let utc = rem.trim().to_string();
@@ -158,14 +159,20 @@ impl TimeOffset {
         let (a1, rem) = rem.split_at(19);
         let (a2, time) = rem.split_at(19);
 
-        let t_tm = f64::from_str(time.trim()).map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
+        // let t_tm = f64::from_str(time.trim()).map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
 
         let polynomials = (
-            a0.parse::<f64>()
+            a0.trim()
+                .replace('D', "e")
+                .parse::<f64>()
                 .map_err(|_| ParsingError::NavTimeOffsetParinsg)?,
-            a1.parse::<f64>()
+            a1.trim()
+                .replace('D', "e")
+                .parse::<f64>()
                 .map_err(|_| ParsingError::NavTimeOffsetParinsg)?,
-            a2.parse::<f64>()
+            a2.trim()
+                .replace('D', "e")
+                .parse::<f64>()
                 .map_err(|_| ParsingError::NavTimeOffsetParinsg)?,
         );
 
@@ -215,8 +222,11 @@ mod test {
 
     #[test]
     fn parsing_v3() {
+        // TODO
         // GLUT -1.8626451492e-09 0.000000000e+00      0    0          TIME SYSTEM CORR
         // GLGP -2.1420419216e-08 0.000000000e+00 518400 2138          TIME SYSTEM CORR
+
+        // TODO
         // IRUT -9.6333678812e-09 1.776356839e-15 345888 1114          TIME SYSTEM CORR
         // IRGP -4.9476511776e-10-2.664535259e-15 432288 2138          TIME SYSTEM CORR
 
@@ -282,14 +292,13 @@ mod test {
 
     #[test]
     fn parsing_v4() {
-        for (line_1, line_2, t_ref, system, utc, t_tm, a_0, a_1, a_2) in [
+        for (line_1, line_2, lhs, rhs, t_ref, a_0, a_1, a_2) in [
             (
                 "    2022 06 08 00 00 00 GAUT                                  UTCGAL",
                 "     2.952070000000E+05-1.862645149231E-09 8.881784197001E-16 0.000000000000E+00",
+                TimeScale::GST,
+                TimeScale::UTC,
                 "2022-06-08T00:00:00 GST",
-                "GAUT",
-                "UTCGAL",
-                0,
                 2.952070000000E+05,
                 -1.862645149231E-09,
                 8.881784197001E-16,
@@ -297,10 +306,9 @@ mod test {
             (
                 "    2022 06 10 19 56 48 GPUT                                  UTC(USNO)",
                 "     2.952840000000E+05 9.313225746155E-10 2.664535259100E-15 0.000000000000E+00",
+                TimeScale::GPST,
+                TimeScale::UTC,
                 "2022-06-10T19:56:48 GPST",
-                "GPUT",
-                "UTC(USNO)",
-                0,
                 2.952840000000E+05,
                 9.313225746155E-10,
                 2.664535259100E-15,
@@ -310,10 +318,9 @@ mod test {
 
             let time_offset = TimeOffset::parse_v4(line_1, line_2).unwrap();
 
+            assert_eq!(time_offset.lhs, lhs);
+            assert_eq!(time_offset.rhs, rhs);
             assert_eq!(t_ref, time_offset.t_ref);
-            // assert_eq!(sto.system, system);
-            // assert_eq!(sto.utc, utc);
-            // assert_eq!(sto.t_tm, t_tm);
 
             assert_eq!(time_offset.polynomials, (a_0, a_1, a_2));
         }
