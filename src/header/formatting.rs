@@ -227,6 +227,8 @@ impl Header {
     ) -> Result<(), FormattingError> {
         if let Some(obs) = &self.obs {
             obs.format(w, self.version.major)
+        } else if let Some(nav) = &self.nav {
+            nav.format(w, self.version.major)
         } else if let Some(meteo) = &self.meteo {
             meteo.format(w)
         } else if let Some(clock) = &self.clock {

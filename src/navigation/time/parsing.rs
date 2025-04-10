@@ -1,6 +1,3 @@
-// NAV V4 System Time Messages
-use std::str::FromStr;
-
 use crate::{
     epoch::parse_in_timescale as parse_epoch_in_timescale,
     error::ParsingError,
@@ -25,7 +22,7 @@ impl TimeOffset {
             "BDUT" => Ok((TimeScale::BDT, TimeScale::UTC)),
             "BDGA" => Ok((TimeScale::BDT, TimeScale::GST)),
             "BDGP" => Ok((TimeScale::BDT, TimeScale::GPST)),
-            // "sbas"
+            // "SBAS"
             "SBUT" => Ok((TimeScale::GPST, TimeScale::UTC)),
             _ => Err(ParsingError::NavInvalidTimescale),
         }
@@ -148,16 +145,16 @@ impl TimeOffset {
     /// Parse [TimeOffset] from RINEXv4 standard
     pub fn parse_v4(line_1: &str, line_2: &str) -> Result<Self, ParsingError> {
         let (epoch, rem) = line_1.split_at(24);
-        let (timescales, rem) = rem.split_at(4);
+        let (timescales, _) = rem.split_at(4);
 
         let (lhs, rhs) = Self::parse_lhs_rhs_timescales(timescales)?;
 
-        let utc = rem.trim().to_string();
+        // let utc = rem.trim().to_string();
         let t_ref = parse_epoch_in_timescale(epoch.trim(), lhs)?;
 
         let (a0, rem) = line_2.split_at(23);
         let (a1, rem) = rem.split_at(19);
-        let (a2, time) = rem.split_at(19);
+        let (a2, _) = rem.split_at(19);
 
         // let t_tm = f64::from_str(time.trim()).map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
 
@@ -186,6 +183,9 @@ mod test {
     use crate::prelude::{Epoch, TimeScale};
     use std::str::FromStr;
 
+    use crate::tests::formatting::Utf8Buffer;
+    use std::io::BufWriter;
+
     #[test]
     fn parsing_delta_utc_v2() {
         for (content, a0, a1, sec, week) in [(
@@ -200,6 +200,15 @@ mod test {
 
             let parsed = TimeOffset::parse_v2_delta_utc(content).unwrap();
             assert_eq!(parsed, expected);
+
+            // test reciprocal
+            let mut buf = BufWriter::new(Utf8Buffer::new(1024));
+            parsed.format_v2_delta_utc(&mut buf).unwrap();
+
+            let formatted = buf.into_inner().unwrap().to_ascii_utf8();
+
+            let reparsed = TimeOffset::parse_v2_delta_utc(&formatted).unwrap();
+            assert_eq!(parsed, reparsed);
         }
     }
 
@@ -217,6 +226,15 @@ mod test {
 
             let parsed = TimeOffset::parse_v2_corr_to_system_time(content).unwrap();
             assert_eq!(parsed, expected);
+
+            // test reciprocal
+            let mut buf = BufWriter::new(Utf8Buffer::new(1024));
+            parsed.format_v2_corr_to_system_time(&mut buf).unwrap();
+
+            let formatted = buf.into_inner().unwrap().to_ascii_utf8();
+
+            let reparsed = TimeOffset::parse_v2_corr_to_system_time(&formatted).unwrap();
+            assert_eq!(parsed, reparsed);
         }
     }
 
@@ -287,6 +305,19 @@ mod test {
             let parsed = TimeOffset::parse_v3(content).unwrap();
 
             assert_eq!(parsed, expected);
+
+            // test reciprocal
+            let mut buf = BufWriter::new(Utf8Buffer::new(1024));
+            parsed.format_v3(&mut buf).unwrap();
+
+            let formatted = buf.into_inner().unwrap().to_ascii_utf8();
+            // TODO: upgrade to NavFormatter with programmable precision
+            // assert_eq!(formatted, content);
+
+            let reparsed = TimeOffset::parse_v3(&formatted)
+                .unwrap_or_else(|e| panic!("Parse back failed for \"{}\" - {}", formatted, e));
+
+            assert_eq!(parsed, reparsed);
         }
     }
 
@@ -323,6 +354,22 @@ mod test {
             assert_eq!(t_ref, time_offset.t_ref);
 
             assert_eq!(time_offset.polynomials, (a_0, a_1, a_2));
+
+            // test reciprocal
+            let mut buf = BufWriter::new(Utf8Buffer::new(1024));
+            time_offset.format_v4(&mut buf).unwrap();
+
+            let formatted = buf.into_inner().unwrap().to_ascii_utf8();
+
+            for (index, line) in formatted.split('\n').enumerate() {
+                if index == 0 {
+                    // assert_eq!(line, line_1);
+                } else if index == 1 {
+                    assert_eq!(line, line_2);
+                } else {
+                    panic!("two lines expected (only)!");
+                }
+            }
         }
     }
 }

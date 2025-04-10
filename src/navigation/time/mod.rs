@@ -2,10 +2,11 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::prelude::{Duration, Epoch, ParsingError, TimeScale};
+use crate::prelude::{Duration, Epoch, TimeScale};
 
 use hifitime::Unit;
 
+pub(crate) mod formatting;
 pub(crate) mod parsing;
 
 /// System Time (offset) Message
