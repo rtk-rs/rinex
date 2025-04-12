@@ -2,7 +2,7 @@ use crate::{
     epoch::epoch_decompose,
     error::FormattingError,
     navigation::{formatting::NavFormatter, time::TimeOffset},
-    prelude::TimeScale,
+    prelude::{Epoch, TimeScale},
 };
 
 use std::io::{BufWriter, Write};
@@ -32,15 +32,13 @@ impl TimeOffset {
         &self,
         w: &mut BufWriter<W>,
     ) -> Result<(), FormattingError> {
-        let (week, secs) = self.t_ref.to_time_of_week();
-
         write!(
             w,
             "   {}{} {:8} {:8} DELTA-UTC: A0,A1,T,W",
             NavFormatter::new(self.polynomials.0),
             NavFormatter::new(self.polynomials.1),
-            secs,
-            week,
+            self.t_ref.1 / 1_000_000_000,
+            self.t_ref.0,
         )?;
 
         Ok(())
@@ -51,7 +49,10 @@ impl TimeOffset {
         &self,
         w: &mut BufWriter<W>,
     ) -> Result<(), FormattingError> {
-        let (y, m, d, _, _, _, _) = epoch_decompose(self.t_ref);
+        let t = Epoch::from_time_of_week(self.t_ref.0, self.t_ref.1, self.lhs);
+
+        let (y, m, d, _, _, _, _) = epoch_decompose(t);
+
         write!(
             w,
             "{:6}{:6}{:6}   {}",
@@ -60,6 +61,7 @@ impl TimeOffset {
             d,
             NavFormatter::new(self.polynomials.0)
         )?;
+
         Ok(())
     }
 
@@ -84,15 +86,14 @@ impl TimeOffset {
             write!(w, " {:14.9E} ", self.polynomials.1,)?;
         }
 
-        let (week, secs) = self.t_ref.to_time_of_week();
-
-        write!(w, "{:6}{:5}", secs, week,)?;
+        write!(w, "{:6}{:5}", self.t_ref.1 / 1_000_000_000, self.t_ref.0)?;
 
         Ok(())
     }
 
     pub(crate) fn format_v4<W: Write>(&self, w: &mut BufWriter<W>) -> Result<(), FormattingError> {
-        let (y, m, d, hh, mm, ss, _) = epoch_decompose(self.t_ref);
+        let t = Epoch::from_time_of_week(self.t_ref.0, self.t_ref.1, self.lhs);
+        let (y, m, d, hh, mm, ss, _) = epoch_decompose(t);
 
         write!(
             w,
@@ -109,10 +110,10 @@ impl TimeOffset {
         write!(
             w,
             "    {}{}{}{}",
+            NavFormatter::new((self.t_ref.1 / 1_000_000_000) as f64),
             NavFormatter::new(self.polynomials.0),
             NavFormatter::new(self.polynomials.1),
             NavFormatter::new(self.polynomials.2),
-            NavFormatter::new(0.0),
         )?;
 
         // write!(

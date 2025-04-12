@@ -45,8 +45,6 @@ impl TimeOffset {
             .parse::<u64>()
             .map_err(|_| ParsingError::NavEpochWeekCounter)?;
 
-        let t_ref = Epoch::from_time_of_week(week, seconds, TimeScale::GPST);
-
         let a0 = a0
             .trim()
             .replace('D', "e")
@@ -59,10 +57,11 @@ impl TimeOffset {
             .parse::<f64>()
             .map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
 
-        Ok(Self::new(
+        Ok(Self::from_time_of_week(
+            week,
+            seconds * 1_000_000_000,
             TimeScale::GPST,
             TimeScale::UTC,
-            t_ref,
             (a0, a1, 0.0),
         ))
     }
@@ -97,10 +96,10 @@ impl TimeOffset {
             .parse::<f64>()
             .map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
 
-        Ok(Self::new(
+        Ok(Self::from_epoch(
+            t_ref,
             TimeScale::GPST, //TODO GlonassT
             TimeScale::UTC,
-            t_ref,
             (a0, 0.0, 0.0),
         ))
     }
@@ -125,8 +124,6 @@ impl TimeOffset {
             .parse::<u64>()
             .map_err(|_| ParsingError::NavEpochWeekCounter)?;
 
-        let t_ref = Epoch::from_time_of_week(week, seconds, lhs);
-
         let a0 = a0
             .trim()
             .replace('D', "e")
@@ -139,7 +136,13 @@ impl TimeOffset {
             .parse::<f64>()
             .map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
 
-        Ok(Self::new(lhs, rhs, t_ref, (a0, a1, 0.0)))
+        Ok(Self::from_time_of_week(
+            week,
+            seconds * 1_000_000_000,
+            lhs,
+            rhs,
+            (a0, a1, 0.0),
+        ))
     }
 
     /// Parse [TimeOffset] from RINEXv4 standard
@@ -152,11 +155,16 @@ impl TimeOffset {
         // let utc = rem.trim().to_string();
         let t_ref = parse_epoch_in_timescale(epoch.trim(), lhs)?;
 
-        let (a0, rem) = line_2.split_at(23);
+        let (t_tm, rem) = line_2.split_at(23);
+        let (a0, rem) = rem.split_at(19);
         let (a1, rem) = rem.split_at(19);
         let (a2, _) = rem.split_at(19);
 
-        // let t_tm = f64::from_str(time.trim()).map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
+        let t_tm = t_tm
+            .trim()
+            .replace('D', "e")
+            .parse::<f64>()
+            .map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
 
         let polynomials = (
             a0.trim()
@@ -173,7 +181,9 @@ impl TimeOffset {
                 .map_err(|_| ParsingError::NavTimeOffsetParinsg)?,
         );
 
-        Ok(Self::new(lhs, rhs, t_ref, polynomials))
+        let mut time_offset = Self::from_epoch(t_ref, lhs, rhs, polynomials);
+        time_offset.t_ref.1 = t_tm.round() as u64 * 1_000_000_000;
+        Ok(time_offset)
     }
 }
 
@@ -195,8 +205,13 @@ mod test {
             552960,
             1025,
         )] {
-            let t_ref = Epoch::from_time_of_week(week, sec, TimeScale::GPST);
-            let expected = TimeOffset::new(TimeScale::GPST, TimeScale::UTC, t_ref, (a0, a1, 0.0));
+            let expected = TimeOffset::from_time_of_week(
+                week,
+                sec * 1_000_000_000,
+                TimeScale::GPST,
+                TimeScale::UTC,
+                (a0, a1, 0.0),
+            );
 
             let parsed = TimeOffset::parse_v2_delta_utc(content).unwrap();
             assert_eq!(parsed, expected);
@@ -222,7 +237,9 @@ mod test {
             -1.862645149231E-09,
         )] {
             let t_ref = Epoch::from_gregorian_utc_at_midnight(y, m, d);
-            let expected = TimeOffset::new(TimeScale::GPST, TimeScale::UTC, t_ref, (a0, 0.0, 0.0));
+
+            let expected =
+                TimeOffset::from_epoch(t_ref, TimeScale::GPST, TimeScale::UTC, (a0, 0.0, 0.0));
 
             let parsed = TimeOffset::parse_v2_corr_to_system_time(content).unwrap();
             assert_eq!(parsed, expected);
@@ -299,8 +316,8 @@ mod test {
                 TimeScale::UTC,
             ),
         ] {
-            let t_ref = Epoch::from_time_of_week(week, sec, lhs);
-            let expected = TimeOffset::new(lhs, rhs, t_ref, (a0, a1, 0.0));
+            let expected =
+                TimeOffset::from_time_of_week(week, sec * 1_000_000_000, lhs, rhs, (a0, a1, 0.0));
 
             let parsed = TimeOffset::parse_v3(content).unwrap();
 
@@ -323,16 +340,17 @@ mod test {
 
     #[test]
     fn parsing_v4() {
-        for (line_1, line_2, lhs, rhs, t_ref, a_0, a_1, a_2) in [
+        for (line_1, line_2, lhs, rhs, t_ref, t_sec, a_0, a_1, a_2) in [
             (
                 "    2022 06 08 00 00 00 GAUT                                  UTCGAL",
                 "     2.952070000000E+05-1.862645149231E-09 8.881784197001E-16 0.000000000000E+00",
                 TimeScale::GST,
                 TimeScale::UTC,
                 "2022-06-08T00:00:00 GST",
-                2.952070000000E+05,
+                295207,
                 -1.862645149231E-09,
                 8.881784197001E-16,
+                0.0,
             ),
             (
                 "    2022 06 10 19 56 48 GPUT                                  UTC(USNO)",
@@ -340,19 +358,21 @@ mod test {
                 TimeScale::GPST,
                 TimeScale::UTC,
                 "2022-06-10T19:56:48 GPST",
-                2.952840000000E+05,
+                295284,
                 9.313225746155E-10,
                 2.664535259100E-15,
+                0.0,
             ),
         ] {
             let t_ref = Epoch::from_str(t_ref).unwrap();
+            let (t_ref_week, _) = t_ref.to_time_of_week();
 
             let time_offset = TimeOffset::parse_v4(line_1, line_2).unwrap();
 
             assert_eq!(time_offset.lhs, lhs);
             assert_eq!(time_offset.rhs, rhs);
-            assert_eq!(t_ref, time_offset.t_ref);
-
+            assert_eq!(time_offset.t_ref.0, t_ref_week);
+            assert_eq!(time_offset.t_ref.1, t_sec * 1_000_000_000);
             assert_eq!(time_offset.polynomials, (a_0, a_1, a_2));
 
             // test reciprocal
