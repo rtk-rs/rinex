@@ -1,6 +1,7 @@
 use crate::{
     epoch::epoch_decompose,
     error::FormattingError,
+    fmt_rinex,
     navigation::{formatting::NavFormatter, time::TimeOffset},
     prelude::{Epoch, TimeScale},
 };
@@ -32,13 +33,19 @@ impl TimeOffset {
         &self,
         w: &mut BufWriter<W>,
     ) -> Result<(), FormattingError> {
-        write!(
+        writeln!(
             w,
-            "   {}{} {:8} {:8} DELTA-UTC: A0,A1,T,W",
-            NavFormatter::new(self.polynomials.0),
-            NavFormatter::new(self.polynomials.1),
-            self.t_ref.1 / 1_000_000_000,
-            self.t_ref.0,
+            "{}",
+            fmt_rinex(
+                &format!(
+                    "   {}{} {:8} {:8}",
+                    NavFormatter::new_time_system_correction_v2(self.polynomials.0),
+                    NavFormatter::new_time_system_correction_v2(self.polynomials.1),
+                    self.t_ref.1 / 1_000_000_000,
+                    self.t_ref.0,
+                ),
+                "DELTA-UTC: A0,A1,T,W",
+            ),
         )?;
 
         Ok(())
@@ -53,13 +60,19 @@ impl TimeOffset {
 
         let (y, m, d, _, _, _, _) = epoch_decompose(t);
 
-        write!(
+        writeln!(
             w,
-            "{:6}{:6}{:6}   {}",
-            y,
-            m,
-            d,
-            NavFormatter::new(self.polynomials.0)
+            "{}",
+            fmt_rinex(
+                &format!(
+                    "{:6}{:6}{:6}   {}",
+                    y,
+                    m,
+                    d,
+                    NavFormatter::new_time_system_correction_v2(self.polynomials.0)
+                ),
+                "CORR TO SYSTEM TIME",
+            ),
         )?;
 
         Ok(())
@@ -67,26 +80,21 @@ impl TimeOffset {
 
     /// Format [TimeOffset] according to RINEXv3 standard
     pub(crate) fn format_v3<W: Write>(&self, w: &mut BufWriter<W>) -> Result<(), FormattingError> {
-        write!(w, "{} ", self.to_lhs_rhs_timescales())?;
-
-        // TODO: convert to NavFormatter with programmable precision
-        if self.polynomials.0 == 0.0 {
-            write!(w, " 0.0000000000e+00",)?;
-        } else if self.polynomials.0.is_sign_negative() {
-            write!(w, "{:14.10E} ", self.polynomials.0,)?;
-        } else {
-            write!(w, " {:14.10E} ", self.polynomials.0,)?;
-        }
-
-        if self.polynomials.1 == 0.0 {
-            write!(w, " 0.000000000e+00 ",)?;
-        } else if self.polynomials.1.is_sign_negative() {
-            write!(w, "{:14.9E} ", self.polynomials.1,)?;
-        } else {
-            write!(w, " {:14.9E} ", self.polynomials.1,)?;
-        }
-
-        write!(w, "{:6}{:5}", self.t_ref.1 / 1_000_000_000, self.t_ref.0)?;
+        writeln!(
+            w,
+            "{}",
+            fmt_rinex(
+                &format!(
+                    "{} {}{} {:6}{:5}",
+                    self.to_lhs_rhs_timescales(),
+                    NavFormatter::new_time_system_correction_v3_offset(self.polynomials.0),
+                    NavFormatter::new_time_system_correction_v3_drift(self.polynomials.1),
+                    self.t_ref.1 / 1_000_000_000,
+                    self.t_ref.0
+                ),
+                "TIME SYSTEM CORR"
+            ),
+        )?;
 
         Ok(())
     }
@@ -95,9 +103,9 @@ impl TimeOffset {
         let t = Epoch::from_time_of_week(self.t_ref.0, self.t_ref.1, self.lhs);
         let (y, m, d, hh, mm, ss, _) = epoch_decompose(t);
 
-        write!(
+        writeln!(
             w,
-            "    {:04} {:02} {:02} {:02} {:02} {:02} {}\n",
+            "    {:04} {:02} {:02} {:02} {:02} {:02} {}",
             y,
             m,
             d,
@@ -107,7 +115,7 @@ impl TimeOffset {
             self.to_lhs_rhs_timescales(),
         )?;
 
-        write!(
+        writeln!(
             w,
             "    {}{}{}{}",
             NavFormatter::new((self.t_ref.1 / 1_000_000_000) as f64),

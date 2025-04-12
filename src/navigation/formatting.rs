@@ -31,6 +31,30 @@ impl NavFormatter {
             precision: 4,
         }
     }
+
+    pub fn new_time_system_correction_v2(value: f64) -> Self {
+        Self {
+            value,
+            width: 17,
+            precision: 12,
+        }
+    }
+
+    pub fn new_time_system_correction_v3_offset(value: f64) -> Self {
+        Self {
+            value,
+            width: 14,
+            precision: 10,
+        }
+    }
+
+    pub fn new_time_system_correction_v3_drift(value: f64) -> Self {
+        Self {
+            value,
+            width: 13,
+            precision: 9,
+        }
+    }
 }
 
 impl std::fmt::Display for NavFormatter {
@@ -231,6 +255,33 @@ mod test {
             (0.123, " 1.230000000000E-01"),
         ] {
             let formatted = NavFormatter::new(value);
+            assert_eq!(formatted.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn system_time_corr_v2_formatter() {
+        for (value, expected) in [(-1.862645149231E-09, "-1.862645149231E-09")] {
+            let formatted = NavFormatter::new_time_system_correction_v2(value);
+            assert_eq!(formatted.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn system_time_corr_v3_formatter() {
+        for (value, expected) in [
+            (0.0000000000E+00, " 0.0000000000E+00"),
+            (2.1536834538E-09, " 2.1536834538E-09"),
+        ] {
+            let formatted = NavFormatter::new_time_system_correction_v3_offset(value);
+            assert_eq!(formatted.to_string(), expected);
+        }
+
+        for (value, expected) in [
+            (-3.019806627E-14, "-3.019806627E-14"),
+            (-9.769962617E-15, "-9.769962617E-15"),
+        ] {
+            let formatted = NavFormatter::new_time_system_correction_v3_drift(value);
             assert_eq!(formatted.to_string(), expected);
         }
     }
