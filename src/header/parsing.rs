@@ -15,7 +15,7 @@ use crate::{
     linspace::Linspace,
     marker::{GeodeticMarker, MarkerType},
     meteo::{HeaderFields as MeteoHeader, Sensor as MeteoSensor},
-    navigation::{IonosphereModel, KbModel},
+    navigation::{HeaderFields as NavigationHeader, IonosphereModel, KbModel, TimeOffset},
     observable::Observable,
     observation::HeaderFields as ObservationHeader,
     prelude::{Constellation, Duration, Epoch, ParsingError, TimeScale, COSPAR, DOMES, SV},
@@ -63,12 +63,18 @@ impl Header {
 
         // RINEX specific fields
         let mut current_constell: Option<Constellation> = None;
+
         let mut observation = ObservationHeader::default();
         let mut meteo = MeteoHeader::default();
         let mut clock = ClockHeader::default();
         let mut antex = AntexHeader::default();
         let mut ionex = IonexHeaderFields::default();
         let mut doris = DorisHeader::default();
+
+        let mut nav = NavigationHeader::default();
+        let mut nav_ts = TimeScale::GPST;
+
+        let mut time_offsets = Vec::<TimeOffset>::new();
 
         for l in reader.lines() {
             let line = l.unwrap();
@@ -115,7 +121,6 @@ impl Header {
             } else if marker.contains("ANTENNA: PHASECENTER") {
             } else if marker.contains("CENTER OF MASS: XYZ") {
             } else if marker.contains("PRN / BIAS / RMS") {
-            } else if marker.contains("DELTA-UTC") {
             } else if marker.contains("TIME REF STATION") {
 
                 ///////////////////////////////////////////////////////
@@ -129,6 +134,7 @@ impl Header {
                 if let Ok(constell) = Constellation::from_str(system.trim()) {
                     constellation = Some(constell)
                 }
+
                 rinex_type = Type::AntennaData;
             } else if marker.contains("PCV TYPE / REFANT") {
                 let (pcv_str, rem) = content.split_at(20);
@@ -797,14 +803,18 @@ impl Header {
                     },
                     _ => {},
                 }
+            } else if marker.contains("DELTA-UTC") {
+                if let Ok(time_offset) = TimeOffset::parse_v2_delta_utc(content) {
+                    time_offsets.push(time_offset);
+                }
+            } else if marker.contains("CORR TO SYSTEM TIME") {
+                if let Ok(time_offset) = TimeOffset::parse_v2_corr_to_system_time(content) {
+                    time_offsets.push(time_offset);
+                }
             } else if marker.contains("TIME SYSTEM CORR") {
-                // GPUT 0.2793967723E-08 0.000000000E+00 147456 1395
-                /*
-                 * V3 Time System correction description
-                 */
-                //if let Ok((ts, ts, corr)) = gnss_time::decode_time_system_corr(content) {
-                //    time_corrections.insert(ts, (ts, corr));
-                //}
+                if let Ok(time_offset) = TimeOffset::parse_v3(content) {
+                    time_offsets.push(time_offset);
+                }
             } else if marker.contains("TIME SYSTEM ID") {
                 let timescale = content.trim();
                 let ts = TimeScale::from_str(timescale)?;
@@ -859,9 +869,7 @@ impl Header {
                     ionex = ionex.with_exponent(e);
                 }
 
-            /*
-             * Ionex Grid Definition
-             */
+            // IONEX grid definitions
             } else if marker.contains("HGT1 / HGT2 / DHGT") {
                 let grid = Self::parse_grid(content)?;
                 ionex = ionex.with_altitude_grid(grid);
@@ -918,6 +926,13 @@ impl Header {
             obs: {
                 if rinex_type == Type::ObservationData {
                     Some(observation)
+                } else {
+                    None
+                }
+            },
+            nav: {
+                if rinex_type == Type::NavigationData {
+                    Some(nav)
                 } else {
                     None
                 }

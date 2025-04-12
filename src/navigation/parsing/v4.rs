@@ -1,9 +1,9 @@
 use crate::{
     navigation::{
         BdModel, EarthOrientation, Ephemeris, IonosphereModel, KbModel, NavFrame, NavFrameType,
-        NavKey, NavMessageType, NgModel, SystemTime,
+        NavKey, NavMessageType, NgModel, TimeOffset,
     },
-    prelude::{Constellation, ParsingError, SV},
+    prelude::{Constellation, Epoch, ParsingError, SV},
 };
 
 /// ([NavKey], [NavFrame]) parsing attempt for a V4 frame.
@@ -63,8 +63,12 @@ pub fn parse(content: &str) -> Result<(NavKey, NavFrame), ParsingError> {
             // grab next lines
             let line_1 = lines.next().ok_or(ParsingError::EmptyEpoch)?;
             let line_2 = lines.next().ok_or(ParsingError::EmptyEpoch)?;
-            let (epoch, system_time) = SystemTime::parse(line_1, line_2, ts)?;
-            (epoch, NavFrame::STO(system_time))
+            let time_offset = TimeOffset::parse_v4(line_1, line_2)?;
+
+            let epoch =
+                Epoch::from_time_of_week(time_offset.t_ref.0, time_offset.t_ref.1, time_offset.lhs);
+
+            (epoch, NavFrame::STO(time_offset))
         },
         NavFrameType::EarthOrientation => {
             // grab next lines

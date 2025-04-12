@@ -31,7 +31,6 @@ pub mod antex;
 pub mod carrier;
 pub mod clock;
 pub mod doris;
-pub mod gnss_time;
 pub mod hardware;
 pub mod hatanaka;
 pub mod header;

@@ -2,11 +2,12 @@
 mod earth_orientation;
 mod ephemeris;
 mod frame;
+mod header;
 mod ionosphere;
 mod message;
 mod parsing;
 mod rinex;
-mod system_time;
+mod time;
 
 pub(crate) mod formatting;
 
@@ -17,9 +18,10 @@ pub use crate::navigation::{
     earth_orientation::EarthOrientation,
     ephemeris::Ephemeris,
     frame::{NavFrame, NavFrameType},
+    header::HeaderFields,
     ionosphere::{BdModel, IonosphereModel, KbModel, KbRegionCode, NgModel, NgRegionFlags},
     message::NavMessageType,
-    system_time::SystemTime,
+    time::TimeOffset,
 };
 
 #[cfg(feature = "processing")]

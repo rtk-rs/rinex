@@ -1,5 +1,5 @@
 use crate::{
-    navigation::{EarthOrientation, Ephemeris, IonosphereModel, SystemTime},
+    navigation::{EarthOrientation, Ephemeris, IonosphereModel, TimeOffset},
     prelude::ParsingError,
 };
 
@@ -53,7 +53,7 @@ pub enum NavFrame {
     EPH(Ephemeris),
     EOP(EarthOrientation),
     ION(IonosphereModel),
-    STO(SystemTime),
+    STO(TimeOffset),
 }
 
 impl NavFrame {
@@ -73,16 +73,16 @@ impl NavFrame {
         }
     }
 
-    /// [SystemTime] unwrapping attempt.
-    pub fn as_system_time(&self) -> Option<&SystemTime> {
+    /// [TimeOffset] unwrapping attempt.
+    pub fn as_system_time(&self) -> Option<&TimeOffset> {
         match self {
             Self::STO(fr) => Some(fr),
             _ => None,
         }
     }
 
-    /// Mutable [SystemTime] unwrapping attempt.
-    pub fn as_mut_system_time(&mut self) -> Option<&mut SystemTime> {
+    /// Mutable [TimeOffset] unwrapping attempt.
+    pub fn as_mut_system_time(&mut self) -> Option<&mut TimeOffset> {
         match self {
             Self::STO(fr) => Some(fr),
             _ => None,

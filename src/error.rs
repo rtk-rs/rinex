@@ -124,8 +124,14 @@ pub enum ParsingError {
     IonexGridCoordinates,
     #[error("nav: invalid frame class")]
     NavFrameClass,
+    #[error("nav: invalid timescale")]
+    NavInvalidTimescale,
     #[error("nav: invalid message type")]
     NavMsgType,
+    #[error("nav: (ref) epoch week counter parsing")]
+    NavEpochWeekCounter,
+    #[error("nav: time offset parsing")]
+    NavTimeOffsetParinsg,
     #[error("nav: unknown radio message")]
     NoNavigationDefinition,
     #[error("nav: invalid health flag definition")]
