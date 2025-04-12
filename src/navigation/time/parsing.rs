@@ -268,12 +268,11 @@ mod test {
         // IRGP -4.9476511776e-10-2.664535259e-15 432288 2138          TIME SYSTEM CORR
 
         let content = "XXXX  1.7840648070e-08 5.773159728e-14 432288 2138          ";
-
         assert!(TimeOffset::parse_v3(content).is_err());
 
         for (content, a0, a1, week, sec, lhs, rhs) in [
             (
-                "GAUT  1.8626451492e-09-8.881784197e-16 432000 2138          ",
+                "GAUT  1.8626451492E-09-8.881784197E-16 432000 2138          TIME SYSTEM CORR\n",
                 1.8626451492e-09,
                 -8.881784197e-16,
                 2138,
@@ -282,7 +281,7 @@ mod test {
                 TimeScale::UTC,
             ),
             (
-                "GPUT -3.7252902985e-09-1.065814104e-14  61440 2139          ",
+                "GPUT -3.7252902985E-09-1.065814104E-14  61440 2139          TIME SYSTEM CORR\n",
                 -3.7252902985e-09,
                 -1.065814104e-14,
                 2139,
@@ -291,7 +290,7 @@ mod test {
                 TimeScale::UTC,
             ),
             (
-                "GAGP  2.1536834538e-09-9.769962617e-15 432000 2138          ",
+                "GAGP  2.1536834538E-09-9.769962617E-15 432000 2138          TIME SYSTEM CORR\n",
                 2.1536834538e-09,
                 -9.769962617e-15,
                 2138,
@@ -300,7 +299,7 @@ mod test {
                 TimeScale::GPST,
             ),
             (
-                "BDUT  0.0000000000e+00-4.085620730e-14     14  782          ",
+                "BDUT  0.0000000000E+00-4.085620730E-14     14  782          TIME SYSTEM CORR\n",
                 0.0,
                 -4.085620730e-14,
                 782,
@@ -309,7 +308,7 @@ mod test {
                 TimeScale::UTC,
             ),
             (
-                "QZUT  5.5879354477e-09 0.000000000e+00  94208 2139          ",
+                "QZUT  5.5879354477E-09 0.000000000E+00  94208 2139          TIME SYSTEM CORR\n",
                 5.5879354477e-09,
                 0.000000000e+00,
                 2139,
@@ -330,8 +329,7 @@ mod test {
             parsed.format_v3(&mut buf).unwrap();
 
             let formatted = buf.into_inner().unwrap().to_ascii_utf8();
-            // TODO: upgrade to NavFormatter with programmable precision
-            // assert_eq!(formatted, content);
+            assert_eq!(formatted, content);
 
             let reparsed = TimeOffset::parse_v3(&formatted)
                 .unwrap_or_else(|e| panic!("Parse back failed for \"{}\" - {}", formatted, e));
@@ -388,7 +386,7 @@ mod test {
                     // assert_eq!(line, line_1);
                 } else if index == 1 {
                     // assert_eq!(line, line_2);
-                } else {
+                } else if index == 3 {
                     panic!("two lines expected (only)!");
                 }
             }

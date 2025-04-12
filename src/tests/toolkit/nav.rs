@@ -124,8 +124,16 @@ fn generic_header_comparison(dut: &HeaderFields, model: &HeaderFields) {
     for t_offset in dut.time_offsets.iter() {
         let mut found = false;
         for rhs_t_offset in model.time_offsets.iter() {
-            if rhs_t_offset == t_offset {
-                found = true;
+            if rhs_t_offset.rhs == t_offset.rhs && rhs_t_offset.lhs == t_offset.lhs {
+                if rhs_t_offset.t_ref == t_offset.t_ref && rhs_t_offset.utc == t_offset.utc {
+                    if (rhs_t_offset.polynomials.0 - t_offset.polynomials.0).abs() < 1E-6 {
+                        if (rhs_t_offset.polynomials.1 - t_offset.polynomials.1).abs() < 1E-6 {
+                            if (rhs_t_offset.polynomials.2 - t_offset.polynomials.2).abs() < 1E-6 {
+                                found = true;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -137,8 +145,16 @@ fn generic_header_comparison(dut: &HeaderFields, model: &HeaderFields) {
     for t_offset in model.time_offsets.iter() {
         let mut found = false;
         for lhs_t_offset in dut.time_offsets.iter() {
-            if lhs_t_offset == t_offset {
-                found = true;
+            if lhs_t_offset.rhs == t_offset.rhs && lhs_t_offset.lhs == t_offset.lhs {
+                if lhs_t_offset.t_ref == t_offset.t_ref && lhs_t_offset.utc == t_offset.utc {
+                    if (lhs_t_offset.polynomials.0 - t_offset.polynomials.0).abs() < 1E-6 {
+                        if (lhs_t_offset.polynomials.1 - t_offset.polynomials.1).abs() < 1E-6 {
+                            if (lhs_t_offset.polynomials.2 - t_offset.polynomials.2).abs() < 1E-6 {
+                                found = true;
+                            }
+                        }
+                    }
+                }
             }
         }
 

@@ -65,16 +65,12 @@ impl Header {
         let mut current_constell: Option<Constellation> = None;
 
         let mut observation = ObservationHeader::default();
+        let mut nav = NavigationHeader::default();
         let mut meteo = MeteoHeader::default();
         let mut clock = ClockHeader::default();
         let mut antex = AntexHeader::default();
         let mut ionex = IonexHeaderFields::default();
         let mut doris = DorisHeader::default();
-
-        let mut nav = NavigationHeader::default();
-        let mut nav_ts = TimeScale::GPST;
-
-        let mut time_offsets = Vec::<TimeOffset>::new();
 
         for l in reader.lines() {
             let line = l.unwrap();
@@ -805,15 +801,15 @@ impl Header {
                 }
             } else if marker.contains("DELTA-UTC") {
                 if let Ok(time_offset) = TimeOffset::parse_v2_delta_utc(content) {
-                    time_offsets.push(time_offset);
+                    nav = nav.with_time_offset(time_offset);
                 }
             } else if marker.contains("CORR TO SYSTEM TIME") {
                 if let Ok(time_offset) = TimeOffset::parse_v2_corr_to_system_time(content) {
-                    time_offsets.push(time_offset);
+                    nav = nav.with_time_offset(time_offset);
                 }
             } else if marker.contains("TIME SYSTEM CORR") {
                 if let Ok(time_offset) = TimeOffset::parse_v3(content) {
-                    time_offsets.push(time_offset);
+                    nav = nav.with_time_offset(time_offset);
                 }
             } else if marker.contains("TIME SYSTEM ID") {
                 let timescale = content.trim();
