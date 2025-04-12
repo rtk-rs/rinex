@@ -660,10 +660,7 @@ fn nav_v4_kms300dnk_r2022() {
                 assert_eq!(v.rhs, TimeScale::UTC);
                 // TODO assert_eq!(v.utc, "UTC(USNO)");
 
-                assert_eq!(
-                    v.polynomials,
-                    (2.952840000000E+05, 9.313225746155E-10, 2.664535259100E-15)
-                );
+                assert_eq!(v.polynomials, (9.313225746155E-10, 2.664535259100E-15, 0.0));
 
                 tests_passed += 1;
             }
@@ -679,7 +676,7 @@ fn nav_v4_kms300dnk_r2022() {
 
                 assert_eq!(
                     v.polynomials,
-                    (2.952400000000E+05, 3.201421350241E-09, -4.440892098501E-15),
+                    (3.201421350241E-09, -4.440892098501E-15, 0.0),
                 );
 
                 tests_passed += 1;
