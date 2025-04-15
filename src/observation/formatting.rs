@@ -53,19 +53,21 @@ impl Observations {
         self.format_epoch_v2(w, key, sv_list, numsat)?;
 
         for sv in sv_list.iter() {
-            // following header specs (strictly)
+            // V2 is too badly specified to permit correct SBAS handling
             let observables = if sv.constellation.is_sbas() {
-                observables
-                    .get(&Constellation::SBAS)
-                    .ok_or(FormattingError::MissingObservableDefinition)?
+                observables.get(&Constellation::SBAS)
             } else {
-                observables
-                    .get(&sv.constellation)
-                    .ok_or(FormattingError::MissingObservableDefinition)?
+                observables.get(&sv.constellation)
+            };
+
+            let observables = match observables {
+                Some(observables) => observables, // correctly identified
+                None => continue,                 // abort
             };
 
             let mut modulo = 0;
 
+            // following header specs (strictly)
             for (nth, observable) in observables.iter().enumerate() {
                 // retrieve observed signal (if any)
                 if let Some(observation) = self
@@ -181,14 +183,11 @@ impl Observations {
                 write!(w, "{:x}", sv)?;
 
                 // following header definitions
-                let observables = if sv.constellation.is_sbas() {
-                    observables
-                        .get(&Constellation::SBAS)
-                        .ok_or(FormattingError::MissingObservableDefinition)?
-                } else {
-                    observables
-                        .get(&sv.constellation)
-                        .ok_or(FormattingError::MissingObservableDefinition)?
+                let observables = observables.get(&sv.constellation);
+
+                let observables = match observables {
+                    Some(observables) => observables, // correctly identified
+                    None => continue,                 // abort
                 };
 
                 for observable in observables.iter() {
