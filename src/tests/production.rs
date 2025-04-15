@@ -25,7 +25,7 @@ mod test {
         println!("Formatting test passed for \"{}\"", path);
 
         // remove copy
-        // let _ = std::fs::remove_file(tmp_path);
+        let _ = std::fs::remove_file(tmp_path);
     }
 
     #[test]
