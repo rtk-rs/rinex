@@ -34,7 +34,7 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Install stable toolchain
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.81.0
