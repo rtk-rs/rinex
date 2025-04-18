@@ -41,7 +41,7 @@ rustdoc-args = ["--cfg", "docrs", "--generate-link-to-definition"]
 ################################################################
 
 [features]
-default = ["full"]
+default = ["flate2"] # gzip files supported by default
 
 # OBSERVATION RINEX Iterators & methods. Unlocks signal combinations.
 obs = []
