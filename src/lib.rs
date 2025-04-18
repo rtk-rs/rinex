@@ -190,7 +190,8 @@ pub mod prelude {
     #[cfg_attr(docsrs, doc(cfg(feature = "processing")))]
     pub mod processing {
         pub use qc_traits::{
-            Decimate, DecimationFilter, Filter, MaskFilter, Masking, Preprocessing, Split,
+            Decimate, DecimationFilter, Filter, GnssAbsoluteTime, MaskFilter, Masking,
+            Preprocessing, Split, Timeshift,
         };
     }
 
