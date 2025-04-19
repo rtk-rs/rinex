@@ -561,32 +561,15 @@ impl Header {
                 // <o repeated for each satellite system
                 // <o blank field when no corrections applied
             } else if marker.contains("TIME OF FIRST OBS") {
-                let mut time_of_first_obs = Self::parse_time_of_obs(content)?;
-                match constellation {
-                    Some(Constellation::Mixed) | None => {},
-                    Some(c) => {
-                        // in case of OLD RINEX : fixed constellation
-                        //  use that information, as it may be omitted in the TIME OF OBS header
-                        time_of_first_obs.time_scale =
-                            c.timescale().ok_or(ParsingError::NoTimescaleDefinition)?;
-                    },
-                }
+                let time_of_first_obs = Self::parse_time_of_obs(content)?;
+
                 if rinex_type == Type::DORIS {
                     doris.timeof_first_obs = Some(time_of_first_obs);
                 } else {
                     observation = observation.with_timeof_first_obs(time_of_first_obs);
                 }
             } else if marker.contains("TIME OF LAST OBS") {
-                let mut time_of_last_obs = Self::parse_time_of_obs(content)?;
-                match constellation {
-                    Some(Constellation::Mixed) | None => {},
-                    Some(c) => {
-                        // in case of OLD RINEX : fixed constellation
-                        //  use that information, as it may be omitted in the TIME OF OBS header
-                        time_of_last_obs.time_scale =
-                            c.timescale().ok_or(ParsingError::NoTimescaleDefinition)?;
-                    },
-                }
+                let time_of_last_obs = Self::parse_time_of_obs(content)?;
 
                 if rinex_type == Type::DORIS {
                     doris.timeof_last_obs = Some(time_of_last_obs);
