@@ -1,4 +1,4 @@
-use crate::header::Header;
+use crate::prelude::{Constellation, Header};
 use qc_traits::{FilterItem, MaskFilter, MaskOperand};
 
 fn header_mask_eq(hd: &mut Header, item: &FilterItem) {
@@ -8,6 +8,11 @@ fn header_mask_eq(hd: &mut Header, item: &FilterItem) {
                 .retain(|dcb| constellations.contains(&dcb.constellation));
             hd.pcv_compensations
                 .retain(|pcv| constellations.contains(&pcv.constellation));
+
+            if !constellations.contains(&Constellation::Glonass) {
+                // remove glonass specs
+                hd.glo_channels.clear();
+            }
         },
         _ => {},
     }

@@ -897,7 +897,6 @@ impl Header {
             dcb_compensations,
             pcv_compensations,
             wavelengths: None,
-            gps_utc_delta: None,
             sampling_interval,
             rcvr_antenna,
             sv_antenna,
