@@ -108,8 +108,6 @@ pub struct Header {
     pub license: Option<String>,
     /// Possible Digital Object Identifier
     pub doi: Option<String>,
-    /// Optionnal GPS - UTC time difference
-    pub gps_utc_delta: Option<u32>,
     /// Possible [Receiver] information
     #[cfg_attr(feature = "serde", serde(default))]
     pub rcvr: Option<Receiver>,
@@ -171,7 +169,6 @@ impl Default for Header {
             agency: Default::default(),
             geodetic_marker: Default::default(),
             glo_channels: Default::default(),
-            gps_utc_delta: None,
             sampling_interval: None,
             leap: None,
             rx_position: None,
