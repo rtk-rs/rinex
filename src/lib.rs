@@ -31,6 +31,7 @@ pub mod antex;
 pub mod carrier;
 pub mod clock;
 pub mod doris;
+pub mod error;
 pub mod hardware;
 pub mod hatanaka;
 pub mod header;
@@ -47,7 +48,6 @@ pub mod version;
 mod bibliography;
 mod constants;
 mod epoch;
-mod error;
 mod iterators;
 mod leap;
 mod linspace;
@@ -190,7 +190,8 @@ pub mod prelude {
     #[cfg_attr(docsrs, doc(cfg(feature = "processing")))]
     pub mod processing {
         pub use qc_traits::{
-            Decimate, DecimationFilter, Filter, MaskFilter, Masking, Preprocessing, Split,
+            Decimate, DecimationFilter, Filter, GnssAbsoluteTime, MaskFilter, Masking,
+            Preprocessing, Split, Timeshift,
         };
     }
 
