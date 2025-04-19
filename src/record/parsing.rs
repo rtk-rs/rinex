@@ -118,30 +118,16 @@ impl Record {
         // OBSERVATION case: timescale is either defined by
         // [+] TIME OF FIRST header field
         // [+] TIME OF LAST header field (flexibility, actually invalid according to specs)
-        // [+] GNSS system in case of single GNSS old RINEX
         let mut obs_ts = TimeScale::default();
 
         if let Some(obs) = &header.obs {
-            match header.constellation {
-                Some(Constellation::Mixed) | None => {
-                    if let Some(t) = obs.timeof_first_obs {
-                        obs_ts = t.time_scale;
-                    } else {
-                        if let Some(t) = obs.timeof_first_obs {
-                            obs_ts = t.time_scale;
-                        } else {
-                            let t = obs
-                                .timeof_last_obs
-                                .ok_or(ParsingError::BadObsBadTimescaleDefinition)?;
-                            obs_ts = t.time_scale;
-                        }
-                    }
-                },
-                Some(constellation) => {
-                    obs_ts = constellation
-                        .timescale()
-                        .ok_or(ParsingError::BadObsBadTimescaleDefinition)?;
-                },
+            if let Some(t) = obs.timeof_first_obs {
+                obs_ts = t.time_scale;
+            } else {
+                let t = obs
+                    .timeof_last_obs
+                    .ok_or(ParsingError::BadObsBadTimescaleDefinition)?;
+                obs_ts = t.time_scale;
             }
         }
 
