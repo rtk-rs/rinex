@@ -124,7 +124,8 @@ impl Record {
             if let Some(t) = obs.timeof_first_obs {
                 obs_ts = t.time_scale;
             } else {
-                let t = obs.timeof_last_obs
+                let t = obs
+                    .timeof_last_obs
                     .ok_or(ParsingError::BadObsBadTimescaleDefinition)?;
                 obs_ts = t.time_scale;
             }
