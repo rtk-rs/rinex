@@ -36,7 +36,7 @@ impl Observations {
         }
     }
 
-    /// Format [Observations] according to V2 RINEX format
+    /// Formats [Observations] according to RINEXv2 standards.
     fn format_v2<W: Write>(
         &self,
         w: &mut BufWriter<W>,
@@ -53,22 +53,29 @@ impl Observations {
         self.format_epoch_v2(w, key, sv_list, numsat)?;
 
         for sv in sv_list.iter() {
-            // V2 is too badly specified to permit correct SBAS handling
-            let observables = if sv.constellation.is_sbas() {
-                observables.get(&Constellation::SBAS)
-            } else {
-                observables.get(&sv.constellation)
-            };
+            let sv_observables = observables.get(&sv.constellation);
 
-            let observables = match observables {
-                Some(observables) => observables, // correctly identified
-                None => continue,                 // abort
+            let sv_observables = match sv_observables {
+                Some(sv_observables) => sv_observables, // correctly identified
+                None => {
+                    // handles SBAS case
+                    if sv.constellation.is_sbas() {
+                        match observables.get(&Constellation::SBAS) {
+                            Some(sv_observables) => sv_observables,
+                            _ => continue, // abort
+                        }
+                    } else {
+                        // abort: normally formatted RINEX
+                        // will never end up here
+                        continue;
+                    }
+                },
             };
 
             let mut modulo = 0;
 
             // following header specs (strictly)
-            for (nth, observable) in observables.iter().enumerate() {
+            for (nth, observable) in sv_observables.iter().enumerate() {
                 // retrieve observed signal (if any)
                 if let Some(observation) = self
                     .signals
@@ -153,6 +160,7 @@ impl Observations {
         Ok(())
     }
 
+    /// Formats [Observations] according to RINEXv3 standards.
     fn format_v3<W: Write>(
         &self,
         w: &mut BufWriter<W>,
@@ -183,14 +191,26 @@ impl Observations {
                 write!(w, "{:x}", sv)?;
 
                 // following header definitions
-                let observables = observables.get(&sv.constellation);
+                let sv_observables = observables.get(&sv.constellation);
 
-                let observables = match observables {
+                let sv_observables = match sv_observables {
                     Some(observables) => observables, // correctly identified
-                    None => continue,                 // abort
+                    None => {
+                        // handles SBAS case
+                        if sv.constellation.is_sbas() {
+                            match observables.get(&Constellation::SBAS) {
+                                Some(sv_observables) => sv_observables,
+                                _ => continue, // abort
+                            }
+                        } else {
+                            // abort: normally formatted RINEX
+                            // will never end up here
+                            continue;
+                        }
+                    },
                 };
 
-                for observable in observables.iter() {
+                for observable in sv_observables.iter() {
                     if let Some(observation) = self
                         .signals
                         .iter()

@@ -9,6 +9,9 @@ pub mod formatting;
 mod parsing;
 
 #[cfg(feature = "flate2")]
+mod sbas;
+
+#[cfg(feature = "flate2")]
 mod production;
 
 #[cfg(feature = "qc")]
