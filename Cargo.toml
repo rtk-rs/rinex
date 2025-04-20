@@ -143,13 +143,13 @@ nalgebra = { version = "0.33.0", optional = true }
 anise = { git = "https://github.com/nyx-space/anise", branch = "dep/hifitime-github", optional = true }
 hifitime = { git = "https://github.com/nyx-space/hifitime", branch = "master", features = ["serde", "std"] }
 
-gnss-rs = { git = "https://github.com/rtk-rs/gnss", branch = "dep/hifitime", features = ["serde", "domes", "cospar"] }
-gnss-qc-traits = { git = "https://github.com/rtk-rs/qc-traits", branch = "dep/hifitime", features = ["html"], optional = true }
+gnss-rs = { git = "https://github.com/rtk-rs/gnss", branch = "main", features = ["serde", "domes", "cospar"] }
+gnss-qc-traits = { git = "https://github.com/rtk-rs/qc-traits", branch = "main", features = ["html"], optional = true }
 
 maud = { version = "0.26", optional = true }
 
 # BINEX
-binex = { git = "https://github.com/rtk-rs/binex", branch = "dep/hifitime", optional = true }
+binex = { git = "https://github.com/rtk-rs/binex", branch = "main", optional = true }
 
 # RTCM
 rtcm-rs = { version = "0.11", optional = true }
