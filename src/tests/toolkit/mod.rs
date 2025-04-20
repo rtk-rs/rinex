@@ -207,7 +207,6 @@ pub fn generic_header_comparison(dut: &Header, model: &Header) {
     assert_eq!(dut.sampling_interval, model.sampling_interval);
     assert_eq!(dut.license, model.license);
     assert_eq!(dut.doi, model.doi);
-    assert_eq!(dut.gps_utc_delta, model.gps_utc_delta);
     assert_eq!(dut.rcvr, model.rcvr);
 
     rcvr_antenna_comparison(&dut.rcvr_antenna, &model.rcvr_antenna);

@@ -51,14 +51,12 @@ impl Merge for Header {
         merge_mut_option(&mut self.license, &rhs.license);
         merge_mut_option(&mut self.doi, &rhs.doi);
         merge_mut_option(&mut self.leap, &rhs.leap);
-        merge_mut_option(&mut self.gps_utc_delta, &rhs.gps_utc_delta);
         merge_mut_option(&mut self.rcvr, &rhs.rcvr);
         merge_mut_option(&mut self.cospar, &rhs.cospar);
         merge_mut_option(&mut self.rcvr_antenna, &rhs.rcvr_antenna);
         merge_mut_option(&mut self.sv_antenna, &rhs.sv_antenna);
         merge_mut_option(&mut self.rx_position, &rhs.rx_position);
         merge_mut_option(&mut self.wavelengths, &rhs.wavelengths);
-        merge_mut_option(&mut self.gps_utc_delta, &rhs.gps_utc_delta);
 
         // DCBS compensation is preserved, only if both A&B both have it
         if self.dcb_compensations.is_empty() || rhs.dcb_compensations.is_empty() {
