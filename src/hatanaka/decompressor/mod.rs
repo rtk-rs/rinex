@@ -237,7 +237,6 @@ impl<const M: usize> DecompressorExpert<M> {
         constellation: Constellation,
         gnss_observables: HashMap<Constellation, Vec<Observable>>,
     ) -> Self {
-
         Self {
             v3,
             numsat: 0,
