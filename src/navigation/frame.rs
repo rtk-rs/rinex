@@ -47,7 +47,7 @@ impl std::str::FromStr for NavFrameType {
     }
 }
 
-#[cfg_attr(feature = "serde", derive(Serialize))]
+// #[cfg_attr(feature = "serde", derive(Serialize))]
 #[derive(Debug, Clone, PartialEq)]
 pub enum NavFrame {
     EPH(Ephemeris),

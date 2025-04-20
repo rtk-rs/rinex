@@ -128,7 +128,7 @@ pub mod prelude {
 
     // pub re-export
     pub use gnss::prelude::{Constellation, DOMESTrackingPoint, COSPAR, DOMES, SV};
-    pub use hifitime::{Duration, Epoch, TimeScale, TimeSeries};
+    pub use hifitime::{Duration, Epoch, Polynomial, TimeScale, TimeSeries};
 
     #[cfg(feature = "antex")]
     #[cfg_attr(docsrs, doc(cfg(feature = "antex")))]

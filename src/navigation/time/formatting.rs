@@ -39,8 +39,10 @@ impl TimeOffset {
             fmt_rinex(
                 &format!(
                     "   {}{} {:8} {:8}",
-                    NavFormatter::new_time_system_correction_v2(self.polynomials.0),
-                    NavFormatter::new_time_system_correction_v2(self.polynomials.1),
+                    NavFormatter::new_time_system_correction_v2(
+                        self.polynomial.constant.to_seconds()
+                    ),
+                    NavFormatter::new_time_system_correction_v2(self.polynomial.rate.to_seconds()),
                     self.t_ref.1 / 1_000_000_000,
                     self.t_ref.0,
                 ),
@@ -69,7 +71,9 @@ impl TimeOffset {
                     y,
                     m,
                     d,
-                    NavFormatter::new_time_system_correction_v2(self.polynomials.0)
+                    NavFormatter::new_time_system_correction_v2(
+                        self.polynomial.constant.to_seconds()
+                    )
                 ),
                 "CORR TO SYSTEM TIME",
             ),
@@ -87,8 +91,12 @@ impl TimeOffset {
                 &format!(
                     "{} {}{} {:6}{:5}",
                     self.to_lhs_rhs_timescales(),
-                    NavFormatter::new_time_system_correction_v3_offset(self.polynomials.0),
-                    NavFormatter::new_time_system_correction_v3_drift(self.polynomials.1),
+                    NavFormatter::new_time_system_correction_v3_offset(
+                        self.polynomial.constant.to_seconds()
+                    ),
+                    NavFormatter::new_time_system_correction_v3_drift(
+                        self.polynomial.rate.to_seconds()
+                    ),
                     self.t_ref.1 / 1_000_000_000,
                     self.t_ref.0
                 ),
@@ -119,16 +127,10 @@ impl TimeOffset {
             w,
             "    {}{}{}{}",
             NavFormatter::new((self.t_ref.1 / 1_000_000_000) as f64),
-            NavFormatter::new(self.polynomials.0),
-            NavFormatter::new(self.polynomials.1),
-            NavFormatter::new(self.polynomials.2),
+            NavFormatter::new(self.polynomial.constant.to_seconds()),
+            NavFormatter::new(self.polynomial.rate.to_seconds()),
+            NavFormatter::new(self.polynomial.accel.to_seconds()),
         )?;
-
-        // write!(
-        //     w,
-        //     "   {:14.13E}{:14.13E}{:14.13E}{:14.13E}",
-        //     self.polynomials.0, self.polynomials.1, self.polynomials.2, 0.0
-        // )?;
 
         Ok(())
     }
