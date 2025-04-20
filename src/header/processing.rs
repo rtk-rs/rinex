@@ -8,6 +8,10 @@ fn header_mask_eq(hd: &mut Header, item: &FilterItem) {
                 .retain(|dcb| constellations.contains(&dcb.constellation));
             hd.pcv_compensations
                 .retain(|pcv| constellations.contains(&pcv.constellation));
+
+            if constellations.len() == 1 {
+                hd.constellation = Some(constellations[0]);
+            }
         },
         _ => {},
     }
