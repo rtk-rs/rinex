@@ -9,8 +9,12 @@ fn header_mask_eq(hd: &mut Header, item: &FilterItem) {
             hd.pcv_compensations
                 .retain(|pcv| constellations.contains(&pcv.constellation));
 
+            if constellations.len() == 1 {
+                hd.constellation = Some(constellations[0]);
+            }
+
             if !constellations.contains(&Constellation::Glonass) {
-                // remove glonass specs
+                // remove glonass specs in case it is no longer contained
                 hd.glo_channels.clear();
             }
         },

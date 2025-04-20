@@ -1076,7 +1076,7 @@ impl Rinex {
         }
     }
 
-    /// Returns [SV] iterator.
+    /// Returns a [SV] iterator, from all satellites encountered in this [Rinex].
     pub fn sv_iter(&self) -> Box<dyn Iterator<Item = SV> + '_> {
         if self.is_observation_rinex() {
             Box::new(

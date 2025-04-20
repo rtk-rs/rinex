@@ -5,7 +5,7 @@ use crate::{
     error::FormattingError,
     hatanaka::{NumDiff, TextDiff},
     observation::{HeaderFields, Record},
-    prelude::{Observable, SV},
+    prelude::{Constellation, Observable, SV},
     BufWriter,
 };
 
@@ -147,12 +147,30 @@ impl<const M: usize> CompressorExpert<M> {
             // For each SV
             for sv in svnn.iter() {
                 // Following header specs
-                let observables = header
-                    .codes
-                    .get(&sv.constellation)
-                    .ok_or(FormattingError::MissingObservableDefinition)?;
+                let sv_observables = header.codes.get(&sv.constellation);
 
-                for observable in observables.iter() {
+                let sv_observables = match sv_observables {
+                    Some(observables) => observables, // correctly identified,
+                    None => {
+                        // handles SBAS case
+                        if sv.constellation.is_sbas() {
+                            match header.codes.get(&Constellation::SBAS) {
+                                Some(observables) => observables,
+                                None => {
+                                    // correctly formatted RINEX will never
+                                    // end up here
+                                    continue;
+                                },
+                            }
+                        } else {
+                            // correctly formatted RINEX will never
+                            // end up here
+                            continue;
+                        }
+                    },
+                };
+
+                for observable in sv_observables.iter() {
                     if let Some(signal) = v
                         .signals
                         .iter()
