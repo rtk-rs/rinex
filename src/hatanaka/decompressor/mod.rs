@@ -237,6 +237,7 @@ impl<const M: usize> DecompressorExpert<M> {
         constellation: Constellation,
         gnss_observables: HashMap<Constellation, Vec<Observable>>,
     ) -> Self {
+
         Self {
             v3,
             numsat: 0,
@@ -859,7 +860,12 @@ impl<const M: usize> DecompressorExpert<M> {
         if let Some(mixed) = self.gnss_observables.get(&Constellation::Mixed) {
             Some(mixed)
         } else {
-            self.gnss_observables.get(constell)
+            // SBAS special case
+            if constell.is_sbas() {
+                self.gnss_observables.get(&Constellation::SBAS)
+            } else {
+                self.gnss_observables.get(constell)
+            }
         }
     }
 

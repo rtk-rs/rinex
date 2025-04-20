@@ -66,18 +66,18 @@ fn test_sbas_obs_v3_formatting() {
     let dut = Rinex::from_file("test_geo-only.txt")
         .unwrap_or_else(|e| panic!("SABS only: failed to parse back: {}", e));
 
-    //  // test
-    //  let (mut s23_found, mut s25_found, mut s36_found) = (false, false, false);
-    //  for sv in dut.sv_iter() {
-    //      s23_found |= sv == s23;
-    //      s25_found |= sv == s25;
-    //      s36_found |= sv == s36;
-    //  }
+    // test
+    let (mut s23_found, mut s25_found, mut s36_found) = (false, false, false);
+    for sv in dut.sv_iter() {
+        s23_found |= sv == s23;
+        s25_found |= sv == s25;
+        s36_found |= sv == s36;
+    }
 
-    //  assert!(s23_found, "S23 not present in parsed-back RINEX!");
-    //  assert!(s25_found, "S25 not present in parsed-back RINEX!");
-    //  assert!(s36_found, "S36 not present in parsed-back RINEX!");
+    assert!(s23_found, "S23 not present in parsed-back RINEX!");
+    assert!(s25_found, "S25 not present in parsed-back RINEX!");
+    assert!(s36_found, "S36 not present in parsed-back RINEX!");
 
     // delete
-    // let _ = std::fs::remove_file("test_geo-only.txt");
+    let _ = std::fs::remove_file("test_geo-only.txt");
 }
