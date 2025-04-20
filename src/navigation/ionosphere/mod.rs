@@ -33,7 +33,8 @@ impl IonosphereModel {
     /// In this case, it will apply for the entire day course.
     /// Two models may exist: Klobuchar and NequickG.
     pub(crate) fn from_rinex3_header(header: &str) -> Result<Self, ParsingError> {
-        let (system, rem) = header.split_at(5);
+        let (system, model_params) = header.split_at(5);
+        let rem = model_params.replace("D", "E");
         match system.trim() {
             /*
              * Models that only needs 3 fields
@@ -231,6 +232,35 @@ mod test {
             IonosphereModel::Klobuchar(KbModel {
                 alpha: (0.0, 0.0, 0.0, 0.0),
                 beta: (9.0112E4, -6.5536E4, -1.3107E5, 4.5875E5),
+                region: KbRegionCode::Worldwide,
+            })
+        );
+
+        // v3 Kb header w/ D notation
+        let kb = IonosphereModel::from_rinex3_header(
+            "GPSA   0.2794D-07  0.1490D-07 -0.1192D-06 -0.5960D-07       ",
+        );
+        let kb = kb.unwrap();
+
+        assert_eq!(
+            kb,
+            IonosphereModel::Klobuchar(KbModel {
+                alpha: (0.2794E-07, 0.1490E-07, -0.1192E-06, -0.5960E-07),
+                beta: (0.0, 0.0, 0.0, 0.0),
+                region: KbRegionCode::Worldwide,
+            })
+        );
+
+        let kb = IonosphereModel::from_rinex3_header(
+            "GPSB   0.1290D+06  0.3277D+05 -0.2621D+06  0.2621D+06       ",
+        );
+        assert!(kb.is_ok(), "failed to parse GPSB iono correction header");
+        let kb = kb.unwrap();
+        assert_eq!(
+            kb,
+            IonosphereModel::Klobuchar(KbModel {
+                alpha: (0.0, 0.0, 0.0, 0.0),
+                beta: (0.1290E+06, 0.3277E+05, -0.2621E+06, 0.2621E+06),
                 region: KbRegionCode::Worldwide,
             })
         );
