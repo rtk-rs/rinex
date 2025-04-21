@@ -11,6 +11,7 @@ pub(crate) mod parsing;
 
 /// System Time (offset) Message
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TimeOffset {
     /// Left hand side [TimeScale]
     pub lhs: TimeScale,
