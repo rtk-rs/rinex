@@ -660,12 +660,9 @@ fn nav_v4_kms300dnk_r2022() {
                 assert_eq!(v.rhs, TimeScale::UTC);
                 // TODO assert_eq!(v.utc, "UTC(USNO)");
 
-                let (seconds, drift) = (
-                    v.polynomial.constant.to_seconds(),
-                    v.polynomial.rate.to_seconds(),
-                );
-                assert_eq!(v.polynomial.accel, Duration::ZERO);
+                let (seconds, drift) = (v.polynomial.0, v.polynomial.1);
 
+                assert_eq!(v.polynomial.2, 0.0);
                 tests_passed += 1;
             }
         } else if k.epoch == t1 {
@@ -678,15 +675,12 @@ fn nav_v4_kms300dnk_r2022() {
                 // TODO assert_eq!(v.utc, "");
                 // TODO assert_eq!(v.t_tm, 0);
 
-                let (seconds, drift) = (
-                    v.polynomial.constant.to_seconds(),
-                    v.polynomial.rate.to_seconds(),
-                );
+                let (seconds, drift) = (v.polynomial.0, v.polynomial.1);
+
                 assert!((seconds - 3.201421350241E-09).abs() < 1E-12);
                 assert!((drift - -4.440892098501E-15).abs() < 1E-12);
 
-                assert_eq!(v.polynomial.accel, Duration::ZERO);
-
+                assert_eq!(v.polynomial.2, 0.0);
                 tests_passed += 1;
             }
         }

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::prelude::{Epoch, TimeScale};
 
-use hifitime::Polynomial;
+use hifitime::{Duration, Polynomial};
 
 pub(crate) mod formatting;
 pub(crate) mod parsing;
@@ -21,8 +21,8 @@ pub struct TimeOffset {
     pub t_ref: (u32, u64),
     /// Possible UTC ID# in case this came from RINEXv4
     pub utc: Option<String>,
-    /// [Polynomial]
-    pub polynomial: Polynomial,
+    /// Interpolation polynomial
+    pub polynomial: (f64, f64, f64),
 }
 
 impl TimeOffset {
@@ -31,7 +31,7 @@ impl TimeOffset {
         t_ref: Epoch,
         lhs: TimeScale,
         rhs: TimeScale,
-        polynomial: Polynomial,
+        polynomial: (f64, f64, f64),
     ) -> Self {
         let t_ref = t_ref.to_time_scale(lhs).to_time_of_week();
         Self {
@@ -49,14 +49,22 @@ impl TimeOffset {
         t_nanos: u64,
         lhs: TimeScale,
         rhs: TimeScale,
-        polynomial: Polynomial,
+        polynomial: (f64, f64, f64),
     ) -> Self {
         Self {
             lhs,
             rhs,
-            polynomial,
             utc: None,
+            polynomial,
             t_ref: (t_week, t_nanos),
+        }
+    }
+
+    fn to_hifitime_polynomial(&self) -> Polynomial {
+        Polynomial {
+            constant: Duration::from_seconds(self.polynomial.0),
+            rate: Duration::from_seconds(self.polynomial.1),
+            accel: Duration::from_seconds(self.polynomial.2),
         }
     }
 
@@ -66,7 +74,12 @@ impl TimeOffset {
             // forward
             let ref_epoch = Epoch::from_time_of_week(self.t_ref.0, self.t_ref.1, t.time_scale);
 
-            match t.precise_timescale_conversion(true, ref_epoch, self.polynomial, target) {
+            match t.precise_timescale_conversion(
+                true,
+                ref_epoch,
+                self.to_hifitime_polynomial(),
+                target,
+            ) {
                 Ok(epoch) => Some(epoch),
                 Err(_) => None, // should not happen at this point
             }
@@ -74,12 +87,17 @@ impl TimeOffset {
             // backwards
             let ref_epoch = Epoch::from_time_of_week(self.t_ref.0, self.t_ref.1, t.time_scale);
 
-            match t.precise_timescale_conversion(false, ref_epoch, self.polynomial, target) {
+            match t.precise_timescale_conversion(
+                false,
+                ref_epoch,
+                self.to_hifitime_polynomial(),
+                target,
+            ) {
                 Ok(epoch) => Some(epoch),
                 Err(_) => None, // should not happen at this point
             }
         } else {
-            // invalid
+            // indirection conversion is not supported yet!
             None
         }
     }

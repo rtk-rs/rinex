@@ -2,7 +2,7 @@ use crate::{
     epoch::parse_in_timescale as parse_epoch_in_timescale,
     error::ParsingError,
     navigation::time::TimeOffset,
-    prelude::{Duration, Epoch, Polynomial, TimeScale},
+    prelude::{Epoch, TimeScale},
 };
 
 impl TimeOffset {
@@ -57,18 +57,12 @@ impl TimeOffset {
             .parse::<f64>()
             .map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
 
-        let polynomial = Polynomial {
-            constant: Duration::from_seconds(a0),
-            rate: Duration::from_seconds(a1),
-            accel: Duration::ZERO,
-        };
-
         Ok(Self::from_time_of_week(
             week,
             seconds * 1_000_000_000,
             TimeScale::GPST,
             TimeScale::UTC,
-            polynomial,
+            (a0, a1, 0.0),
         ))
     }
 
@@ -102,17 +96,11 @@ impl TimeOffset {
             .parse::<f64>()
             .map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
 
-        let polynomial = Polynomial {
-            constant: Duration::from_seconds(a0),
-            rate: Duration::ZERO,
-            accel: Duration::ZERO,
-        };
-
         Ok(Self::from_epoch(
             t_ref,
             TimeScale::GPST, //TODO GlonassT
             TimeScale::UTC,
-            polynomial,
+            (a0, 0.0, 0.0),
         ))
     }
 
@@ -148,18 +136,12 @@ impl TimeOffset {
             .parse::<f64>()
             .map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
 
-        let polynomial = Polynomial {
-            constant: Duration::from_seconds(a0),
-            rate: Duration::from_seconds(a1),
-            accel: Duration::ZERO,
-        };
-
         Ok(Self::from_time_of_week(
             week,
             seconds * 1_000_000_000,
             lhs,
             rhs,
-            polynomial,
+            (a0, a1, 0.0),
         ))
     }
 
@@ -200,13 +182,7 @@ impl TimeOffset {
                 .map_err(|_| ParsingError::NavTimeOffsetParinsg)?,
         );
 
-        let polynomial = Polynomial {
-            constant: Duration::from_seconds(a0),
-            rate: Duration::from_seconds(a1),
-            accel: Duration::from_seconds(a2),
-        };
-
-        let time_offset = Self::from_time_of_week(t_week, t_nanos, lhs, rhs, polynomial);
+        let time_offset = Self::from_time_of_week(t_week, t_nanos, lhs, rhs, (a0, a1, a2));
 
         Ok(time_offset)
     }
@@ -218,7 +194,7 @@ mod test {
     use std::str::FromStr;
 
     use super::TimeOffset;
-    use crate::prelude::{Duration, Epoch, Polynomial, TimeScale};
+    use crate::prelude::{Epoch, TimeScale};
     use crate::tests::formatting::Utf8Buffer;
 
     #[test]
@@ -235,11 +211,7 @@ mod test {
                 sec * 1_000_000_000,
                 TimeScale::GPST,
                 TimeScale::UTC,
-                Polynomial {
-                    constant: Duration::from_seconds(a0),
-                    rate: Duration::from_seconds(a1),
-                    accel: Duration::ZERO,
-                },
+                (a0, a1, 0.0),
             );
 
             let parsed = TimeOffset::parse_v2_delta_utc(content).unwrap();
@@ -267,16 +239,8 @@ mod test {
         )] {
             let t_ref = Epoch::from_gregorian_utc_at_midnight(y, m, d);
 
-            let expected = TimeOffset::from_epoch(
-                t_ref,
-                TimeScale::GPST,
-                TimeScale::UTC,
-                Polynomial {
-                    constant: Duration::from_seconds(a0),
-                    rate: Duration::ZERO,
-                    accel: Duration::ZERO,
-                },
-            );
+            let expected =
+                TimeOffset::from_epoch(t_ref, TimeScale::GPST, TimeScale::UTC, (a0, 0.0, 0.0));
 
             let parsed = TimeOffset::parse_v2_corr_to_system_time(content).unwrap();
             assert_eq!(parsed, expected);
@@ -352,17 +316,8 @@ mod test {
                 TimeScale::UTC,
             ),
         ] {
-            let expected = TimeOffset::from_time_of_week(
-                week,
-                sec * 1_000_000_000,
-                lhs,
-                rhs,
-                Polynomial {
-                    constant: Duration::from_seconds(a0),
-                    rate: Duration::from_seconds(a1),
-                    accel: Duration::ZERO,
-                },
-            );
+            let expected =
+                TimeOffset::from_time_of_week(week, sec * 1_000_000_000, lhs, rhs, (a0, a1, 0.0));
 
             let parsed = TimeOffset::parse_v3(content).unwrap();
 
@@ -384,7 +339,7 @@ mod test {
 
     #[test]
     fn parsing_v4() {
-        for (line_1, line_2, lhs, rhs, t_ref, t_sec, a_0, a_1, a_2) in [
+        for (line_1, line_2, lhs, rhs, t_ref, t_sec, a0, a1, a2) in [
             (
                 "    2022 06 08 00 00 00 GAUT                                  UTCGAL",
                 "     2.952070000000E+05-1.862645149231E-09 8.881784197001E-16 0.000000000000E+00",
@@ -418,14 +373,7 @@ mod test {
             assert_eq!(time_offset.t_ref.0, t_ref_week);
             //assert_eq!(time_offset.t_ref.1, t_sec * 1_000_000_000);
 
-            assert_eq!(
-                time_offset.polynomial,
-                Polynomial {
-                    constant: Duration::from_seconds(a_0),
-                    rate: Duration::from_seconds(a_1),
-                    accel: Duration::from_seconds(a_2)
-                }
-            );
+            assert_eq!(time_offset.polynomial, (a0, a1, a2),);
 
             // test reciprocal
             let mut buf = BufWriter::new(Utf8Buffer::new(1024));
