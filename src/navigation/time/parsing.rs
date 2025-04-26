@@ -167,7 +167,7 @@ impl TimeOffset {
         //     .parse::<f64>()
         //     .map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
 
-        let polynomials = (
+        let (a0, a1, a2) = (
             a0.trim()
                 .replace('D', "e")
                 .parse::<f64>()
@@ -182,8 +182,7 @@ impl TimeOffset {
                 .map_err(|_| ParsingError::NavTimeOffsetParinsg)?,
         );
 
-        let time_offset = Self::from_time_of_week(t_week, t_nanos, lhs, rhs, polynomials);
-        // time_offset.t_ref.1 = t_tm.round() as u64 * 1_000_000_000;
+        let time_offset = Self::from_time_of_week(t_week, t_nanos, lhs, rhs, (a0, a1, a2));
 
         Ok(time_offset)
     }
@@ -191,12 +190,12 @@ impl TimeOffset {
 
 #[cfg(test)]
 mod test {
-    use super::TimeOffset;
-    use crate::prelude::{Epoch, TimeScale};
+    use std::io::BufWriter;
     use std::str::FromStr;
 
+    use super::TimeOffset;
+    use crate::prelude::{Epoch, TimeScale};
     use crate::tests::formatting::Utf8Buffer;
-    use std::io::BufWriter;
 
     #[test]
     fn parsing_delta_utc_v2() {
@@ -340,7 +339,7 @@ mod test {
 
     #[test]
     fn parsing_v4() {
-        for (line_1, line_2, lhs, rhs, t_ref, t_sec, a_0, a_1, a_2) in [
+        for (line_1, line_2, lhs, rhs, t_ref, t_sec, a0, a1, a2) in [
             (
                 "    2022 06 08 00 00 00 GAUT                                  UTCGAL",
                 "     2.952070000000E+05-1.862645149231E-09 8.881784197001E-16 0.000000000000E+00",
@@ -373,7 +372,8 @@ mod test {
             assert_eq!(time_offset.rhs, rhs);
             assert_eq!(time_offset.t_ref.0, t_ref_week);
             //assert_eq!(time_offset.t_ref.1, t_sec * 1_000_000_000);
-            assert_eq!(time_offset.polynomials, (a_0, a_1, a_2));
+
+            assert_eq!(time_offset.polynomial, (a0, a1, a2),);
 
             // test reciprocal
             let mut buf = BufWriter::new(Utf8Buffer::new(1024));

@@ -34,7 +34,7 @@ use crate::{
         is_new_epoch as is_new_observation_epoch, parse_epoch as parse_observation_epoch,
         Record as ObservationRecord,
     },
-    prelude::{Constellation, Epoch, Header, ParsingError, TimeScale},
+    prelude::{Epoch, Header, ParsingError, TimeScale},
     record::{Comments, Record},
     types::Type,
 };
