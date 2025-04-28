@@ -109,6 +109,7 @@ full = [
     "serde",
     "binex",
     "rtcm",
+    "ut1",
 ]
 
 [build-dependencies]
@@ -144,6 +145,7 @@ anise = { git = "https://github.com/nyx-space/anise", branch = "dep/hifitime-git
 hifitime = { git = "https://github.com/nyx-space/hifitime", branch = "master", features = ["serde", "std"] }
 
 gnss-rs = { git = "https://github.com/rtk-rs/gnss", branch = "main", features = ["serde", "domes", "cospar"] }
+
 gnss-qc-traits = { git = "https://github.com/rtk-rs/qc-traits", branch = "main", features = ["html"], optional = true }
 
 maud = { version = "0.26", optional = true }
