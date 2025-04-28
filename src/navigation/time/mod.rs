@@ -9,6 +9,9 @@ use hifitime::{Duration, Polynomial};
 pub(crate) mod formatting;
 pub(crate) mod parsing;
 
+#[cfg(feature = "processing")]
+use qc_traits::TimePolynomial;
+
 /// System Time (offset) Message
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -68,37 +71,14 @@ impl TimeOffset {
         }
     }
 
-    /// Tranposes proposed [Epoch] into desired [TimeScale] if that is feasible using this [TimeOffset] structure.
-    pub fn epoch_time_correction(&self, t: Epoch, target: TimeScale) -> Option<Epoch> {
-        if self.lhs == t.time_scale && self.rhs == target {
-            // forward
-            let ref_epoch = Epoch::from_time_of_week(self.t_ref.0, self.t_ref.1, t.time_scale);
-
-            match t.precise_timescale_conversion(
-                true,
-                ref_epoch,
-                self.to_hifitime_polynomial(),
-                target,
-            ) {
-                Ok(epoch) => Some(epoch),
-                Err(_) => None, // should not happen at this point
-            }
-        } else if self.lhs == target && self.rhs == t.time_scale {
-            // backwards
-            let ref_epoch = Epoch::from_time_of_week(self.t_ref.0, self.t_ref.1, t.time_scale);
-
-            match t.precise_timescale_conversion(
-                false,
-                ref_epoch,
-                self.to_hifitime_polynomial(),
-                target,
-            ) {
-                Ok(epoch) => Some(epoch),
-                Err(_) => None, // should not happen at this point
-            }
-        } else {
-            // indirection conversion is not supported yet!
-            None
-        }
+    #[cfg(feature = "processing")]
+    pub(crate) fn to_time_polynomial(&self) -> TimePolynomial {
+        TimePolynomial::from_reference_time_of_week_nanos(
+            self.t_ref.0,
+            self.t_ref.1,
+            self.lhs,
+            self.rhs,
+            self.to_hifitime_polynomial(),
+        )
     }
 }
