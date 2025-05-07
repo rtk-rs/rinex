@@ -148,7 +148,7 @@ gnss-rs = { git = "https://github.com/rtk-rs/gnss", branch = "main", features = 
 
 gnss-qc-traits = { git = "https://github.com/rtk-rs/qc-traits", branch = "main", features = ["html"], optional = true }
 
-maud = { version = "0.26", optional = true }
+maud = { version = "0.27", optional = true }
 
 # BINEX
 binex = { git = "https://github.com/rtk-rs/binex", branch = "main", optional = true }
