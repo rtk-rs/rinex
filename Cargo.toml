@@ -164,7 +164,7 @@ num-integer = "0.1.44"
 
 [dev-dependencies]
 serde_json = "1"
-criterion = "0.5"
+criterion = "0.6"
 rand = "0.8.4"
 flate2 = "1"
 
