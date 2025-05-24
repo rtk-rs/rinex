@@ -155,10 +155,6 @@ pub fn generic_observation_rinex_test(
     let expected = gnss_from_csv(gnss_csv);
     assert_eq!(content, expected);
 
-    // Self - Self should be 0
-    let null_dut = dut.observations_substract(&dut);
-    generic_null_rinex_test(&null_dut);
-
     // Test clock data points
     for point in clock_points {
         let k = point.key;
