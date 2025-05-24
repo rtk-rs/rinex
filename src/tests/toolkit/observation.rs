@@ -156,7 +156,7 @@ pub fn generic_observation_rinex_test(
     assert_eq!(content, expected);
 
     // Self - Self should be 0
-    let null_dut = dut.observation_substract(&dut);
+    let null_dut = dut.observations_substract(&dut);
     generic_null_rinex_test(&null_dut);
 
     // Test clock data points
