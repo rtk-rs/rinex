@@ -1259,64 +1259,70 @@ impl Rinex {
     }
 
     /// Copies and returns new [Rinex] that is the result
-    /// of observation differentiation. See [Self::observation_substract_mut] for more
+    /// of observation differentiation. See [Self::observations_substract_mut] for more
     /// information.
-    pub fn observation_substract(&self, rhs: &Self) -> Self {
+    pub fn observations_substract(&self, rhs: &Self) -> Result<Self, Error> {
         let mut s = self.clone();
-        s.observation_substract_mut(rhs);
-        s
+        s.observations_substract_mut(rhs)?;
+        Ok(s)
     }
 
     /// Modifies [Rinex] in place with observation differentiation
     /// using the remote (RHS) counterpart, for each identical observation and signal source.
-    /// This only applies to Observation RINEX (1), DORIS (2) or Meteo RINEX (3).
-    /// 1: only same [Observable] from same [SV] are differentiated
-    /// 2: only same [Observable] from same [Station] are diffentiated
-    /// 3: only same [Observable] are differentiated.
+    ///
+    /// This is currently limited to Observation RINEX. NB:
+    /// - Only matched (differentiated) symbols will remain, any other observations are
+    /// discarded.
+    /// - Output symbols are not compliant with Observation RINEX, this is sort
+    /// of like a "residual" RINEX. Use with care.
     ///
     /// This allows analyzing a local clock used as GNSS receiver reference clock
     /// spread to dual GNSS receiver, by means of phase differential analysis.
-    pub fn observation_substract_mut(&mut self, rhs: &Self) {
+    pub fn observations_substract_mut(&mut self, rhs: &Self) -> Result<(), Error> {
+        let lhs_dt = self
+            .dominant_sampling_interval()
+            .ok_or(Error::UndeterminedSamplingPeriod)?;
+
+        let half_lhs_dt = lhs_dt / 2.0;
+
         if let Some(rhs) = rhs.record.as_obs() {
             if let Some(rec) = self.record.as_mut_obs() {
-                for (k, v) in rec.iter_mut() {
-                    if let Some(rhs) = rhs.get(&k) {
-                        for signal in v.signals.iter_mut() {
-                            if let Some(rhs) = rhs
-                                .signals
-                                .iter()
-                                .filter(|sig| {
-                                    sig.observable == signal.observable && sig.sv == signal.sv
-                                })
-                                .reduce(|k, _| k)
-                            {
-                                signal.value -= rhs.value;
+                rec.retain(|k, v| {
+                    v.signals.retain_mut(|sig| {
+                        let mut reference = 0.0;
+                        let mut min_dt = Duration::MAX;
+
+                        // temporal filter
+                        let filtered_rhs_epochs = rhs.iter().filter(|(rhs, _)| {
+                            let dt = (rhs.epoch - k.epoch).abs();
+                            dt <= half_lhs_dt
+                        });
+
+                        for (rhs_epoch, rhs_values) in filtered_rhs_epochs {
+                            for rhs_sig in rhs_values.signals.iter() {
+                                if rhs_sig.sv == sig.sv && rhs_sig.observable == sig.observable {
+                                    let dt = (rhs_epoch.epoch - k.epoch).abs();
+                                    if dt <= min_dt {
+                                        reference = rhs_sig.value;
+                                        min_dt = dt;
+                                    }
+                                }
                             }
                         }
-                    }
-                }
-            }
-        } else if let Some(rhs) = rhs.record.as_doris() {
-            if let Some(rec) = self.record.as_mut_doris() {
-                for (k, v) in rec.iter_mut() {
-                    if let Some(rhs) = rhs.get(&k) {
-                        for (k, v) in v.signals.iter_mut() {
-                            if let Some(rhs) = rhs.signals.get(&k) {
-                                v.value -= rhs.value;
-                            }
+
+                        if min_dt < Duration::MAX {
+                            sig.value -= reference;
                         }
-                    }
-                }
-            }
-        } else if let Some(rhs) = rhs.record.as_meteo() {
-            if let Some(rec) = self.record.as_mut_meteo() {
-                for (k, v) in rec.iter_mut() {
-                    if let Some(rhs) = rhs.get(&k) {
-                        *v -= rhs;
-                    }
-                }
+
+                        min_dt < Duration::MAX
+                    });
+
+                    !v.signals.is_empty()
+                });
             }
         }
+
+        Ok(())
     }
 }
 

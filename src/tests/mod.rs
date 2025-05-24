@@ -8,7 +8,7 @@ mod filename;
 pub mod formatting;
 mod parsing;
 
-#[cfg(feature = "flate2")]
+#[cfg(all(feature = "flate2", feature = "qc"))]
 mod sbas;
 
 #[cfg(feature = "flate2")]
