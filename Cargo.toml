@@ -1,6 +1,6 @@
 [package]
 name = "rinex"
-version = "0.17.1"
+version = "0.18.0"
 license = "MPL-2.0"
 authors = ["Guillaume W. Bres <guillaume.bressaix@gmail.com>"]
 description = "RINEX file parsing, analysis and production"
