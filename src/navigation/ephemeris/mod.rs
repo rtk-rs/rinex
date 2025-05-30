@@ -117,7 +117,7 @@ use std::collections::HashMap;
 ///     // that can resolve the coordinates of the SV using this very frame.
 ///     // You still have to manage your ephemeris frames correctly.
 ///     // This is just an example.
-///     if let Some(orbital_state) = ephemeris.kepler2position(sv_broadcaster, toc, toc) {
+///     if let Some(orbital_state) = ephemeris.kepler2position(sv_broadcaster, toc) {
 ///         // continue with [Orbit] processing
 ///     }
 /// }

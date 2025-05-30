@@ -25,7 +25,7 @@ pub struct Kepler {
 
     /// Inclination angle at reference time (in radians)
     pub i_0: f64,
-    
+
     /// Longitude of ascending node at reference time (in radians)
     pub omega_0: f64,
 
@@ -47,30 +47,30 @@ pub struct Kepler {
 pub struct Perturbations {
     /// Mean motion difference from computed value (in radians)
     pub dn: f64,
-    
+
     /// Inclination rate of change (in radians.s⁻¹)
     pub i_dot: f64,
 
     /// Right ascension rate of change (in radians.s⁻¹)
     pub omega_dot: f64,
-    
+
     /// Amplitude of sine harmonic correction term of the argument
     /// of latitude (in radians)
     pub cus: f64,
-    
+
     /// Amplitude of cosine harmonic correction term of the argument
     /// of latitude (in radians)
     pub cuc: f64,
-    
+
     /// Amplitude of sine harmonic correction term of the angle of inclination (in radians)
     pub cis: f64,
-    
+
     /// Amplitude of cosine harmonic correction term of the angle of inclination (in radians)
     pub cic: f64,
-    
+
     /// Amplitude of sine harmonic correction term of the orbit radius (in meters)
     pub crs: f64,
-    
+
     /// Amplitude of cosine harmonic correction term of the orbit radius (in meters)
     pub crc: f64,
 }
@@ -148,10 +148,12 @@ impl Ephemeris {
     }
 
     /// Returns [SV] [Orbit]al state at t [Epoch].
-    /// t_sv [Epoch] is the satellite free running clock.
     /// Self must be correctly selected from navigation record.
     /// See [Bibliography::AsceAppendix3], [Bibliography::JLe19] and [Bibliography::BeiDouICD]
-    pub fn kepler2position(&self, sv: SV, t_sv: Epoch, t: Epoch) -> Option<Orbit> {
+    /// ## Input
+    /// - sv: [SV] satellite identity
+    /// - epoch: desired [Epoch]
+    pub fn kepler2position(&self, sv: SV, epoch: Epoch) -> Option<Orbit> {
         if sv.constellation.is_sbas() || sv.constellation == Constellation::Glonass {
             let (x_km, y_km, z_km) = (
                 self.get_orbit_f64("satPosX")?,
@@ -159,33 +161,33 @@ impl Ephemeris {
                 self.get_orbit_f64("satPosZ")?,
             );
             // TODO: velocity + integration
-            Some(Orbit::from_position(x_km, y_km, z_km, t, IAU_EARTH_FRAME))
+            Some(Orbit::from_position(
+                x_km,
+                y_km,
+                z_km,
+                epoch,
+                IAU_EARTH_FRAME,
+            ))
         } else {
-            let helper = self.helper(sv, t)?;
+            let helper = self.helper(sv, epoch)?;
             let pos = helper.ecef_position();
             let vel = helper.ecef_velocity();
             Some(Orbit::from_cartesian_pos_vel(
                 Vector6::new(pos[0], pos[1], pos[2], vel[0], vel[1], vel[2]),
-                t,
+                epoch,
                 IAU_EARTH_FRAME,
             ))
         }
     }
 
     /// Calculates ECEF (position, velocity) [Vector3] duplet
-    /// ## Inputs
+    /// ## Input
     /// - sv: desired [SV]
-    /// - toc: [SV] time of clock as [Epoch]
-    /// - t: desired [Epoch]
+    /// - epoch: desired [Epoch]
     /// ## Returns
     /// - (position, velocity): [Vector3] duplet, in (km, km/s)
     /// See [Bibliography::AsceAppendix3], [Bibliography::JLe19] and [Bibliography::BeiDouICD]
-    pub fn kepler2position_velocity(
-        &self,
-        sv: SV,
-        toc: Epoch,
-        t: Epoch,
-    ) -> Option<(Vector3, Vector3)> {
+    pub fn kepler2position_velocity(&self, sv: SV, epoch: Epoch) -> Option<(Vector3, Vector3)> {
         // In gloass and SBAS scenarios,
         // we only need to pick up the values from the record.
         // NB: this is incorrect, it requires an integration process
@@ -208,7 +210,7 @@ impl Ephemeris {
             Some((position, velocity))
         } else {
             // form keplerian helper
-            let helper = self.helper(sv, t)?;
+            let helper = self.helper(sv, epoch)?;
             helper.position_velocity()
         }
     }

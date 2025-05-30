@@ -16,7 +16,7 @@ impl Rinex {
     /// - orbital state: expressed as ECEF [Orbit]
     pub fn sv_orbit(&self, sv: SV, t: Epoch) -> Option<Orbit> {
         let (toc, _, eph) = self.nav_ephemeris_selection(sv, t)?;
-        eph.kepler2position(sv, toc, t)
+        eph.kepler2position(sv, t)
     }
 
     /// [SV] (azimuth, elevation, slant range) triplet determination,
