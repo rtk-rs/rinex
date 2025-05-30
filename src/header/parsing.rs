@@ -1074,7 +1074,7 @@ impl Header {
     ) {
         lazy_static! {
             /*
-             *  Only GPS, Glonass, Galileo and SBAS are supported in V2 RINEX
+             *  We support GPS, Glonass, Galileo, SBAS and BDS as per v2.11.
              */
             static ref KNOWN_V2_CONSTELLS: [Constellation; 5] = [
                 Constellation::GPS,
