@@ -36,16 +36,103 @@ use anise::{
 
 use std::collections::HashMap;
 
-/// Ephermeris NAV frame type
+/// Ephemeris Navigation message. May be found in all RINEX revisions.
+/// Describes the content of the radio message at publication time.
+/// Usually published at midnight and regularly updated with respect
+/// to [Ephemeris] validity period.
+///
+/// Any [Ephemeris] comes with the description of the on-board clock,
+/// but other data fields are [Constellation] and RINEX version dependent.
+/// We store them as dictionary of [OrbitItem]s. This dictionary
+/// is parsed based on our built-in JSON descriptor, it proposes methods
+/// to access raw data or higher level methods for types that we can interpret.
+/// Refer to [OrbitItem] for more information.
+///
+/// RINEX V3 example:
+/// ```
+/// use rinex::{
+///     prelude::Rinex,
+///     navigation::{NavFrameType, NavMessageType},
+/// };
+///
+/// let rinex = Rinex::from_gzip_file("data/NAV/V3/BRDC00GOP_R_20210010000_01D_MN.rnx.gz")
+///     .unwrap();
+///
+/// // You can always unwrap inner structures manually and access everything.
+/// // But we propose higher level iteration methods to make things easier:
+/// for (key, ephemeris) in rinex.nav_ephemeris_frames_iter() {
+///     
+///     let sv_broadcaster = key.sv;
+///
+///     // until RINEXv3 (included) you can only find this type of frame
+///     assert_eq!(key.frmtype, NavFrameType::Ephemeris);
+///
+///     // until RINEXv3 (included) you can only find this kind of message
+///     assert_eq!(key.msgtype, NavMessageType::LNAV);
+///
+///     // Ephemeris serves many purposes and applications, so
+///     // it has a lot to offer.
+///     
+///     if let Some(tgd) = ephemeris.tgd() {
+///         // TGD was found & interpreted as duration
+///         let tgd = tgd.total_nanoseconds();
+///     }
+///
+///     // SV Health highest interpretation level: as simple boolean
+///     if !ephemeris.sv_healthy() {
+///         // should most likely be ignored in navigation processing
+///     }
+///
+///     // finer health interpretation is constellation dependent.
+///     // Refer to RINEX standards and related constellation ICD.
+///     if let Some(health) = ephemeris.orbits.get("health") {
+///         if let Some(gps_qzss_l1l2l5) = health.as_gps_qzss_l1l2l5_health_flag() {
+///             assert!(gps_qzss_l1l2l5.healthy());
+///         }
+///     }
+/// }
+/// ```
+///
+/// Working with other RINEX revisions does not change anything
+/// when dealing with this type, unless maybe the data fields you may
+/// find the dictionary. For example, RINEX v4 describes beta-testing
+/// health flags for BDS vehicles:
+///
+/// ```
+/// use rinex::{
+///     prelude::Rinex,
+///     navigation::{NavFrameType, NavMessageType, bds::BdsHealth},
+/// };
+///
+/// let rinex = Rinex::from_gzip_file("data/NAV/V4/BRD400DLR_S_20230710000_01D_MN.rnx.gz")
+///     .unwrap();
+///
+/// // You can always unwrap inner structures manually and access everything.
+/// // But we propose higher level iteration methods to make things easier:
+/// for (key, ephemeris) in rinex.nav_ephemeris_frames_iter() {
+///
+///     if let Some(health) = ephemeris.orbits.get("health") {
+///         // health flag found & possibly interpreted
+///         // this for example, only applies to modern BDS messages
+///         if let Some(flag) = health.as_bds_health_flag() {
+///             if flag == BdsHealth::UnhealthyTesting {
+///             }
+///         }
+///     }
+/// }    
+/// ```
 #[derive(Default, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 pub struct Ephemeris {
     /// Clock bias (in seconds)
     pub clock_bias: f64,
+
     /// Clock drift (s.s⁻¹)
     pub clock_drift: f64,
+
     /// Clock drift rate (s.s⁻²)).   
     pub clock_drift_rate: f64,
+
     /// Orbits are revision and constellation dependent,
     /// sorted by key and content, described in navigation::database
     pub orbits: HashMap<String, OrbitItem>,
@@ -122,7 +209,7 @@ impl Ephemeris {
         }
     }
 
-    /// Returns true if this [Ephemeris] declares this satellite as in testing mode. declared healthy (suitable
+    /// Returns true if this [Ephemeris] message declares this satellite in testing mode.
     pub fn sv_in_testing(&self) -> bool {
         let health = self.orbits.get("health");
 
