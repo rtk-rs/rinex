@@ -1,6 +1,6 @@
 use crate::{
     navigation::{NavFrameType, NavMessageType},
-    prelude::{Constellation, Duration, Epoch, Rinex, TimeScale, SV},
+    prelude::{Constellation, Epoch, Rinex, TimeScale, SV},
     tests::toolkit::{generic_navigation_test, TimeFrame},
 };
 

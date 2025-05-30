@@ -9,8 +9,6 @@ use orbits::OrbitItem;
 
 use flags::{
     bds::{BdsHealth, BdsSatH1},
-    gal::GalHealth,
-    geo::GeoHealth,
     glonass::{GlonassHealth, GlonassHealth2},
     gps::GpsQzssl1cHealth,
 };
@@ -20,7 +18,7 @@ use log::error;
 
 #[cfg(feature = "nav")]
 #[cfg_attr(docsrs, doc(cfg(feature = "nav")))]
-mod kepler;
+pub mod kepler;
 
 #[cfg(feature = "nav")]
 use crate::prelude::nav::Almanac;
@@ -62,6 +60,7 @@ use std::collections::HashMap;
 /// // But we propose higher level iteration methods to make things easier:
 /// for (key, ephemeris) in rinex.nav_ephemeris_frames_iter() {
 ///     
+///     let toc = key.epoch;
 ///     let sv_broadcaster = key.sv;
 ///     let sv_timescale = key.sv.constellation.timescale();
 ///
@@ -78,6 +77,8 @@ use std::collections::HashMap;
 ///
 ///     // until RINEXv3 (included) you can only find this kind of message
 ///     assert_eq!(key.msgtype, NavMessageType::LNAV);
+///
+///     assert_eq!(toc.time_scale, sv_timescale); // always true in NAV RINEX
 ///
 ///     // Ephemeris serves many purposes and applications, so
 ///     // it has a lot to offer.
@@ -110,6 +111,14 @@ use std::collections::HashMap;
 ///     if let Some(l2p) = ephemeris.orbits.get("l2p") {
 ///         let flag = l2p.as_gps_l2p_flag().unwrap();
 ///         assert!(flag); // P2(Y) streams LNAV message
+///     }
+///
+///     // on "nav" feature (heavy) we integrate the kepler solver
+///     // that can resolve the coordinates of the SV using this very frame.
+///     // You still have to manage your ephemeris frames correctly.
+///     // This is just an example.
+///     if let Some(orbital_state) = ephemeris.kepler2position(sv_broadcaster, toc, toc) {
+///         // continue with [Orbit] processing
 ///     }
 /// }
 /// ```

@@ -8,23 +8,33 @@ use anise::{
 };
 
 mod helper;
+pub use helper::Helper;
+
+#[cfg(doc)]
+use crate::bibliography::Bibliography;
 
 /// [Kepler] stores all keplerian parameters
 #[derive(Default, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Kepler {
-    /// semi major axis (m)
+    /// Semi major axis (in meters)
     pub a: f64,
+
     /// Eccentricity (n.a)
     pub e: f64,
-    /// Inclination angle at reference time (semicircles)
+
+    /// Inclination angle at reference time (in radians)
     pub i_0: f64,
-    /// Longitude of ascending node at reference time (semicircles)
+    
+    /// Longitude of ascending node at reference time (in radians)
     pub omega_0: f64,
-    /// Mean anomaly at reference time (semicircles)
+
+    /// Mean anomaly at reference time (in radians)
     pub m_0: f64,
-    /// argument of perigee (semicircles)
+
+    /// Argument of perigee (in radians)
     pub omega: f64,
+
     /// Time of issue of ephemeris.
     /// NB GEO and GLO ephemerides do not have the notion of ToE, we set 0 here.
     /// Any calculations that imply ToE for those is incorrect anyways.
@@ -35,25 +45,33 @@ pub struct Kepler {
 #[derive(Default, Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Perturbations {
-    /// Mean motion difference from computed value [semicircles.s-1]
+    /// Mean motion difference from computed value (in radians)
     pub dn: f64,
-    /// Inclination rate of change [semicircles.s-1]
+    
+    /// Inclination rate of change (in radians.s⁻¹)
     pub i_dot: f64,
-    /// Right ascension rate of change [semicircles.s^-1]
+
+    /// Right ascension rate of change (in radians.s⁻¹)
     pub omega_dot: f64,
+    
     /// Amplitude of sine harmonic correction term of the argument
-    /// of latitude [rad]
+    /// of latitude (in radians)
     pub cus: f64,
+    
     /// Amplitude of cosine harmonic correction term of the argument
-    /// of latitude [rad]
+    /// of latitude (in radians)
     pub cuc: f64,
-    /// Amplitude of sine harmonic correction term of the angle of inclination [rad]
+    
+    /// Amplitude of sine harmonic correction term of the angle of inclination (in radians)
     pub cis: f64,
-    /// Amplitude of cosine harmonic correction term of the angle of inclination [rad]
+    
+    /// Amplitude of cosine harmonic correction term of the angle of inclination (in radians)
     pub cic: f64,
-    /// Amplitude of sine harmonic correction term of the orbit radius [m]
+    
+    /// Amplitude of sine harmonic correction term of the orbit radius (in meters)
     pub crs: f64,
-    /// Amplitude of cosine harmonic correction term of the orbit radius [m]
+    
+    /// Amplitude of cosine harmonic correction term of the orbit radius (in meters)
     pub crc: f64,
 }
 
@@ -143,7 +161,7 @@ impl Ephemeris {
             // TODO: velocity + integration
             Some(Orbit::from_position(x_km, y_km, z_km, t, IAU_EARTH_FRAME))
         } else {
-            let helper = self.helper(sv, t_sv, t)?;
+            let helper = self.helper(sv, t)?;
             let pos = helper.ecef_position();
             let vel = helper.ecef_velocity();
             Some(Orbit::from_cartesian_pos_vel(
@@ -190,7 +208,7 @@ impl Ephemeris {
             Some((position, velocity))
         } else {
             // form keplerian helper
-            let helper = self.helper(sv, toc, t)?;
+            let helper = self.helper(sv, t)?;
             helper.position_velocity()
         }
     }
