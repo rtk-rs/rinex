@@ -63,6 +63,15 @@ use std::collections::HashMap;
 /// for (key, ephemeris) in rinex.nav_ephemeris_frames_iter() {
 ///     
 ///     let sv_broadcaster = key.sv;
+///     let sv_timescale = key.sv.constellation.timescale();
+///
+///     // we support most GNSS [Timescale]s completely.
+///     // But incomplete support prohibits most Ephemeris exploitation.
+///     if sv_timescale.is_none() {
+///         continue;
+///     }
+///
+///     let sv_timescale = sv_timescale.unwrap();
 ///
 ///     // until RINEXv3 (included) you can only find this type of frame
 ///     assert_eq!(key.frmtype, NavFrameType::Ephemeris);
@@ -72,7 +81,13 @@ use std::collections::HashMap;
 ///
 ///     // Ephemeris serves many purposes and applications, so
 ///     // it has a lot to offer.
+///
+///     // ToE is most important when considering a frame.
+///     // When missing (blanked), the frame should be discarded.
+///     if let Some(toe) = ephemeris.toe(sv_timescale) {
 ///     
+///     }
+///
 ///     if let Some(tgd) = ephemeris.tgd() {
 ///         // TGD was found & interpreted as duration
 ///         let tgd = tgd.total_nanoseconds();
@@ -89,6 +104,12 @@ use std::collections::HashMap;
 ///         if let Some(gps_qzss_l1l2l5) = health.as_gps_qzss_l1l2l5_health_flag() {
 ///             assert!(gps_qzss_l1l2l5.healthy());
 ///         }
+///     }
+///
+///     // other example: l2p flag in GPS messages
+///     if let Some(l2p) = ephemeris.orbits.get("l2p") {
+///         let flag = l2p.as_gps_l2p_flag().unwrap();
+///         assert!(flag); // P2(Y) streams LNAV message
 ///     }
 /// }
 /// ```
