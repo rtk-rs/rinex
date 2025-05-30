@@ -24,7 +24,7 @@ pub use crate::navigation::{
     time::TimeOffset,
 };
 
-#[cfg(feature = "processing")]
+#[cfg(feature = "nav")]
 pub use crate::navigation::ephemeris::kepler::{Helper, Kepler, Perturbations};
 
 #[cfg(feature = "processing")]
