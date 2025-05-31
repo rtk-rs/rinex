@@ -142,7 +142,7 @@ impl Ephemeris {
         }
 
         let sv_ts = sv.timescale()?;
-        let toe = self.toe(sv_ts)?;
+        let toe = self.toe(sv)?;
         let dt = t.to_time_scale(sv_ts) - toe;
         Some(dt.to_seconds())
     }

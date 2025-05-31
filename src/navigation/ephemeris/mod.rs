@@ -267,21 +267,22 @@ impl Ephemeris {
         }
     }
 
-    /// Return ToE expressed as [Epoch]
-    pub fn toe(&self, sv_ts: TimeScale) -> Option<Epoch> {
+    /// Return Time of [Ephemeris] (ToE) expressed as [Epoch]
+    pub fn toe(&self, sv: SV) -> Option<Epoch> {
+        let timescale = sv.constellation.timescale()?;
+
         // TODO: in CNAV V4 TOC is said to be TOE... ...
-        let week = self.get_week()?;
-        let sec = self.get_orbit_f64("toe")?;
-        let week_dur = Duration::from_days((week * 7) as f64);
-        let sec_dur = Duration::from_seconds(sec);
-        match sv_ts {
-            TimeScale::GPST | TimeScale::QZSST | TimeScale::GST => {
-                Some(Epoch::from_duration(week_dur + sec_dur, TimeScale::GPST))
+        let (week, seconds) = (self.get_week()?, self.get_orbit_f64("toe")?);
+        let nanos = (seconds * 1.0E9).round() as u64;
+
+        match sv.constellation {
+            Constellation::GPS | Constellation::QZSS | Constellation::Galileo => {
+                Some(Epoch::from_time_of_week(week, nanos, TimeScale::GPST))
             },
-            TimeScale::BDT => Some(Epoch::from_bdt_duration(week_dur + sec_dur)),
+            Constellation::BeiDou => Some(Epoch::from_time_of_week(week, nanos, TimeScale::BDT)),
             _ => {
                 #[cfg(feature = "log")]
-                error!("{} is not supported", sv_ts);
+                error!("{} is not supported", sv.constellation);
                 None
             },
         }
@@ -355,15 +356,24 @@ impl Ephemeris {
         almanac.azimuth_elevation_range_sez(rx_orbit, tx_orbit, None, None)
     }
 
-    /// Returns True if Self is Valid at specified `t`.
+    /// Returns True if this [Ephemeris] frame is valid for specified epoch.
     /// NB: this only applies to MEO Ephemerides, not GEO Ephemerides,
     /// which should always be considered "valid".
-    pub fn is_valid(&self, sv: SV, t: Epoch, toe: Epoch) -> bool {
-        if let Some(max_dtoe) = Self::validity_duration(sv.constellation) {
-            t > toe && (t - toe) < max_dtoe
+    /// ## Input
+    /// - sv: [SV] identity
+    /// - epoch: test [Epoch]
+    pub fn is_valid(&self, sv: SV, t: Epoch) -> bool {
+        if let Some(toe) = self.toe(sv) {
+            if let Some(max_dtoe) = Self::validity_duration(sv.constellation) {
+                (t - toe).abs() < max_dtoe
+            } else {
+                #[cfg(feature = "log")]
+                error!("{} - validity period", sv.constellation);
+                false
+            }
         } else {
             #[cfg(feature = "log")]
-            error!("{} not fully supported", sv.constellation);
+            error!("{} - ToE calculation", sv.constellation);
             false
         }
     }

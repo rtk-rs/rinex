@@ -243,12 +243,6 @@ impl Ephemeris {
         let dtr_f = Constants::dtr_f(sv);
 
         let t_k = self.t_k(sv, t)?;
-        if t_k < 0.0 {
-            #[cfg(feature = "log")]
-            error!("t_k < 0.0: bad op");
-
-            return None;
-        }
 
         let mut kepler = self.kepler()?;
         let perturbations = self.perturbations()?;
