@@ -81,7 +81,7 @@ impl Rinex {
                         None
                     }
                 })
-                .min_by_key(|(toc, _, _)| t - *toc)
+                .min_by_key(|(_, toe, _)| (t - *toe).abs())
         }
     }
 
