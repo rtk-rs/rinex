@@ -85,7 +85,7 @@ use std::collections::HashMap;
 ///
 ///     // ToE is most important when considering a frame.
 ///     // When missing (blanked), the frame should be discarded.
-///     if let Some(toe) = ephemeris.toe(sv_timescale) {
+///     if let Some(toe) = ephemeris.toe(sv_broadcaster) {
 ///     
 ///     }
 ///
