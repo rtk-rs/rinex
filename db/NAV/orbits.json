@@ -24,7 +24,7 @@
             "idot": "f64",
             "l2Codes": "f64",
             "week": "u32",
-            "l2p": "f64",
+            "l2p": "flag",
             "accuracy": "f64",
             "health": "flag",
             "tgd": "f64",
