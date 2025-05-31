@@ -1,6 +1,6 @@
 [package]
 name = "rinex"
-version = "0.18.1"
+version = "0.19.0"
 license = "MPL-2.0"
 authors = ["Guillaume W. Bres <guillaume.bressaix@gmail.com>"]
 description = "RINEX file parsing, analysis and production"
@@ -156,10 +156,11 @@ num-traits = "0.2.15"
 num-integer = "0.1.44"
 
 [dev-dependencies]
+flate2 = "1"
+rand = "0.8.4"
 serde_json = "1"
 criterion = "0.5"
-rand = "0.8.4"
-flate2 = "1"
+env_logger = "0.11"
 
 [[bench]]
 name = "parsing"

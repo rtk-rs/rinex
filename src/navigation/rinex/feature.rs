@@ -16,7 +16,7 @@ impl Rinex {
     /// - orbital state: expressed as ECEF [Orbit]
     pub fn sv_orbit(&self, sv: SV, t: Epoch) -> Option<Orbit> {
         let (toc, _, eph) = self.nav_ephemeris_selection(sv, t)?;
-        eph.kepler2position(sv, toc, t)
+        eph.kepler2position(sv, t)
     }
 
     /// [SV] (azimuth, elevation, slant range) triplet determination,
@@ -45,7 +45,7 @@ impl Rinex {
     /// Ephemeris selection, that only applies to Navigation [Rinex].
     /// ## Inputs
     /// - sv: desired [SV]
-    /// - t: target [Epoch]
+    /// - epoch: desired [Epoch]
     /// ## Returns
     /// - (toc, toe, [Ephemeris]) triplet if an [Ephemeris] message
     /// was decoded in the correct time frame.
@@ -67,10 +67,13 @@ impl Rinex {
         } else {
             self.nav_ephemeris_frames_iter()
                 .filter_map(|(k, eph)| {
-                    if k.sv == sv && t >= k.epoch {
-                        let toe = eph.toe(sv_ts)?;
-                        if eph.is_valid(sv, t, toe) {
-                            Some((k.epoch, toe, eph))
+                    if k.sv == sv {
+                        if eph.is_valid(sv, t) {
+                            if let Some(toe) = eph.toe(k.sv) {
+                                Some((k.epoch, toe, eph))
+                            } else {
+                                None
+                            }
                         } else {
                             None
                         }
@@ -78,7 +81,7 @@ impl Rinex {
                         None
                     }
                 })
-                .min_by_key(|(toc, _, _)| t - *toc)
+                .min_by_key(|(_, toe, _)| (t - *toe).abs())
         }
     }
 

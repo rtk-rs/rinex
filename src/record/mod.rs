@@ -12,22 +12,29 @@ use serde::Serialize;
 mod formatting;
 mod parsing;
 
+/// RINEX [Record] type, inner content is RINEX type dependent.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 pub enum Record {
     /// [AntexRecord] contains antenna calibration profile
     AntexRecord(AntexRecord),
+
     /// [ClockRecord] contains SV and ground clock states
     ClockRecord(ClockRecord),
-    /// IONEX (Ionosphere maps), see [IonexRecord]
+
+    /// IONEX: TEC maps stored as [IonexRecord]
     IonexRecord(IonexRecord),
-    /// Meteo record, see [MeteoRecord]
+
+    /// Meteo sensor observations, stored as [MeteoRecord]
     MeteoRecord(MeteoRecord),
-    /// Navigation messages stored in [NavRecord]
+
+    /// Navigation messages stored as [NavRecord]
     NavRecord(NavRecord),
-    /// Observation record [ObservationRecord]
+
+    /// Observation record: signals observation
     ObsRecord(ObservationRecord),
-    /// DORIS RINEX, special DORIS signals observation
+
+    /// DORIS RINEX, special observations
     DorisRecord(DorisRecord),
 }
 
