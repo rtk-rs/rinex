@@ -15,7 +15,7 @@ The RINEX format is fully open source and is specified to answer the requirement
 To contribute to either of our project or join our community, you way
 - open an [Issue on Github.com](https://github.com/rtk-rs/rinex/issues) 
 - follow our [Discussions on Github.com](https://github.com/rtk-rs/discussions)
-- join our [Discord channel](https://discord.com/invite/VwuKPcw6)
+- join our [Discord channel](https://discord.gg/EqhEBXBmJh)
 
 ## Advantages :rocket: 
 
