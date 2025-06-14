@@ -6,8 +6,9 @@ mod header;
 mod ionosphere;
 mod message;
 mod parsing;
-mod rinex;
 mod time;
+
+pub mod rinex;
 
 pub(crate) mod formatting;
 
