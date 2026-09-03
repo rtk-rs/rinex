@@ -33,8 +33,8 @@ pub struct CompressorExpert<const M: usize> {
     /// Flag textdiff
     /// Compression kernels (per SV and signal)
     sv_kernels: HashMap<(SV, Observable), NumDiff<M>>,
-    // /// Clock [NumDiff]
-    // clock_diff: NumDiff<M>,
+    /// Receiver clock offset kernel, None while no offset is being reported
+    clock_diff: Option<NumDiff<M>>,
 }
 
 impl<const M: usize> Default for CompressorExpert<M> {
@@ -47,6 +47,7 @@ impl<const M: usize> Default for CompressorExpert<M> {
             flags_buf: String::with_capacity(128),
             sv_kernels: HashMap::with_capacity(8),
             flags_diff: HashMap::with_capacity(8),
+            clock_diff: None,
         }
     }
 }
@@ -134,14 +135,27 @@ impl<const M: usize> CompressorExpert<M> {
                 writeln!(w, "{}", compressed.trim_end())?;
             }
 
-            if let Some(clk) = v.clock {
-                // TODO: clock is not correctly supported yet
-                if !self.epoch_compression {
-                    writeln!(w, "{}", clk.offset_s)?;
-                }
-            } else {
-                // No clock: BLANKed line
-                write!(w, "\n")?;
+            // Receiver clock offset: RINEX 3 formats it as F15.12, RINEX 2
+            // as F12.9, and CRINEX stores it with the decimal point removed.
+            // Like RNX2CRX, the kernel is reset on the first offset that
+            // follows an epoch without one.
+            match v.clock {
+                Some(clock) => {
+                    let scaling = if self.v3 { 1.0E12 } else { 1.0E9 };
+                    let value = (clock.offset_s * scaling).round() as i64;
+                    match &mut self.clock_diff {
+                        Some(kernel) => writeln!(w, "{}", kernel.compress(value)?)?,
+                        None => {
+                            writeln!(w, "3&{}", value)?;
+                            self.clock_diff = Some(NumDiff::<M>::new(value, 3));
+                        },
+                    }
+                },
+                None => {
+                    // No clock: BLANKed line
+                    writeln!(w)?;
+                    self.clock_diff = None;
+                },
             }
 
             // For each SV
