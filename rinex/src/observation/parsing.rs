@@ -169,8 +169,10 @@ fn parse_observations(
     let obs = header.obs.as_ref().unwrap();
     let observables = &obs.codes;
 
-    // V1 / V2 tedious case
-    let rem = rem.trim();
+    // V1 / V2 tedious case.
+    // The SV list starts right after numsat, in 3 character slots: very old
+    // files omit the constellation letter (" 06"), so only the end is trimmed.
+    let rem = rem.trim_end();
     let remainder_len = rem.len();
 
     if header.version.major < 3 {

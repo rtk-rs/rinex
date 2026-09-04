@@ -257,9 +257,9 @@ fn v2_kosg0010_95o() {
         "2.0",
         Some("GPS"),
         false,
-        "G01, G04, G05, G06, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G29, G31",
+        "G01, G04, G05, G06, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28, G29, G31",
         "GPS",
-        &[("GPS", "C1, L1, L2, P2, S1")],
+        &[("GPS", "C1, L1, L2, P1, P2")],
         None, //TODO : problem here, parsing very old files
         // Some("1995-01-01T00:00:00 GPST"),
         None, //TODO: problem here, parsing very old files
