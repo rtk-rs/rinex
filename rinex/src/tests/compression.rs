@@ -87,4 +87,10 @@ mod test {
             run_round_trip_test(&format!("OBS/V3/{}", rnx_name), 3);
         }
     }
+
+    /// RINEX 4 observation files are compressed as CRINEX 3
+    #[test]
+    fn rinex4_round_trip() {
+        run_round_trip_test("OBS/V4/ACRG00GHA_R_20240010000_01H_30S_MO.rnx", 3);
+    }
 }

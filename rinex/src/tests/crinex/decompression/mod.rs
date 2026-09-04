@@ -461,6 +461,38 @@ fn run_clock_offsets_test(
     }
 }
 
+/// RINEX 4 observation files use the RINEX 3 layout and are compressed
+/// as CRINEX 3: the V3 extract with a 4.00 version line, compressed with
+/// RNX2CRX 4.1.0, must decompress to the same content.
+#[test]
+fn v4_acrg00gha_clock_offsets() {
+    run_clock_offsets_test(
+        "CRNX/V4/ACRG00GHA_R_20240010000_01H_30S_MO.crx",
+        "OBS/V4/ACRG00GHA_R_20240010000_01H_30S_MO.rnx",
+        120,
+        true, // signals strictly compared with the CRX2RNX model
+        &[
+            ("2024-01-01T00:00:00 GPST", 0.000000001520),
+            ("2024-01-01T00:20:00 GPST", -0.000000001459),
+        ],
+    );
+
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("test_resources")
+        .join("CRNX")
+        .join("V4")
+        .join("ACRG00GHA_R_20240010000_01H_30S_MO.crx");
+
+    let dut = Rinex::from_file(path.to_string_lossy().as_ref()).unwrap();
+
+    assert_eq!(dut.header.version.major, 4);
+    assert_eq!(dut.header.version.minor, 0);
+
+    let crinex = dut.header.obs.as_ref().unwrap().crinex.as_ref().unwrap();
+    assert_eq!(crinex.version.major, 3);
+}
+
 /// Regression test for <https://github.com/nav-solutions/rinex/issues/426>.
 /// One hour of the BKG ACRG00GHA_R_20240010000_01D_30S_MO file reduced to a single SV,
 /// compressed with RNX2CRX 4.1.0. The receiver clock offset is reset ("3&") at
