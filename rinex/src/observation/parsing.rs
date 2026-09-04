@@ -262,6 +262,11 @@ fn parse_signals_v2(
             let sv_end = (sv_ptr + SVNN_SIZE).min(systems_str_len);
             let system = &systems_str[sv_ptr..sv_end].trim();
 
+            if system.is_empty() {
+                // more lines than vehicles: rubbish trailing content
+                break;
+            }
+
             // actual parsing
             if let Ok(found) = SV::from_str(system) {
                 sv = found;

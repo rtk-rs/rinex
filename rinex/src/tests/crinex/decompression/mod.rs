@@ -73,7 +73,8 @@ pub fn run_raw_decompression_test(
                     // we are not 100 % equivalent, in terms of trailing whitespace
                     let content = content.trim_end();
 
-                    let output = output_lines.next().unwrap().trim_end();
+                    // expected content may omit trailing blank lines
+                    let output = output_lines.next().unwrap_or("").trim_end();
 
                     assert_eq!(content, output, "failed on line={} \"{}\"", nth, input);
                 } else {
@@ -82,7 +83,8 @@ pub fn run_raw_decompression_test(
                         // we are not 100 % equivalent, in terms of trailing whitespace
                         let content = line.trim_end();
 
-                        let output = output_lines.next().unwrap().trim_end();
+                        // expected content may omit trailing blank lines
+                        let output = output_lines.next().unwrap_or("").trim_end();
 
                         assert_eq!(content, output, "failed on line={} \"{}\"", nth, input);
                     }
@@ -140,18 +142,18 @@ fn testbench_v1() {
                     "2.11",
                     Some("MIXED"),
                     false,
-                    "GPS, GLO",
                     "G07, G08, G10, G13, G15, G16, G18, G20, G21, G23, G26, G27, G30, R01, R02, R03, R08, R09, R15, R16, R17, R18, R19, R24",
+                    "GPS, GLO",
                     &[
                         ("GPS", "C1, C2, C5, L1, L2, L5, P1, P2, S1, S2, S5"),
-                        ("GLO", "C1"),
+                        ("GLO", "C1, C2, C5, L1, L2, L5, P1, P2, S1, S2, S5"),
                     ],
                     Some("2021-01-01T00:00:00 GPST"),
                     Some("2021-01-01T23:59:30 GPST"),
                     None,
                     None,
                     None,
-                    TimeFrame::from_exclusive_csv("2021-01-01T00:00:00 GPST, 2021-01-01T00:09:00 GPST, 30 s"),
+                    TimeFrame::from_inclusive_csv("2021-01-01T00:00:00 GPST, 2021-01-01T00:09:00 GPST, 30 s"),
                     vec![],
                     vec![],
                 );
@@ -168,8 +170,8 @@ fn testbench_v1() {
                 "2.11",
                 Some("MIXED"),
                 false,
+                "G01, G08, G10, G15, G16, G18, G21, G23, G26, G32, R04, R05, R06, R07, R10, R12, R19, R20, R21, R22",
                 "GPS, GLO",
-                "G08,G10,G15,G16,G18,G21,G23,G26,G32,R04,R05,R06,R10,R12,R19,R20,R21",
                 &[("GPS", "C1, L1, L2, P2, S1, S2")],
                 Some("2021-12-21T00:00:00 GPST"),
                 Some("2021-12-21T23:59:30 GPST"),
@@ -188,8 +190,8 @@ fn testbench_v1() {
                     "2.11",
                     Some("MIXED"),
                     false,
-                    "GPS, GLO",
                     "R09, R02, G07, G13, R17, R16, R01, G18, G26, G10, G30, G23, G27, G08, R18, G20, R15, G21, G15, R24, G16",
+                    "GPS, GLO",
                     &[
                         ("GPS", "L1, L2, C1, P2, P1, S1, S2"),
                         ("GPS", "L1, L2, C1, P2, P1, S1, S2"),
@@ -199,7 +201,7 @@ fn testbench_v1() {
                     None,
                     None,
                     None,
-                    TimeFrame::from_inclusive_csv("2021-01-01T00:00:00 GPST, 2021-01-01T00:08:00 GPST, 30s"),
+                    TimeFrame::from_inclusive_csv("2021-01-01T00:00:00 GPST, 2021-01-01T00:08:00 GPST, 30 s"),
                     vec![],
                     vec![],
                 );
@@ -209,9 +211,9 @@ fn testbench_v1() {
                 "2.10",
                 Some("GPS"),
                 false,
+                "G01, G03, G06, G07, G08, G09, G11, G14, G16, G17, G19, G22, G23, G26, G27, G28, G30, G31, G32",
                 "GPS",
-                "G31, G27, G03, G32, G16, G08, G14, G23, G22, G26",
-                &[("GPS", "C1, L1, L2, P1, P2"), ("GLO", "C1")],
+                &[("GPS", "C1, L1, L2, P1, P2")],
                 Some("2017-01-01T00:00:00 GPST"),
                 None,
                 None,
@@ -249,13 +251,13 @@ fn testbench_v1() {
                     "2.11",
                     Some("MIXED"),
                     false,
-                    "GPS, GLO, GAL, EGNOS",
                     "G07, G08, G10, G16, G18, G21, G23, G26, G32, R04, R05, R10, R12, R19, R20, R21, E04, E11, E12, E19, E24, E25, E31, E33, S23, S36",
+                    "GPS, GLO, GAL, EGNOS",
                     &[
                         ("GPS", "L1, L2, C1, C2, P1, P2, D1, D2, S1, S2, L5, C5, D5, S5, L7, C7, D7, S7, L8, C8, D8, S8"),
-                        ("GLO", "C1"),
-                        ("GAL", "C1"),
-                        ("EGNOS", "C1"),
+                        ("GLO", "L1, L2, C1, C2, P1, P2, D1, D2, S1, S2, L5, C5, D5, S5, L7, C7, D7, S7, L8, C8, D8, S8"),
+                        ("GAL", "L1, L2, C1, C2, P1, P2, D1, D2, S1, S2, L5, C5, D5, S5, L7, C7, D7, S7, L8, C8, D8, S8"),
+                        ("SBAS", "L1, L2, C1, C2, P1, P2, D1, D2, S1, S2, L5, C5, D5, S5, L7, C7, D7, S7, L8, C8, D8, S8"),
                     ],
                     Some("2021-12-21T00:00:00 GPST"),
                     None,
@@ -558,7 +560,7 @@ fn v1_delf0010_clock_offsets() {
         "CRNX/V1/delf0010_clock.21d",
         "OBS/V2/delf0010_clock.21o",
         24,
-        false, // V1 observation decompression is not there yet (see testbench_v1)
+        true, // signals strictly compared with the CRX2RNX model
         &[
             // kernel reset: 3&-123456
             ("2021-01-01T00:00:00 GPST", -0.000123456),
@@ -636,7 +638,7 @@ fn v1_zegv0010_21d() {
                     EpochFlag::Ok,
                     SV::from_str("G07").unwrap(),
                     Observable::from_str("C1").unwrap(),
-                    0.0,
+                    24178026.635,
                 ),
             ],
             vec![],

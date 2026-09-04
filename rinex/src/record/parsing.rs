@@ -259,6 +259,12 @@ impl Record {
                             line_buf.clear();
                             line_buf = recovered.to_string();
                             line_buf.push('\n');
+                        } else if !eos {
+                            // line consumed by the decompressor (epoch or clock
+                            // description) without anything to publish yet:
+                            // the compressed text must not reach the parser.
+                            line_buf.clear();
+                            continue;
                         }
                     },
                     Err(_) => {
