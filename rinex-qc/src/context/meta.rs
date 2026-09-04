@@ -58,32 +58,30 @@ impl MetaData {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, QcCtxError> {
         let path = path.as_ref();
 
-        let mut name = path
+        let file_name = path
+            .file_name()
+            .ok_or(QcCtxError::FileName)?
+            .to_string_lossy()
+            .to_string();
+
+        // everything past the first '.' is the extension: "crx.gz", "SP3.gz", "22O"
+        let (mut name, extension) = match file_name.split_once('.') {
+            Some((name, extension)) => (name.to_string(), extension.to_string()),
+            None => (file_name.clone(), String::new()),
+        };
+
+        let stem = path
             .file_stem()
             .ok_or(QcCtxError::FileName)?
             .to_string_lossy()
             .to_string();
 
-        let mut extension = if name.ends_with(".crx") {
-            "crx".to_string()
-        } else {
-            "".to_string()
-        };
-
         // If this Meta is consitent with modern RINEx V3:
         // simply retain only "name" field
-        if let Ok(prod) = RINexProductionAttributes::from_str(&name) {
+        if let Ok(prod) = RINexProductionAttributes::from_str(&stem) {
             if let Some(v3_details) = prod.v3_details {
                 name = format!("{}{:02}{}", prod.name, v3_details.batch, v3_details.country);
             }
-        }
-
-        if let Some(path_extension) = path.extension() {
-            let path_extension = path_extension.to_string_lossy();
-            if extension.len() > 0 {
-                extension.push('.');
-            }
-            extension.push_str(&path_extension);
         }
 
         Ok(Self {
@@ -141,5 +139,15 @@ mod test {
 
         assert_eq!(meta.name, "ESBC00DNK");
         assert_eq!(meta.extension, "crx.gz");
+
+        let path = format!(
+            "{}/../test_resources/SP3/COD0MGXFIN_20230500000_01D_05M_ORB.SP3.gz",
+            env!("CARGO_MANIFEST_DIR")
+        );
+
+        let meta = MetaData::new(&path).unwrap();
+
+        assert_eq!(meta.name, "COD0MGXFIN_20230500000_01D_05M_ORB");
+        assert_eq!(meta.extension, "SP3.gz");
     }
 }

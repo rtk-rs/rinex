@@ -60,8 +60,7 @@ mod test {
         assert_eq!(ctx.sp3_dataset.len(), 1);
 
         let meta = MetaData {
-            //name: "COD0MGXFIN".to_string(),
-            name: "COD0MGXFIN_20230500999_01D_05M_ORB".to_string(),
+            name: "COD0MGXFIN_20230500000_01D_05M_ORB".to_string(),
             extension: "SP3.gz".to_string(),
             unique_id: Some("AIUB".to_string()),
         };
