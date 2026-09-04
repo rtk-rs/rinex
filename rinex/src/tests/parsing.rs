@@ -157,4 +157,21 @@ mod test {
             }
         }
     }
+
+    /// A file that is not readable as text must be reported as an error,
+    /// not abort the process.
+    #[test]
+    fn binary_file_is_a_parsing_error() {
+        let path = PathBuf::new()
+            .join(env!("CARGO_MANIFEST_DIR"))
+            .join("../test_resources/SP3/COD0MGXFIN_20230500000_01D_05M_ORB.SP3.gz");
+
+        let result = Rinex::from_file(path.to_string_lossy().as_ref());
+
+        assert!(
+            matches!(result, Err(ParsingError::IO(_))),
+            "gzip stream parsed as text: {:?}",
+            result.map(|_| ())
+        );
+    }
 }

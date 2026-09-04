@@ -14,6 +14,8 @@ use crate::hatanaka::Error as HatanakaError;
 /// Errors that may rise in Parsing process
 #[derive(Debug, Error)]
 pub enum ParsingError {
+    #[error("i/o error: {0}")]
+    IO(#[from] IoError),
     #[error("header line too short (invalid)")]
     HeaderLineTooShort,
     #[error("empty epoch")]

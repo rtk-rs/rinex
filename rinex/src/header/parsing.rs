@@ -71,7 +71,7 @@ impl Header {
         let mut doris = DorisHeader::default();
 
         for l in reader.lines() {
-            let line = l.unwrap();
+            let line = l?;
             if line.len() < 60 {
                 continue; // --> invalid header content
             }
