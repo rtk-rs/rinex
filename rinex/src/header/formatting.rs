@@ -50,7 +50,8 @@ impl Header {
                 w,
                 "{}",
                 fmt_rinex(
-                    &format!("{:15.14} {:15.14} {:15.14}", x_ecef_m, y_ecef_m, z_ecef_m),
+                    // 3F14.4
+                    &format!("{:14.4}{:14.4}{:14.4}", x_ecef_m, y_ecef_m, z_ecef_m),
                     "APPROX POSITION XYZ"
                 )
             )?;
@@ -161,13 +162,23 @@ impl Header {
                     )?;
                 },
                 Some(c) => {
+                    // satellite system letter in column 41, then its name
+                    let name = match c {
+                        Constellation::GPS => "GPS",
+                        Constellation::Glonass => "GLONASS",
+                        Constellation::Galileo => "GALILEO",
+                        Constellation::BeiDou => "BEIDOU",
+                        Constellation::QZSS => "QZSS",
+                        Constellation::IRNSS => "IRNSS",
+                        _ => "SBAS",
+                    };
                     writeln!(
                         w,
                         "{}",
                         fmt_rinex(
                             &format!(
-                                "{:6}.{:02}           OBSERVATION DATA    {:x<20}",
-                                major, minor, c
+                                "{:6}.{:02}           OBSERVATION DATA    {:x} ({})",
+                                major, minor, c, name
                             ),
                             "RINEX VERSION / TYPE"
                         )

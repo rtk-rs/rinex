@@ -56,7 +56,7 @@ pub(crate) fn format(epoch: Epoch, t: Type, revision: u8) -> String {
                 )
             } else {
                 format!(
-                    "{:04} {:02} {:02} {:02} {:02} {:>2}.{:07}",
+                    "{:04} {:02} {:02} {:02} {:02} {:02}.{:07}",
                     y,
                     m,
                     d,
@@ -483,7 +483,7 @@ mod test {
         assert_eq!(ns, 0);
         assert_eq!(
             format(e, Type::ObservationData, 3),
-            "2022 01 09 00 00  0.0000000"
+            "2022 01 09 00 00 00.0000000"
         );
 
         let e = parse_utc(" 2022 01 09 00 13 30.0000000");
@@ -549,7 +549,7 @@ mod test {
     }
     #[test]
     fn epoch_parse_obs_v3_nanos() {
-        let e = parse_utc("2022 01 09 00 00  0.1000000");
+        let e = parse_utc("2022 01 09 00 00 00.1000000");
         assert!(e.is_ok());
         let e = e.unwrap();
         let (_, _, _, _, _, ss, ns) = e.to_gregorian_utc();
@@ -557,7 +557,7 @@ mod test {
         assert_eq!(ns, 100_000_000);
         assert_eq!(
             format(e, Type::ObservationData, 3),
-            "2022 01 09 00 00  0.1000000"
+            "2022 01 09 00 00 00.1000000"
         );
 
         let e = parse_utc(" 2022 01 09 00 00  0.1234000");
@@ -568,7 +568,7 @@ mod test {
         assert_eq!(ns, 123_400_000);
         assert_eq!(
             format(e, Type::ObservationData, 3),
-            "2022 01 09 00 00  0.1234000"
+            "2022 01 09 00 00 00.1234000"
         );
 
         let e = parse_utc(" 2022 01 09 00 00  8.7654321");
@@ -579,7 +579,7 @@ mod test {
         assert_eq!(ns, 765_432_100);
         assert_eq!(
             format(e, Type::ObservationData, 3),
-            "2022 01 09 00 00  8.7654321"
+            "2022 01 09 00 00 08.7654321"
         );
     }
     #[test]

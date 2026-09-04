@@ -457,7 +457,7 @@ mod test {
         let mut buf = BufWriter::new(Utf8Buffer::new(1024));
         format_epoch_v3(&mut buf, &key, &sv_list, None).unwrap();
         let content = buf.into_inner().unwrap().to_ascii_utf8();
-        assert_eq!(content, "> 2021 01 01 00 00  0.0000000  0  4\n",);
+        assert_eq!(content, "> 2021 01 01 00 00 00.0000000  0  4\n",);
 
         let sv_list = [
             SV::from_str("G01").unwrap(),
@@ -475,6 +475,6 @@ mod test {
         let mut buf = BufWriter::new(Utf8Buffer::new(1024));
         format_epoch_v3(&mut buf, &key, &sv_list, None).unwrap();
         let content = buf.into_inner().unwrap().to_ascii_utf8();
-        assert_eq!(content, "> 2021 01 01 00 00  0.0000000  0 10\n",);
+        assert_eq!(content, "> 2021 01 01 00 00 00.0000000  0 10\n",);
     }
 }

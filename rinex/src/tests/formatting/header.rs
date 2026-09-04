@@ -40,7 +40,7 @@ fn obs_header_formatting() {
         HashMap::from_iter([
             (
                 0,
-                "     3.05           OBSERVATION DATA    GPS                 RINEX VERSION / TYPE",
+                "     3.05           OBSERVATION DATA    G (GPS)             RINEX VERSION / TYPE",
             ),
             (
                 1,
