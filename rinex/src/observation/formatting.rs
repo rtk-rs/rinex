@@ -4,7 +4,7 @@ use crate::{
     hatanaka::Compressor,
     observation::Record,
     observation::{ClockObservation, HeaderFields, ObsKey},
-    prelude::{Header, RinexType, SV},
+    prelude::{Constellation, Header, RinexType, SV},
     FormattingError,
 };
 
@@ -45,6 +45,16 @@ pub fn format_compressed<W: Write>(
 ) -> Result<(), FormattingError> {
     let mut compressor = Compressor::default();
     compressor.format(w, record, header)
+}
+
+/// Header observables are defined per constellation, and once for all
+/// SBAS vehicles whatever their actual system.
+fn sv_constellation(sv: &SV) -> Constellation {
+    if sv.constellation.is_sbas() {
+        Constellation::SBAS
+    } else {
+        sv.constellation
+    }
 }
 
 fn format_epoch_v3<W: Write>(
@@ -113,7 +123,7 @@ fn format_v3<W: Write>(
 
                 // following header definition
                 let observables = observables
-                    .get(&sv.constellation)
+                    .get(&sv_constellation(sv))
                     .ok_or(FormattingError::MissingObservableDefinition)?;
 
                 for observable in observables.iter() {
@@ -218,7 +228,7 @@ fn format_v2<W: Write>(
         for sv in sv_list.iter() {
             // following Header specs
             let observables = observables
-                .get(&sv.constellation)
+                .get(&sv_constellation(sv))
                 .ok_or(FormattingError::MissingObservableDefinition)?;
 
             let mut modulo = 0;
