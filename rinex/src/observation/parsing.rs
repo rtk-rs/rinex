@@ -499,13 +499,13 @@ fn parse_signals_v3(
 
         let observables = observables.unwrap();
 
-        let num_obs = line.len() / OBSERVABLE_WIDTH;
-        let mut obs_ptr = 0;
-        let mut offset = SVNN_SIZE + 1;
+        // each observation is a 16 character field right after the SV:
+        // F14.3 value, LLI, SNR
+        let mut offset = SVNN_SIZE;
 
-        for i in 0..num_obs {
-            if i == observables.len() {
-                // line is abnormally long (trailing whitespaces)
+        for i in 0..observables.len() {
+            if offset >= line.len() {
+                // trailing observations omitted
                 break;
             }
 
@@ -515,7 +515,7 @@ fn parse_signals_v3(
             let mut lli = Option::<LliFlags>::None;
 
             if slice.len() > OBSERVABLE_F14_WIDTH {
-                let start = offset + OBSERVABLE_F14_WIDTH - 1;
+                let start = offset + OBSERVABLE_F14_WIDTH;
                 let lli_slice = &line[start..start + 1];
                 match lli_slice.parse::<u8>() {
                     Ok(unsigned) => {
@@ -531,11 +531,12 @@ fn parse_signals_v3(
             let mut snr = Option::<SNR>::None;
 
             if slice.len() > OBSERVABLE_F14_WIDTH + 1 {
-                let start = offset + OBSERVABLE_F14_WIDTH;
+                let start = offset + OBSERVABLE_F14_WIDTH + 1;
                 let snr_slice = &line[start..start + 1];
 
-                if let Ok(value) = snr_slice.parse::<u8>() {
-                    snr = Some(SNR::from(value));
+                // RINEX code (1-9), not a dB value
+                if let Ok(value) = SNR::from_str(snr_slice) {
+                    snr = Some(value);
                 }
             }
 
@@ -551,8 +552,7 @@ fn parse_signals_v3(
                 });
             }
 
-            obs_ptr += 1;
-            offset += OBSERVABLE_F14_WIDTH + 2;
+            offset += OBSERVABLE_WIDTH;
         }
     } //browse all lines
 }
@@ -649,7 +649,7 @@ G09  25493930.890   133971510.403 6        41.250                    25493926.95
                     observable: Observable::from_str("L1C").unwrap(),
                     value: 109474991.854,
                     lli: None,
-                    snr: Some(SNR::from(8)),
+                    snr: Some(SNR::DbHz48_53), // RINEX code 8
                 },
                 SignalObservation {
                     sv: SV::from_str("G01").unwrap(),
@@ -663,7 +663,7 @@ G09  25493930.890   133971510.403 6        41.250                    25493926.95
                     observable: Observable::from_str("L1C").unwrap(),
                     value: 133971510.403,
                     lli: None,
-                    snr: Some(SNR::from(6)),
+                    snr: Some(SNR::DbHz36_41), // RINEX code 6
                 },
             ],
         );
