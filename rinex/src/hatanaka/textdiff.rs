@@ -67,52 +67,49 @@ impl TextDiff {
 
     /// Compress given data using the Textdiff algorithm.
     /// Returns compressed text.
+    ///
+    /// The internal buffer mirrors what a decompressor recovers: it only
+    /// ever grows, characters past the end of a shorter input are kept.
+    /// A character identical to the buffer is published as a blank, a
+    /// blank replacing a character as '&', anything else as is.
     pub fn compress(&mut self, data: &str) -> &str {
-        let len = data.len();
-        let buf_len = self.buffer.len();
+        let data = data.as_bytes();
         let history_len = self.buffer.len();
 
-        // expand with new content
-        if len > buf_len {
-            self.buffer.push_str(&data[buf_len..]);
-            self.compressed.push_str(&data[buf_len..].replace(' ', "&")); // copy & replace whitespaces
-        }
+        self.compressed.clear();
 
-        // study possible shared content
-        let mut new = data.bytes();
-        let mut history = self.buffer[..history_len].bytes();
-
-        unsafe {
-            let mut compressed = self.compressed.as_bytes_mut().iter_mut();
-
-            // run through bytes for which we have history
-            // and either keep or compress
-            while let Some(new) = new.next() {
-                let compressed = compressed.next().unwrap();
-
-                if let Some(history) = history.next() {
-                    if history == new {
-                        *compressed = b' ';
+        for (i, byte) in data.iter().enumerate() {
+            let previous = self.buffer.as_bytes().get(i).copied();
+            let compressed = match previous {
+                Some(previous) if previous == *byte => b' ',
+                _ => {
+                    if *byte == b' ' {
+                        b'&'
                     } else {
-                        if new == b' ' {
-                            *compressed = b'&';
-                        } else {
-                            *compressed = new;
-                        }
+                        *byte
                     }
-                }
-            }
-
-            // supports shorter inputs than internal buffer:
-            // possible '&' residues need to be whitened
-            // this gives maximum flexibility when dealing with actual files
-            while let Some(compressed) = compressed.next() {
-                *compressed = b' ';
-            }
-
-            self.buffer = data.to_string();
-            &self.compressed
+                },
+            };
+            self.compressed.push(compressed as char);
         }
+
+        // shorter input than history: recovered content is kept
+        for _ in data.len()..history_len {
+            self.compressed.push(' ');
+        }
+
+        // mirror the decompressor: overwrite known positions, extend past them
+        let mut buffer = std::mem::take(&mut self.buffer).into_bytes();
+        for (i, byte) in data.iter().enumerate() {
+            if i < buffer.len() {
+                buffer[i] = *byte;
+            } else {
+                buffer.push(*byte);
+            }
+        }
+        self.buffer = String::from_utf8(buffer).expect("textdiff buffer is ascii");
+
+        &self.compressed
     }
 }
 
@@ -186,7 +183,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn test_compression() {
         let mut diff = TextDiff::new("0");
         assert_eq!(diff.compress("0"), " ");
@@ -201,6 +197,6 @@ mod test {
         diff.force_init("Default 1234");
         assert_eq!(diff.compress("DEfault 1234"), " E          ");
         assert_eq!(diff.compress("DEfault 1234"), "            ");
-        assert_eq!(diff.compress("             "), "            &");
+        assert_eq!(diff.compress("             "), "&&&&&&& &&&&&");
     }
 }

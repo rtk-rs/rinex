@@ -171,6 +171,10 @@ pub enum ParsingError {
 pub enum FormattingError {
     #[error("i/o: output error")]
     OutputError(#[from] IoError),
+    #[error("formatting error")]
+    Format(#[from] std::fmt::Error),
+    #[error("hatanaka compression: {0}")]
+    Hatanaka(#[from] HatanakaError),
     #[error("missing constellation information")]
     NoConstellationDefinition,
     #[error("undefined observables")]
