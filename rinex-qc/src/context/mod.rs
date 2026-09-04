@@ -200,6 +200,15 @@ impl QcContext {
     /// format (if supported) and load it into the [QcContext].
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> Result<(), QcCtxError> {
         let path = path.as_ref();
+
+        #[cfg(feature = "flate2")]
+        if path
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("gz"))
+        {
+            return self.load_gzip_file(path);
+        }
+
         let mut meta = MetaData::new(path)?;
 
         if let Ok(rinex) = Rinex::from_file(path) {
