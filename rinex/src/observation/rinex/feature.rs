@@ -1328,31 +1328,45 @@ mod test {
 
     #[test]
     fn phase_range_tracking_ok() {
-        let path = format!(
-            "{}/../test_resources/OBS/V3/DUTH0630.22O",
-            env!("CARGO_MANIFEST_DIR")
-        );
+        for (file, has_tracking_issues) in [
+            ("OBS/V3/DUTH0630.22O", false),
+            ("OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx", true),
+        ] {
+            let path = format!("{}/../test_resources/{}", env!("CARGO_MANIFEST_DIR"), file);
 
-        let rinex = Rinex::from_file(&path).unwrap();
+            let rinex = Rinex::from_file(&path).unwrap();
 
-        let sampling_ok = rinex.phase_range_sampling_ok_iter().collect::<Vec<_>>();
+            let sampling_ok = rinex.phase_range_sampling_ok_iter().collect::<Vec<_>>();
 
-        let with_lli = sampling_ok
-            .iter()
-            .filter(|(_, sig)| sig.lli.is_some())
-            .count();
+            // observations flagged as sane must be retained
+            let ok_with_lli = sampling_ok
+                .iter()
+                .filter(|(_, sig)| sig.lli.is_some_and(|lli| lli.is_ok()))
+                .count();
 
-        assert!(with_lli > 0, "no LLI flags in this file");
+            assert!(ok_with_lli > 0, "{}: no sane LLI flags in this file", file);
 
-        let expected = sampling_ok
-            .iter()
-            .filter(|(_, sig)| match sig.lli {
-                Some(lli) => !lli.intersects(LliFlags::LOCK_LOSS | LliFlags::HALF_CYCLE_SLIP),
-                None => true,
-            })
-            .count();
+            let expected = sampling_ok
+                .iter()
+                .filter(|(_, sig)| match sig.lli {
+                    Some(lli) => !lli.intersects(LliFlags::LOCK_LOSS | LliFlags::HALF_CYCLE_SLIP),
+                    None => true,
+                })
+                .count();
 
-        assert!(expected > 0);
-        assert_eq!(rinex.phase_range_tracking_ok_iter().count(), expected);
+            assert_eq!(
+                expected < sampling_ok.len(),
+                has_tracking_issues,
+                "{}: tracking issues",
+                file
+            );
+
+            assert_eq!(
+                rinex.phase_range_tracking_ok_iter().count(),
+                expected,
+                "{}: tracking filter",
+                file
+            );
+        }
     }
 }
