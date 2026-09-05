@@ -91,7 +91,9 @@ impl ProductionAttributes {
     }
     /* filename generator */
     pub(crate) fn rinex_short_format(name: &str, ddd: &str, yy: &str, ext: char) -> String {
-        format!("{}{}0.{}{}", &name, ddd, yy, ext,)
+        // unknown station name: placeholder of the standard length
+        let name = if name.is_empty() { "XXXX" } else { name };
+        format!("{}{}0.{}{}", name, ddd, yy, ext)
     }
     /* filename generator */
     pub(crate) fn rinex_long_format(
