@@ -159,14 +159,17 @@ let t0 = Epoch::from_str("2023-08-27T00:00:00 GPST")
     .unwrap();
 
 // after 7th epoch we can interpolate by x11 
-let t7 = Epoch::from_str("2023-08-27T00:00:00 GPST")
+let t7 = Epoch::from_str("2023-08-27T01:45:00 GPST")
     .unwrap();
 
 let interpolated = sp3.satellite_position_lagrangian_11_interpolation(g01, t0);
-assert!(interpolated.is_err(), "too early in this file");
+assert!(interpolated.is_none(), "too early in this file");
 
 let interpolated = sp3.satellite_position_lagrangian_17_interpolation(g01, t0);
-assert!(interpolated.is_err(), "too early in this file");
+assert!(interpolated.is_none(), "too early in this file");
+
+let interpolated = sp3.satellite_position_lagrangian_11_interpolation(g01, t7);
+assert!(interpolated.is_some(), "x11 interpolation is feasible here");
 ```
 
 ## Satellite clock interpolation
