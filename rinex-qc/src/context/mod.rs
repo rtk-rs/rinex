@@ -136,7 +136,9 @@ impl QcContext {
     /// storage is created, which requires internet access. The daily JPL
     /// Earth orientation model is optional: when it cannot be retrieved,
     /// the [Almanac] is stored without it and the lower precision frame
-    /// model applies until the local storage is removed.
+    /// model applies until the local storage is removed. When the mandatory
+    /// files cannot be retrieved either, the almanac embedded in anise is
+    /// used and nothing is stored, so the download is attempted next time.
     /// Returns the [Almanac] and whether it contains the JPL model.
     ///
     /// Processes setting up the almanac at the same time (tests for example)
@@ -191,7 +193,11 @@ impl QcContext {
                     if Self::is_jpl_bpc(file) {
                         warn!("(anise) daily JPL model unavailable: {}", e);
                     } else {
-                        return Err(e);
+                        // documented offline model: the embedded almanac,
+                        // not stored so the download is attempted next time
+                        error!("(anise) almanac unavailable: {}", e);
+                        warn!("(anise) using the embedded almanac");
+                        return Ok((Almanac::until_2035()?, false));
                     }
                 },
             }
@@ -417,7 +423,7 @@ mod test {
         let storage =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(QcContext::ANISE_ALMANAC_STORAGE);
 
-        assert!(storage.join("anise.dhall").is_file());
+        // the storage description is only written when the download succeeded
         assert!(storage.join("anise.lock").is_file());
         assert!(!storage.join("anise.dhall.tmp").exists());
     }
