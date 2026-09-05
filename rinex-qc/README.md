@@ -61,18 +61,19 @@ use rinex_qc::prelude::*;
 let cfg = QcConfig::default();
 
 // Deployment 
-let mut ctx = QcContext::new()
+let mut ctx = QcContext::new(cfg)
     .unwrap_or_else(|e| panic!("ctx deployment failure: {}", e));
 
 ctx.load_file("../test_resources/OBS/V3/DUTH0630.22O")
     .unwrap();
+
+assert!(ctx.has_observations());
 ```
 
 ## SP3 input
 
 When built with the `sp3` feature, SP3 data may be loaded into the pool as well.
-This will enable high precision post processed navigation. Standard SP3 data
-is always indexed correctly in the pool (by publisher Agency):
+Standard SP3 data is always indexed correctly in the pool (by publisher Agency):
 
 ```rust
 use rinex_qc::prelude::*;
@@ -84,8 +85,10 @@ let cfg = QcConfig::default();
 let mut ctx = QcContext::new(cfg)
     .unwrap_or_else(|e| panic!("ctx deployment failure: {}", e));
 
-ctx.load_file("../test_resources/SP3/sio06492.sp3")
+ctx.load_gzip_file("../test_resources/SP3/COD0MGXFIN_20230500000_01D_05M_ORB.SP3.gz")
     .unwrap();
+
+assert!(ctx.has_precise_orbits());
 ```
 
 ## Gzip files
@@ -95,14 +98,24 @@ The file extension must be `.gz` for this to work correctly. This applies to any
 file format supported by the library:
 
 ```rust
-use rinex_qc::prelude::QcContext;
+use rinex_qc::prelude::*;
+
+// default setup
+let cfg = QcConfig::default();
 
 // Deployment 
-let mut ctx = QcContext::new()
+let mut ctx = QcContext::new(cfg)
     .unwrap_or_else(|e| panic!("ctx deployment failure: {}", e));
 
-ctx.load_gzip_file("../test_resources/OBS/V3/240506_glacier_station.obs.gz")
+ctx.load_gzip_file("../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
     .unwrap();
+
+// load_file dispatches ".gz" files to the gzip loader as well
+ctx.load_file("../test_resources/NAV/V3/ESBC00DNK_R_20201770000_01D_MN.rnx.gz")
+    .unwrap();
+
+assert!(ctx.has_observations());
+assert!(ctx.has_navigation_data());
 ```
 
 ## Analysis
@@ -136,21 +149,17 @@ ctx.load_gzip_file(
     "../test_resources/NAV/V3/ESBC00DNK_R_20201770000_01D_MN.rnx.gz")
     .unwrap();
 
-// Generate a report
-let report = ctx.analyze().report();
+// Analyze and render the report (HTML)
+let analysis = ctx.analyze();
 
-let _ = report.render().into_string();
+let html = analysis.render().into_string();
+assert!(!html.is_empty());
 ```
 
 ## Custom chapters
 
 The `Qc` report can be enhanced with custom chapters, that only need you to provide the rendition implementation.
-
-Basic example:
-
-```rust
-TODO
-```
+This is work in progress.
 
 ## Post processed navigation
 
@@ -158,7 +167,9 @@ The `Qc` library is able to perform the challenging task of precise navigation,
 in just a few lines of code. All you need to do is provide a compatible setup.
 Refer to the report summary to understand if you setup is compatible.  
 
-In the folllowing example, we provide a BRDC navigation compatible setup
+In the folllowing example, we provide a BRDC navigation compatible setup.
+The solver resolves one solution per epoch of the rover observations:
+we only resolve the first epochs here.
 
 ```rust
 use rinex_qc::prelude::*;
@@ -177,65 +188,50 @@ ctx.load_gzip_file(
 
 // stack a BRDC RINEX
 ctx.load_gzip_file(
-    "../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
+    "../test_resources/NAV/V3/ESBC00DNK_R_20201770000_01D_MN.rnx.gz")
     .unwrap();
+
+// select the rover
+let rover = ctx.rover_observations_meta()
+    .next()
+    .unwrap()
+    .clone();
 
 // Deploy a solver
-let mut solver = ctx.nav_pvt_solver()
+let solver = ctx.nav_pvt_solver(RTKConfig::default(), &rover, None)
     .unwrap();
 
-// Collect all solutions
-while let Some(pvt) = solver.next() {
-
+// Collect the first solutions
+for solution in solver.take(3) {
+    match solution {
+        Ok(pvt) => {
+            let (x_m, y_m, z_m) = pvt.pos_m;
+        },
+        Err(e) => {
+            // this epoch could not be resolved
+        },
+    }
 }
 ```
 
 ## KML, GPX tracks
 
-When built with the `kml` or `gpx` features, the `Qc` library allows
-you to directly form such tracks from your navigation solutions:
-
-```rust
-use rinex_qc::prelude::*;
-
-// default setup
-let cfg = QcConfig::default();
-
-// deploy
-let mut ctx = QcContext::new(cfg)
-    .unwrap();
-
-// stack a RINEX
-ctx.load_gzip_file(
-    "../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
-    .unwrap();
-
-// stack a BRDC RINEX
-ctx.load_gzip_file(
-    "../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
-    .unwrap();
-
-// Collect track as KML
-let kml = ctx.kml_track_solutions()
-    .unwrap();
-
-// Collect tracks a GPX
-let gpx = ctx.gpx_track_solutions()
-    .unwrap();
-```
+Forming KML or GPX tracks from the navigation solutions is work in progress
+and not available yet.
 
 ## CGGTTS tracker and solutions solver
 
-The `Qc` library is able to perform the challenging task of precise timing resolution,
-in just a few lines of code as well. Instead of deploy the `NavPvtSolver`, prefer
-the `CggttsSolver` which is dedicated to CGGTTS solutions solving and implements
-the special sky tracker algorithm.
+The `Qc` library is designed to perform the challenging task of precise timing resolution
+in just a few lines of code as well. Instead of deploying the `NavPvtSolver`, prefer
+the `NavCggttsSolver` which is dedicated to CGGTTS solutions solving.
 
 Any navigation compatible setup is CGGTTS compatible by definition.
-In this example, this is a BRDC navigation setup:
+The CGGTTS solver is currently work in progress: it resolves the navigation
+solutions but does not form tracks yet, every item it yields is an error.
 
 ```rust
 use rinex_qc::prelude::*;
+use rinex::prelude::Duration;
 
 // default setup
 let cfg = QcConfig::default();
@@ -251,52 +247,50 @@ ctx.load_gzip_file(
 
 // stack a BRDC RINEX
 ctx.load_gzip_file(
-    "../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
+    "../test_resources/NAV/V3/ESBC00DNK_R_20201770000_01D_MN.rnx.gz")
     .unwrap();
 
-// Deploy a solver
-let mut solver = ctx.nav_cggtts_solver()
-    .unwrap();
+// select the rover
+let rover = ctx.rover_observations_meta()
+    .next()
+    .unwrap()
+    .clone();
 
-// Collect all solutions
-while let Some(track) = solver.next() {
-    
+// Deploy a solver: the reference position of the RINEX is used
+let solver = ctx.nav_cggtts_solver(
+    RTKConfig::default(),
+    &rover,
+    None,
+    Duration::from_seconds(780.0),
+).unwrap();
+
+// Collect the first solutions
+for track in solver.take(3) {
+    assert!(track.is_err(), "track fitting is not implemented yet");
 }
 ```
-
-If you need the best of both worlds, simply deploy both: they will evolve
-and resolve at their own pace. CGGTTS is more time consuming because it
-resolves for every single vehicle in sight.
 
 ## Precise Point Positioning
 
-The `Qc` library built with `sp3` feature is compatible with the ultra demanding
-PPP navigation technique. Once again, it is super simple to deploy. 
-
-An example of PPP setup would be:
+The configuration lets you express your preferences regarding the orbital
+and clock sources to use in PPP scenarios. The navigation solver currently
+resolves from broadcast ephemeris only: SP3 files are loaded and indexed
+but not used by the solver yet, and Clock RINEX is not a supported input yet.
 
 ```rust
 use rinex_qc::prelude::*;
+use rinex_qc::cfg::{QcPreferedClock, QcPreferedOrbit, QcPreferedSettings};
 
-// default setup that we specifically tie to SP3.
-// In this context, only SP3 data points will be used.
-// It is currently highly recommended to use this scenario for correct PPP
-// interpretation.
+// prefer SP3 orbits and clocks
 let cfg = QcConfig::default()
-    .with_prefered_orbit(QcPreferedOrbit::SP3);
+    .with_preferences(QcPreferedSettings {
+        orbit_source: QcPreferedOrbit::SP3,
+        clk_source: QcPreferedClock::SP3,
+        ..Default::default()
+    });
 
 // deploy
 let mut ctx = QcContext::new(cfg)
-    .unwrap();
-
-// stack a RINEX
-ctx.load_gzip_file(
-    "../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
-    .unwrap();
-
-// stack a BRDC RINEX
-ctx.load_gzip_file(
-    "../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
     .unwrap();
 
 // stack SP3
@@ -304,141 +298,13 @@ ctx.load_gzip_file(
     "../test_resources/SP3/GRG0MGXFIN_20201770000_01D_15M_ORB.SP3.gz")
     .unwrap();
 
-// Deploy a solver: we're still using NavPvtSolver
-// but the presence of SP3 changes everything
-let mut solver = ctx.nav_pvt_solver()
-    .unwrap();
-
-// Collect all solutions
-while let Some(track) = solver.next() {
-    
-}
-```
-
-## PPP ultra
-
-The previous setup is not compatible with ultra (ultimate) PPP navigation,
-because the clock data provided by the SP3 were unused. 
-To change that, you need an extra parameter to your `QcConfig`:
-
-```rust
-let cfg = QcConfig::default()
-    .with_prefered_orbit(QcPreferedOrbit::SP3)
-    .with_prefered_clock(QcPreferedClock::SP3);
-
-// stack SP3: this one is clock compatible
-// once again, check your summary report
-ctx.load_gzip_file(
-    "../test_resources/SP3/GRG0MGXFIN_20201770000_01D_15M_ORB.SP3.gz")
-    .unwrap();
-```
-
-It is more common to prefer Clock RINEX for that purpose. The `Qc` library
-allows that once again. Simply provide that file:
-
-```rust
-use rinex_qc::prelude::*;
-
-// default setup that we specifically tie to SP3.
-// In this context, only SP3 data points will be used.
-// It is currently highly recommended to use this scenario for correct PPP
-// interpretation.
-let cfg = QcConfig::default()
-    .with_prefered_orbit(QcPreferedOrbit::SP3)
-    .with_prefered_clock(QcPreferedClock::RINEX);
-
-// deploy
-let mut ctx = QcContext::new(cfg)
-    .unwrap();
-
-// stack a RINEX
-ctx.load_gzip_file(
-    "../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
-    .unwrap();
-
-// stack a BRDC RINEX
-ctx.load_gzip_file(
-    "../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
-    .unwrap();
-
-// stack SP3
-ctx.load_gzip_file(
-    "../test_resources/SP3/GRG0MGXFIN_20201770000_01D_15M_ORB.SP3.gz")
-    .unwrap();
-
-// stack a Clock RINEX
-ctx.load_gzip_file(
-    "../test_resources/CLK/V3/GRG0MGXFIN_20201770000_01D_30S_CLK.CLK.gz")
-    .unwrap();
-
-// Deploy a solver: we're still using NavPvtSolver
-// but the presence of SP3 changes everything
-let mut solver = ctx.nav_pvt_solver()
-    .unwrap();
-
-// Collect all solutions
-while let Some(track) = solver.next() {
-    
-}
+assert!(ctx.has_precise_orbits());
 ```
 
 ## PPP Guru
 
 Now for all PPP Gurus out there, we're still not quite there yet.  
 The stacking and exploitation of `ANTex` is work in progress.
-
-## Precise Point Positioning + CGGTTS
-
-When both `sp3` and `cggtts` options are active, you can deploy the ultra
-demanding `PPP CGGTTS` solver, that will resolve CGGTTS tracks using the PPP technique.
-All you need to do, is provide a PPP compatible setup (check your summary report) and use
-the CGGTTS solver:
-
-```rust
-use rinex_qc::prelude::*;
-
-// default setup that we specifically tie to SP3.
-// In this context, only SP3 data points will be used.
-// It is currently highly recommended to use this scenario for correct PPP
-// interpretation.
-let cfg = QcConfig::default()
-    .with_prefered_orbit(QcPreferedOrbit::SP3)
-    .with_prefered_clock(QcPreferedClock::RINEX);
-
-// deploy
-let mut ctx = QcContext::new(cfg)
-    .unwrap();
-
-// stack a RINEX
-ctx.load_gzip_file(
-    "../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
-    .unwrap();
-
-// stack a BRDC RINEX
-ctx.load_gzip_file(
-    "../test_resources/CRNX/V3/ESBC00DNK_R_20201770000_01D_30S_MO.crx.gz")
-    .unwrap();
-
-// stack SP3
-ctx.load_gzip_file(
-    "../test_resources/SP3/GRG0MGXFIN_20201770000_01D_15M_ORB.SP3.gz")
-    .unwrap();
-
-// stack a Clock RINEX
-ctx.load_gzip_file(
-    "../test_resources/CLK/V3/GRG0MGXFIN_20201770000_01D_30S_CLK.CLK.gz")
-    .unwrap();
-
-// Deploy a solver: we're still using the previous CGGTTS Solver
-// but the presence of SP3 changes everything
-let mut solver = ctx.nav_cggtts_solver()
-    .unwrap();
-
-// Collect all solutions
-while let Some(track) = solver.next() {
-    
-}
-```
 
 Integrating Navigation solutions
 ================================
