@@ -392,7 +392,7 @@ impl Rinex {
     /// assert_eq!(anomalies.len(), 0, "no anomalies detected");
     /// ```
     pub fn epoch_anomalies(&self) -> Box<dyn Iterator<Item = &ObsKey> + '_> {
-        Box::new(self.observation_keys().filter(|k| k.flag.is_ok()))
+        Box::new(self.observation_keys().filter(|k| !k.flag.is_ok()))
     }
 
     /// Form designed signal [Combination] from all observed signals.
@@ -659,9 +659,8 @@ impl Rinex {
 
 #[cfg(test)]
 mod test {
-
     use super::Combination;
-    use crate::prelude::{Carrier, Rinex};
+    use crate::prelude::{obs::EpochFlag, Carrier, Rinex};
 
     #[test]
     fn gf_signal_combination() {
@@ -1327,5 +1326,29 @@ mod test {
             }
         }
         assert_eq!(tests_passed, 1);
+    }
+
+    #[test]
+    fn epoch_anomalies() {
+        let path = format!(
+            "{}/../test_resources/OBS/V3/DUTH0630.22O",
+            env!("CARGO_MANIFEST_DIR")
+        );
+
+        let mut rinex = Rinex::from_file(&path).unwrap();
+
+        assert!(rinex.observation_keys().count() > 1);
+        assert_eq!(rinex.epoch_anomalies().count(), 0);
+
+        // flag one epoch as abnormal
+        let record = rinex.record.as_mut_obs().unwrap();
+        let (mut key, observations) = record.pop_first().unwrap();
+        key.flag = EpochFlag::PowerFailure;
+        record.insert(key, observations);
+
+        let anomalies = rinex.epoch_anomalies().collect::<Vec<_>>();
+        assert_eq!(anomalies.len(), 1);
+        assert_eq!(anomalies[0].flag, EpochFlag::PowerFailure);
+        assert_eq!(anomalies[0].epoch, key.epoch);
     }
 }
