@@ -36,10 +36,7 @@ impl Rinex {
     /// let rnx = Rinex::from_file("../test_resources/MET/V2/abvi0010.15m")
     ///    .unwrap();
     /// for (key, value) in rnx.meteo_observations_iter() {
-    ///     println!(" *** Epoch:  {} ****", epoch);
-    ///     for (observable, data) in observables {
-    ///         println!("{} : {}", observable, data);
-    ///     }
+    ///     println!("{} - {}: {}", key.epoch, key.observable, value);
     /// }
     /// ```
     pub fn meteo_observations_iter(&self) -> Iter<'_, MeteoKey, f64> {

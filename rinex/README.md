@@ -137,18 +137,18 @@ Reading RINEX files is quick and easy. When the provided file follows standard n
 the structure definition will be complete: the production context is described by the file name itself.
 
 ```rust
-use rinex::prelude::RINEX;
-let rinex = RINEX::from_path("../test_resources/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx")
+use rinex::prelude::Rinex;
+let rinex = Rinex::from_file("../test_resources/OBS/V3/ACOR00ESP_R_20213550000_01D_30S_MO.rnx")
     .unwrap();
 ```
 
-Our parser is smart and will adapt to the file format you are providing. Read the [`from_file`] API to 
+Our parser is smart and will adapt to the file format you are providing. Read the [`Rinex::from_file`] API to
 fully understand the little restrictions we have. For example, CRINEX (Compressed RINEX) decompression
 is builtin:
 
 ```rust
-use rinex::prelude::RINEX;
-let rinex = RINEX::from_path("../test_resources/CRNX/V1/AJAC3550.21D")
+use rinex::prelude::Rinex;
+let rinex = Rinex::from_file("../test_resources/CRNX/V1/AJAC3550.21D")
     .unwrap();
 ```
 
@@ -167,24 +167,43 @@ and it cannot change once the parser has been built: you need to create a new pa
 to a new scenario.
 
 When working with files that do not follow standard naming conventions, or directly
-from Stream interface, we have no means to determine the [FileProductionAttributes].
+from Stream interface, we have no means to determine the [ProductionAttributes].
 This will most likely impact data production scenarios.
 
 ```rust
+use rinex::prelude::Rinex;
+
+// this file does not follow the naming conventions
+let rinex = Rinex::from_file("../test_resources/MET/V4/example1.txt")
+    .unwrap();
+
+// the station name is unknown: the standard name is incomplete
+let standard_name = rinex.standard_filename(true, None, None);
+assert_eq!(standard_name, "XXXX0070.21M");
 ```
 
 When working with files that follow the V2 standard naming conventions, some of the file production setup
 cannot be determined and remains unknown
 
 ```rust
+use rinex::prelude::Rinex;
 
-# but you have means to change that
+let rinex = Rinex::from_file("../test_resources/OBS/V2/aopr0010.17o")
+    .unwrap();
+
+// short (V2) names are fully determined
+assert_eq!(rinex.standard_filename(true, None, None), "AOPR0010.17O");
+
+// the country code (among others) of the modern (V3) name is not
+// described by a V2 name: you have means to provide it, see below
+let standard_name = rinex.standard_filename(false, None, None);
+assert_eq!(standard_name, "AOPR00CCC_R_20170010000_00U_03H_MO.rnx");
 ```
 
-We developped a smart [FileProductionAttributes] guesser, that will guess those from the actual file content.
+We developped a smart [ProductionAttributes] guesser, that will guess those from the actual file content.
 This may apply to two scenarios:
 
-* guessing accurate *FileProductionAttributes* when working with files that do not follow
+* guessing accurate *ProductionAttributes* when working with files that do not follow
 standard naming conventions but contain accurate data, and actually use this library to properly rename those
 * stay focused on data production (actual data symbols) in production context, and use the guesser to
 auto determine an accurate file name.
@@ -192,11 +211,22 @@ auto determine an accurate file name.
 Exemple:
 
 ```rust
-// V2/short filenames are incomplete
+use rinex::prelude::Rinex;
 
-<<<<<<< HEAD
+let rinex = Rinex::from_file("../test_resources/MET/V4/example1.txt")
+    .unwrap();
+
+// V2/short filenames are incomplete
+assert_eq!(rinex.standard_filename(true, None, None), "XXXX0070.21M");
+
 // We can always determine a complete V2 filename from correct datasets
+let guessed = rinex.guess_production_attributes();
+assert_eq!(rinex.standard_filename(true, None, Some(guessed.clone())), "bako0070.21M");
 
 // It is impossible for a V3 filename though
+assert_eq!(
+    rinex.standard_filename(false, None, Some(guessed)),
+    "bako00XXX_U_20210070000_00U_MM.rnx",
+);
 ```
 

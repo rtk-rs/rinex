@@ -57,12 +57,12 @@ impl Rinex {
     /// let rnx = Rinex::from_gzip_file("../test_resources/IONEX/V1/jplg0010.17i.gz")
     ///     .unwrap();
     ///
-    /// for (t, lat, lon, alt, rms) in rnx.ionex_rms_tec_maps_iter() {
-    ///     // t: Epoch
-    ///     // lat: ddeg
-    ///     // lon: ddeg
-    ///     // alt: km
-    ///     // rms|TECu| (f64)
+    /// for (key, rms) in rnx.ionex_rms_tec_maps_iter() {
+    ///     let t = key.epoch;
+    ///     let latitude_ddeg = key.coordinates.latitude_ddeg();
+    ///     let longitude_ddeg = key.coordinates.longitude_ddeg();
+    ///     let altitude_km = key.coordinates.altitude_km();
+    ///     // rms: RMS TEC (TECu)
     /// }
     /// ```
     pub fn ionex_rms_tec_maps_iter(&self) -> Box<dyn Iterator<Item = (IonexKey, f64)> + '_> {
@@ -81,13 +81,13 @@ impl Rinex {
     /// reflect actual content.
     /// ```
     /// use rinex::prelude::*;
-    /// let rnx = Rinex::from_file("../test_resources/IONEX/V1/jplg0010.17i.gz")
+    /// let rnx = Rinex::from_gzip_file("../test_resources/IONEX/V1/jplg0010.17i.gz")
     ///     .unwrap();
-    /// assert_eq!(rnx.ionex_fixed_altitude_km(), Some(450.0));
+    /// assert_eq!(rnx.ionex_2d_fixed_altitude_km(), Some(450.0));
     ///
-    /// let rnx = Rinex::from_file("../test_resources/IONEX/V1/CKMG0020.22I.gz")
+    /// let rnx = Rinex::from_gzip_file("../test_resources/IONEX/V1/CKMG0020.22I.gz")
     ///     .unwrap();
-    /// assert_eq!(rnx.ionex_fixed_altitude_km(), Some(350.0));
+    /// assert_eq!(rnx.ionex_2d_fixed_altitude_km(), Some(350.0));
     /// ```
     pub fn ionex_2d_fixed_altitude_km(&self) -> Option<f64> {
         if self.is_ionex_2d() {
@@ -107,7 +107,12 @@ impl Rinex {
     /// reflect actual content.
     ///
     /// ```
-    /// example
+    /// use rinex::prelude::*;
+    ///
+    /// // 2D IONEX: single isosurface
+    /// let rnx = Rinex::from_gzip_file("../test_resources/IONEX/V1/jplg0010.17i.gz")
+    ///     .unwrap();
+    /// assert_eq!(rnx.ionex_altitude_range_km(), Some((450.0, 450.0)));
     /// ```
     pub fn ionex_altitude_range_km(&self) -> Option<(f64, f64)> {
         let header = self.header.ionex.as_ref()?;

@@ -39,7 +39,7 @@ impl Rinex {
     /// let rnx = Rinex::from_file("../test_resources/MET/V2/abvi0010.15m")
     ///     .unwrap();
     /// assert_eq!(
-    ///     rnx.dominant_sample_rate(),
+    ///     rnx.dominant_sampling_interval(),
     ///     Some(Duration::from_seconds(60.0)));
     /// ```
     pub fn dominant_sampling_interval(&self) -> Option<Duration> {

@@ -68,7 +68,7 @@ impl Rinex {
     /// DORIS pressure at observed ground stations:
     /// ```
     /// use rinex::prelude::*;
-    /// let rinex = Rinex::from_file("../test_resources/DOR/V2/abvi0010.15m")
+    /// let rinex = Rinex::from_gzip_file("../test_resources/DOR/V3/cs2rx18164.gz")
     ///     .unwrap();
     /// for (epoch, value) in rinex.pressure_iter() {
     ///     println!("{} value: {} hPa", epoch, value);

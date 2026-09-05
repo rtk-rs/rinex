@@ -113,28 +113,26 @@ impl Rinex {
     /// - [Self::pseudo_range_sampling_ok_iter()] if you're only interested in decoded pseudo range
     /// - [Self::phase_range_sampling_ok_iter()] if you're only interested in estimated phase range
     /// ```
-    /// use rinex::prelude::Rinex;
+    /// use rinex::prelude::{Observable, Rinex};
     /// let rinex = Rinex::from_file("../test_resources/OBS/V3/DUTH0630.22O")
     ///     .unwrap();
     ///
-    /// for (key, signal) in rinex.signal_ok_iter() {
-    ///     let t = key.epoch;
-    ///     let flag = key.flag;
+    /// for (t, signal) in rinex.signal_observations_sampling_ok_iter() {
     ///     let sv = signal.sv; // signal source
-    ///     assert!(flag.is_ok(), "all abnormal flags filtered out");
-    ///     match signal.observable {
-    ///         Observable::PhaseRange(pr) => {
+    ///     match &signal.observable {
+    ///         Observable::PhaseRange(code) => {
     ///             // then do something
     ///         },
-    ///         Observable::PseudoRange(pr) => {
+    ///         Observable::PseudoRange(code) => {
     ///             // then do something
     ///         },
-    ///         Observable::Doppler(dop) => {
+    ///         Observable::Doppler(code) => {
     ///             // then do something
     ///         },
-    ///         Observable::SSI(ssi) => {
+    ///         Observable::SSI(code) => {
     ///             // then do something
     ///         },
+    ///         _ => {},
     ///     }
     /// }
     /// ```
@@ -156,11 +154,7 @@ impl Rinex {
     /// let rinex = Rinex::from_file("../test_resources/OBS/V3/DUTH0630.22O")
     ///     .unwrap();
     ///
-    /// for (key, signal) in rinex.pseudo_range_decoding_ok_iter() {
-    ///     let t = key.epoch;
-    ///     let flag = key.flag;
-    ///     assert!(flag.is_ok(), "all abnormal flags filtered out");
-    ///
+    /// for (t, signal) in rinex.pseudo_range_sampling_ok_iter() {
     ///     let sv = signal.sv; // signal source
     ///     // RINEX decodes [Observable::PseudoRange] to meters
     ///     let pseudo_range_m = signal.value;
@@ -191,14 +185,10 @@ impl Rinex {
     /// let rinex = Rinex::from_file("../test_resources/OBS/V3/DUTH0630.22O")
     ///     .unwrap();
     ///
-    /// for (key, signal) in rinex.phase_range_sampling_ok_iter() {
-    ///     let t = key.epoch;
-    ///     let flag = key.flag;
-    ///     assert!(flag.is_ok(), "all abnormal flags filtered out");
-    ///
+    /// for (t, signal) in rinex.phase_range_sampling_ok_iter() {
     ///     let sv = signal.sv; // signal source
-    ///     // RINEX measures [Observable::PhaseRange] in meters directly
-    ///     let phase_range_m = signal.value;
+    ///     // RINEX reports [Observable::PhaseRange] in cycles
+    ///     let phase_range_cycles = signal.value;
     /// }
     /// ```
     pub fn phase_range_sampling_ok_iter(
@@ -268,7 +258,7 @@ impl Rinex {
 
     /// Returns Iterator over Phase Cycle slips events.
     ///```
-    /// use rinex::prelude::{Rinex, LliFlags};
+    /// use rinex::prelude::{obs::LliFlags, Rinex};
     ///
     /// let rinex = Rinex::from_file("../test_resources/OBS/V3/DUTH0630.22O")
     ///     .unwrap();
@@ -303,7 +293,7 @@ impl Rinex {
     /// Returns Iterator over both Half and Full Phase Cycle slips events.
     /// Use provided [LliFlags] to inquire.
     ///```
-    /// use rinex::prelude::{Rinex, LliFlags};
+    /// use rinex::prelude::{obs::LliFlags, Rinex};
     ///
     /// let rinex = Rinex::from_file("../test_resources/OBS/V3/DUTH0630.22O")
     ///     .unwrap();

@@ -281,12 +281,12 @@ pub(crate) fn fmt_comment(content: &str) -> String {
 /// assert_eq!(rnx.header.version.major, 2);
 /// assert_eq!(rnx.header.version.minor, 11);
 /// // general informations
-/// assert_eq!(rnx.header.program, "teqc  2019Feb25");
-/// assert_eq!(rnx.header.run_by, "Unknown"); // field was empty
+/// assert_eq!(rnx.header.program.as_deref(), Some("teqc  2019Feb25"));
+/// assert_eq!(rnx.header.run_by, None); // field was empty
 /// // File creation date, temporarily stored as a String
 /// // value, but that will soon change
-/// assert_eq!(rnx.header.date, "20210102 00:01:40UTC");
-/// assert_eq!(rnx.header.observer, "H. VAN DER MAREL");
+/// assert_eq!(rnx.header.date.as_deref(), Some("20210102 00:01:40UTC"));
+/// assert_eq!(rnx.header.observer.as_deref(), Some("H. VAN DER MAREL"));
 ///
 /// let marker = rnx.header.geodetic_marker
 ///         .as_ref()
@@ -302,7 +302,7 @@ pub(crate) fn fmt_comment(content: &str) -> String {
 /// // Some information on the hardware being used might be stored
 /// println!("{:#?}", rnx.header.rcvr);
 /// // WGS84 receiver approximate position
-/// println!("{:#?}", rnx.header.ground_position);
+/// println!("{:#?}", rnx.header.rx_position);
 /// // comments encountered in the Header section
 /// println!("{:#?}", rnx.header.comments);
 /// // sampling interval was set
@@ -313,7 +313,8 @@ pub(crate) fn fmt_comment(content: &str) -> String {
 /// // how to browse all RINEX records.
 /// let record = rnx.record.as_obs()
 ///     .unwrap();
-/// for (epoch, (clk_offset, observations)) in record {
+/// for (key, observations) in record {
+///     // key.epoch, key.flag, observations.clock, observations.signals
 ///     // Do something
 /// }
 /// // comments encountered in file body
@@ -922,12 +923,27 @@ impl Rinex {
     ///
     /// Compact Observation RINEX example:
     /// ```
-    /// example
+    /// use rinex::prelude::Rinex;
+    ///
+    /// let rinex = Rinex::from_file("../test_resources/CRNX/V1/AJAC3550.21D")
+    ///     .unwrap();
+    ///
+    /// assert!(rinex.is_observation_rinex());
+    ///
+    /// // the CRINEX attributes are preserved
+    /// let obs = rinex.header.obs.as_ref().unwrap();
+    /// assert!(obs.crinex.is_some());
     /// ```
     ///
     /// Navigation RINEX example:
     /// ```
-    /// example
+    /// use rinex::prelude::Rinex;
+    ///
+    /// let rinex = Rinex::from_file("../test_resources/NAV/V3/CBW100NLD_R_20210010000_01D_MN.rnx")
+    ///     .unwrap();
+    ///
+    /// assert!(rinex.is_navigation_rinex());
+    /// assert_eq!(rinex.header.version.major, 3);
     /// ```
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Rinex, ParsingError> {
         let path = path.as_ref();
@@ -1155,7 +1171,7 @@ impl Rinex {
     ///
     /// let rnx = Rinex::from_file("../test_resources/OBS/V2/aopr0010.17o")
     ///     .unwrap();
-    /// let mut vehicles : Vec<_> = rnx.sv().collect(); // to run comparison
+    /// let mut vehicles : Vec<_> = rnx.sv_iter().collect(); // to run comparison
     /// vehicles.sort(); // to run comparison
     ///
     /// assert_eq!(vehicles, vec![
@@ -1313,7 +1329,7 @@ impl Rinex {
     /// let rinex = Rinex::from_file("../test_resources/CRNX/V1/AJAC3550.21D")
     ///     .unwrap();
     /// for observable in rinex.observables_iter() {
-    ///     if observable.is_phase_observable() {
+    ///     if observable.is_phase_range_observable() {
     ///         // do something
     ///     }
     /// }
@@ -1332,7 +1348,7 @@ impl Rinex {
     /// let rinex = Rinex::from_gzip_file("../test_resources/DOR/V3/cs2rx18164.gz")
     ///     .unwrap();
     /// for observable in rinex.observables_iter() {
-    ///     if observable.is_pseudorange_observable() {
+    ///     if observable.is_pseudo_range_observable() {
     ///         // do something
     ///     }
     /// }

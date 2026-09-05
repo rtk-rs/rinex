@@ -39,8 +39,17 @@ impl Rinex {
         }
     }
 
+    /// Returns [IonexKey] Iterator: the [Epoch](crate::prelude::Epoch) and coordinates
+    /// of every [TEC] estimate. This only applies to IONEX and will panic otherwise.
     /// ```
-    /// example
+    /// use rinex::prelude::*;
+    /// let rinex = Rinex::from_gzip_file("../test_resources/IONEX/V1/CKMG0020.22I.gz")
+    ///     .unwrap();
+    ///
+    /// for key in rinex.ionex_tec_maps_keys() {
+    ///     let t = key.epoch;
+    ///     let latitude_ddeg = key.coordinates.latitude_ddeg();
+    /// }
     /// ```
     pub fn ionex_tec_maps_keys(&self) -> Keys<'_, IonexKey, TEC> {
         if let Some(rec) = self.record.as_ionex() {
@@ -58,9 +67,9 @@ impl Rinex {
     ///     .unwrap();
     ///
     /// for (key, tec) in rinex.ionex_tec_maps_iter() {
-    ///     let latitude_ddeg = key.latitude_ddeg();
-    ///     let longitude_ddeg = key.longitude_ddeg();
-    ///     let altitude_km = key.altitude_km();
+    ///     let latitude_ddeg = key.coordinates.latitude_ddeg();
+    ///     let longitude_ddeg = key.coordinates.longitude_ddeg();
+    ///     let altitude_km = key.coordinates.altitude_km();
     ///     let tec = tec.tec(); // in TEC unit
     /// }
     /// ```

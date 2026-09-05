@@ -20,7 +20,14 @@ impl Rinex {
     /// Drift is expressed in TAI timescale in seconds per second.
     ///
     /// ```
-    /// example
+    /// use rinex::prelude::*;
+    ///
+    /// let rinex = Rinex::from_gzip_file("../test_resources/DOR/V3/cs2rx18164.gz")
+    ///     .unwrap();
+    ///
+    /// for (key, drift_s_s) in rinex.doris_satellite_clock_drift_iter() {
+    ///     // key.epoch: [Epoch] of measurement
+    /// }
     /// ```
     pub fn doris_satellite_clock_drift_iter(
         &self,

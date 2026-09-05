@@ -163,18 +163,24 @@ impl Rinex {
     /// This is work in progress. Currently, we support
     /// the streaming of Navigation Ephemeris.
     /// ```
+    /// use rinex::prelude::{binex::Meta, Rinex};
+    ///
     /// let rinex = Rinex::from_file(
     ///     "../test_resources/NAV/V3/AMEL00NLD_R_20210010000_01D_MN.rnx"
     ///     ).unwrap();
     ///
-    /// let mut buf = [0; 1024];
-    /// let mut streamer = rinex.rnx2bin();
+    /// // forward stream, little endian, standard CRC
+    /// let meta = Meta::default();
+    ///
+    /// const BUF_SIZE: usize = 4096;
+    /// let mut buf = [0; BUF_SIZE];
+    /// let mut streamer = rinex.rnx2bin(meta).unwrap();
     ///
     /// while let Some(msg) = streamer.next() {
     ///     // usually you want to dump this message
     ///     // and then stream to a writable I/O interface.
     ///     // To do so, use the encode method and a temporary buffer:
-    ///     let size = msg.encode(&mut buf).unwrap();
+    ///     let size = msg.encode(&mut buf, BUF_SIZE).unwrap();
     ///     // send!
     /// }
     /// ```

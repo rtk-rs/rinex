@@ -108,8 +108,9 @@ impl Rinex {
     /// use rinex::prelude::*;
     /// let mut rinex = Rinex::from_file("../test_resources/NAV/V3/CBW100NLD_R_20210010000_01D_MN.rnx")
     ///     .unwrap();
-    /// for (epoch, sv, (offset, drift, drift_rate)) in rinex.nav_sv_clock_iter() {
-    ///     // sv: satellite vehicle
+    /// for (key, (offset, drift, drift_rate)) in rinex.nav_sv_clock_iter() {
+    ///     // key.epoch: [Epoch] of publication
+    ///     // key.sv: satellite vehicle
     ///     // offset [s]
     ///     // clock drift [s.s⁻¹]
     ///     // clock drift rate [s.s⁻²]

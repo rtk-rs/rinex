@@ -29,30 +29,66 @@ use crate::hatanaka::Compressor;
 ///  - missing or bad constellation specifications
 ///
 /// In this example, we deploy the [Decompressor] over a local file, as an example
-/// yet typical usage scenario. We use our [RinexReader] to provide the line Iterator.
+/// yet typical usage scenario. The header section is plain RINEX and is parsed
+/// as such, the [Decompressor] then recovers the record, one line at a time.
 /// ```
 /// use std::fs::File;
+/// use std::io::{BufRead, BufReader};
+///
 /// use rinex::hatanaka::Decompressor;
+/// use rinex::prelude::{Header, Rinex};
 ///
 /// // Working from local files is the typical application,
 /// // but [Decompressor] may deploy over any [Read]able interface
-/// let mut fd = File::open("../test_resources/CRNX/V1/AJAC3550.21D")
+/// let fd = File::open("../test_resources/CRNX/V1/AJAC3550.21D")
 ///     .unwrap();
 ///
-/// // This file was compressed using the historical tool, M=5 limit is OK.
-/// let decomp = Decompressor::new(fd);
+/// let mut reader = BufReader::new(fd);
 ///
-/// // Dump this as a new (readable) RINEX
-/// let mut total = 0;
-/// let mut buf = Vec::<u8>::with_capacity(1024);
-/// while let Some(size) = decomp.read(&mut buf) {
+/// // the header describes the observables to recover
+/// let header = Header::parse(&mut reader).unwrap();
+/// let obs = header.obs.as_ref().unwrap();
+/// let crinex = obs.crinex.as_ref().unwrap();
+///
+/// // This file was compressed using the historical tool, M=5 limit is OK.
+/// let mut decomp = Decompressor::new(
+///     crinex.version.major > 1,
+///     header.constellation.unwrap(),
+///     obs.codes.clone(),
+/// );
+///
+/// // Recover the record as (readable) RINEX
+/// let mut line = String::new();
+/// const BUF_SIZE: usize = 1024;
+/// let mut buf = [0; BUF_SIZE];
+/// let mut recovered = String::new();
+///
+/// while let Ok(size) = reader.read_line(&mut line) {
 ///     if size == 0 {
 ///         break; // EOS reached
 ///     }
-///     total += size;
+///
+///     let size = decomp.decompress(&line, line.len(), &mut buf, BUF_SIZE)
+///         .unwrap();
+///
+///     if size > 0 {
+///         recovered.push_str(std::str::from_utf8(&buf[..size]).unwrap());
+///         recovered.push('\n');
+///     }
+///
+///     line.clear();
 /// }
 ///
-/// assert_eq!(total, 36); // total bytewise
+/// // one epoch description per epoch of this RINEX V2 file
+/// let model = Rinex::from_file("../test_resources/CRNX/V1/AJAC3550.21D")
+///     .unwrap();
+///
+/// let epochs = recovered
+///     .lines()
+///     .filter(|line| line.starts_with(" 21 12 21"))
+///     .count();
+///
+/// assert_eq!(epochs, model.epoch_iter().count());
 /// ```
 pub type Decompressor = DecompressorExpert<5>;
 
