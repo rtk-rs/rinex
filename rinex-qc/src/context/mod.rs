@@ -77,7 +77,7 @@ pub struct QcContext {
 }
 
 /// [Almanac] shared by every [QcContext] of this process
-static SHARED_ALMANAC: Mutex<Option<Almanac>> = Mutex::new(None);
+static SHARED_ALMANAC: Mutex<Option<(Almanac, bool)>> = Mutex::new(None);
 
 impl QcContext {
     /// ANISE storage location
@@ -109,29 +109,40 @@ impl QcContext {
         }
     }
 
-    /// Returns the [Almanac] shared by every [QcContext] of this process.
+    /// Returns the [Almanac] shared by every [QcContext] of this process,
+    /// and whether it contains the daily JPL Earth orientation model.
     /// The first call downloads (or retrieves from local storage) the
     /// almanac files, the following calls return a copy.
-    fn shared_almanac() -> Result<Almanac, QcCtxError> {
+    fn shared_almanac() -> Result<(Almanac, bool), QcCtxError> {
         let mut shared = SHARED_ALMANAC.lock().unwrap_or_else(|e| e.into_inner());
 
-        if let Some(almanac) = shared.as_ref() {
-            return Ok(almanac.clone());
+        if let Some((almanac, has_jpl_bpc)) = shared.as_ref() {
+            return Ok((almanac.clone(), *has_jpl_bpc));
         }
 
-        let almanac = Self::load_almanac()?;
-        *shared = Some(almanac.clone());
-        Ok(almanac)
+        let (almanac, has_jpl_bpc) = Self::load_almanac()?;
+        *shared = Some((almanac.clone(), has_jpl_bpc));
+        Ok((almanac, has_jpl_bpc))
+    }
+
+    /// True if this [MetaFile] is the daily JPL Earth orientation model,
+    /// either remote or retrieved from local storage.
+    fn is_jpl_bpc(file: &MetaFile) -> bool {
+        file.uri.ends_with("earth_latest_high_prec.bpc")
     }
 
     /// Method to either download, retrieve or create a basic [Almanac].
-    /// This will try to download the highest JPL model, and requires
-    /// internet access once a day.
+    /// This will try to download the highest JPL model when the local
+    /// storage is created, which requires internet access. The daily JPL
+    /// Earth orientation model is optional: when it cannot be retrieved,
+    /// the [Almanac] is stored without it and the lower precision frame
+    /// model applies until the local storage is removed.
+    /// Returns the [Almanac] and whether it contains the JPL model.
     ///
     /// Processes setting up the almanac at the same time (tests for example)
     /// take turns: the download and the local storage are protected by an
     /// exclusive file lock.
-    fn load_almanac() -> Result<Almanac, QcCtxError> {
+    fn load_almanac() -> Result<(Almanac, bool), QcCtxError> {
         let storage = Path::new(env!("CARGO_MANIFEST_DIR")).join(Self::ANISE_ALMANAC_STORAGE);
 
         create_dir_all(&storage).map_err(|_| QcCtxError::IO)?;
@@ -143,8 +154,6 @@ impl QcContext {
         let local_storage = storage.join("anise.dhall");
         let local_storage_s = local_storage.to_string_lossy().to_string();
 
-        let mut initial_setup = false;
-
         // Meta almanac for local storage management
         let mut meta_almanac = match MetaAlmanac::new(local_storage_s) {
             Ok(meta) => {
@@ -153,7 +162,6 @@ impl QcContext {
             },
             Err(_) => {
                 debug!("(anise) local storage setup");
-                initial_setup = true;
                 MetaAlmanac {
                     files: vec![
                         Self::nyx_anise_de440s_bsp(),
@@ -164,28 +172,56 @@ impl QcContext {
             },
         };
 
-        // download (if need be)
-        let almanac = meta_almanac.process(true)?;
+        let mut almanac = Almanac::default();
+        let mut stored = Vec::with_capacity(meta_almanac.files.len());
 
-        if initial_setup {
-            let updated = meta_almanac.dumps()?;
+        for file in meta_almanac.files.iter_mut() {
+            // download (if need be) then load
+            let loaded = file
+                .process(true)
+                .map_err(QcCtxError::from)
+                .and_then(|_| almanac.load(&file.uri).map_err(QcCtxError::from));
 
-            // written aside then renamed: readers never see a partial file
-            let tmp_storage = storage.join("anise.dhall.tmp");
-
-            File::create(&tmp_storage)
-                .and_then(|mut fd| fd.write_all(updated.as_bytes()))
-                .and_then(|_| rename(&tmp_storage, &local_storage))
-                .map_err(|_| QcCtxError::IO)?;
+            match loaded {
+                Ok(updated) => {
+                    almanac = updated;
+                    stored.push(file.clone());
+                },
+                Err(e) => {
+                    if Self::is_jpl_bpc(file) {
+                        warn!("(anise) daily JPL model unavailable: {}", e);
+                    } else {
+                        return Err(e);
+                    }
+                },
+            }
         }
 
-        Ok(almanac)
+        let has_jpl_bpc = stored.iter().any(Self::is_jpl_bpc);
+
+        // store what was loaded so it is not downloaded again
+        let updated = MetaAlmanac { files: stored }.dumps()?;
+
+        // written aside then renamed: readers never see a partial file
+        let tmp_storage = storage.join("anise.dhall.tmp");
+
+        File::create(&tmp_storage)
+            .and_then(|mut fd| fd.write_all(updated.as_bytes()))
+            .and_then(|_| rename(&tmp_storage, &local_storage))
+            .map_err(|_| QcCtxError::IO)?;
+
+        Ok((almanac, has_jpl_bpc))
     }
 
     /// Returns the reference [Frame] to work with: the highest precision
     /// model available in the [Almanac] among the prefered ones.
-    fn earth_frame(almanac: &Almanac, prefered: QcFrameModel) -> Result<Frame, QcCtxError> {
-        if prefered == QcFrameModel::ITRF93 {
+    /// The ITRF93 frame is only usable with the JPL Earth orientation model.
+    fn earth_frame(
+        almanac: &Almanac,
+        has_jpl_bpc: bool,
+        prefered: QcFrameModel,
+    ) -> Result<Frame, QcCtxError> {
+        if prefered == QcFrameModel::ITRF93 && has_jpl_bpc {
             // try to form the EARTH ITRF93 frame model
             match almanac.frame_from_uid(EARTH_ITRF93) {
                 Ok(itrf93) => {
@@ -206,8 +242,8 @@ impl QcContext {
     /// Method to either download, retrieve or create
     /// a basic [Almanac] and reference [Frame] to work with.
     fn build_almanac_frame_model(prefered: QcFrameModel) -> Result<(Almanac, Frame), QcCtxError> {
-        let almanac = Self::shared_almanac()?;
-        let earth_cef = Self::earth_frame(&almanac, prefered)?;
+        let (almanac, has_jpl_bpc) = Self::shared_almanac()?;
+        let earth_cef = Self::earth_frame(&almanac, has_jpl_bpc, prefered)?;
         Ok((almanac, earth_cef))
     }
 
