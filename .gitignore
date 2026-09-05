@@ -24,3 +24,6 @@ rinex/test.crx
 rinex/test.rnx
 DATA/
 WORKSPACE/
+
+# almanac storage of the Qc library
+rinex-qc/.cache/

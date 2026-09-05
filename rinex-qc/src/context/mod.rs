@@ -1,4 +1,11 @@
-use std::{collections::HashMap, env, fs::create_dir_all, fs::File, io::Write, path::Path};
+use std::{
+    collections::HashMap,
+    env,
+    fs::{create_dir_all, rename, File},
+    io::Write,
+    path::Path,
+    sync::Mutex,
+};
 
 use rinex::prelude::{nav::Almanac, Rinex};
 
@@ -69,6 +76,9 @@ pub struct QcContext {
     pub sp3_dataset: HashMap<MetaData, SP3>,
 }
 
+/// [Almanac] shared by every [QcContext] of this process
+static SHARED_ALMANAC: Mutex<Option<Almanac>> = Mutex::new(None);
+
 impl QcContext {
     /// ANISE storage location
     const ANISE_ALMANAC_STORAGE: &str = ".cache";
@@ -99,22 +109,44 @@ impl QcContext {
         }
     }
 
-    /// Method to either download, retrieve or create
-    /// a basic [Almanac] and reference [Frame] to work with.
+    /// Returns the [Almanac] shared by every [QcContext] of this process.
+    /// The first call downloads (or retrieves from local storage) the
+    /// almanac files, the following calls return a copy.
+    fn shared_almanac() -> Result<Almanac, QcCtxError> {
+        let mut shared = SHARED_ALMANAC.lock().unwrap_or_else(|e| e.into_inner());
+
+        if let Some(almanac) = shared.as_ref() {
+            return Ok(almanac.clone());
+        }
+
+        let almanac = Self::load_almanac()?;
+        *shared = Some(almanac.clone());
+        Ok(almanac)
+    }
+
+    /// Method to either download, retrieve or create a basic [Almanac].
     /// This will try to download the highest JPL model, and requires
     /// internet access once a day.
-    /// If the JPL database cannot be accessed, we rely on an offline model.
-    fn build_almanac_frame_model(prefered: QcFrameModel) -> Result<(Almanac, Frame), QcCtxError> {
+    ///
+    /// Processes setting up the almanac at the same time (tests for example)
+    /// take turns: the download and the local storage are protected by an
+    /// exclusive file lock.
+    fn load_almanac() -> Result<Almanac, QcCtxError> {
+        let storage = Path::new(env!("CARGO_MANIFEST_DIR")).join(Self::ANISE_ALMANAC_STORAGE);
+
+        create_dir_all(&storage).map_err(|_| QcCtxError::IO)?;
+
+        // released when dropped, at the end of this function
+        let lock = File::create(storage.join("anise.lock")).map_err(|_| QcCtxError::IO)?;
+        lock.lock().map_err(|_| QcCtxError::IO)?;
+
+        let local_storage = storage.join("anise.dhall");
+        let local_storage_s = local_storage.to_string_lossy().to_string();
+
         let mut initial_setup = false;
 
         // Meta almanac for local storage management
-        let local_storage = format!(
-            "{}/{}/anise.dhall",
-            env!("CARGO_MANIFEST_DIR"),
-            Self::ANISE_ALMANAC_STORAGE
-        );
-
-        let mut meta_almanac = match MetaAlmanac::new(local_storage.clone()) {
+        let mut meta_almanac = match MetaAlmanac::new(local_storage_s) {
             Ok(meta) => {
                 debug!("(anise) from local storage");
                 meta
@@ -137,25 +169,28 @@ impl QcContext {
 
         if initial_setup {
             let updated = meta_almanac.dumps()?;
-            let _ = create_dir_all(&format!(
-                "{}/{}",
-                env!("CARGO_MANIFEST_DIR"),
-                Self::ANISE_ALMANAC_STORAGE
-            ));
 
-            let mut fd = File::create(&local_storage)
-                .unwrap_or_else(|e| panic!("almanac storage setup error: {}", e));
+            // written aside then renamed: readers never see a partial file
+            let tmp_storage = storage.join("anise.dhall.tmp");
 
-            fd.write_all(updated.as_bytes())
-                .unwrap_or_else(|e| panic!("almanac storage setup error: {}", e));
+            File::create(&tmp_storage)
+                .and_then(|mut fd| fd.write_all(updated.as_bytes()))
+                .and_then(|_| rename(&tmp_storage, &local_storage))
+                .map_err(|_| QcCtxError::IO)?;
         }
 
+        Ok(almanac)
+    }
+
+    /// Returns the reference [Frame] to work with: the highest precision
+    /// model available in the [Almanac] among the prefered ones.
+    fn earth_frame(almanac: &Almanac, prefered: QcFrameModel) -> Result<Frame, QcCtxError> {
         if prefered == QcFrameModel::ITRF93 {
             // try to form the EARTH ITRF93 frame model
             match almanac.frame_from_uid(EARTH_ITRF93) {
                 Ok(itrf93) => {
                     info!("earth_itrf93 frame model loaded");
-                    return Ok((almanac, itrf93));
+                    return Ok(itrf93);
                 },
                 Err(e) => {
                     error!("(anise) itrf93: {}", e);
@@ -165,6 +200,14 @@ impl QcContext {
 
         let earth_cef = almanac.frame_from_uid(IAU_EARTH_FRAME)?;
         warn!("deployed with offline model");
+        Ok(earth_cef)
+    }
+
+    /// Method to either download, retrieve or create
+    /// a basic [Almanac] and reference [Frame] to work with.
+    fn build_almanac_frame_model(prefered: QcFrameModel) -> Result<(Almanac, Frame), QcCtxError> {
+        let almanac = Self::shared_almanac()?;
+        let earth_cef = Self::earth_frame(&almanac, prefered)?;
         Ok((almanac, earth_cef))
     }
 
@@ -316,5 +359,30 @@ impl std::fmt::Debug for QcContext {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{cfg::QcConfig, context::QcContext};
+    use std::thread;
+
+    /// Contexts deployed concurrently share one almanac setup
+    #[test]
+    fn concurrent_deployment() {
+        let handles = (0..8)
+            .map(|_| thread::spawn(|| QcContext::new(QcConfig::default()).map(|_| ())))
+            .collect::<Vec<_>>();
+
+        for handle in handles {
+            handle.join().unwrap().expect("context deployment failure");
+        }
+
+        let storage =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(QcContext::ANISE_ALMANAC_STORAGE);
+
+        assert!(storage.join("anise.dhall").is_file());
+        assert!(storage.join("anise.lock").is_file());
+        assert!(!storage.join("anise.dhall.tmp").exists());
     }
 }

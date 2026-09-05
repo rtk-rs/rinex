@@ -9,7 +9,7 @@ repository = "https://github.com/georust/rinex"
 keywords = ["rinex", "gnss", "gps", "glonass", "galileo"]
 categories = ["science", "science::geo", "parsing"]
 edition = "2021"
-rust-version = "1.64"
+rust-version = "1.89"
 
 [features]
 
