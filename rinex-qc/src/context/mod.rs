@@ -134,6 +134,43 @@ impl QcContext {
         file.uri.ends_with("earth_latest_high_prec.bpc")
     }
 
+    /// Records, in the local storage, that the daily JPL model was retried.
+    const JPL_RETRY_MARKER: &str = "anise.jpl-retry";
+
+    /// Files to set up, from the local storage description when it exists.
+    /// The daily JPL model missing from the description is retried once
+    /// per local storage: the attempt is recorded in a marker file, which
+    /// a new local storage removes.
+    fn files_to_setup(storage: &Path, description: Option<MetaAlmanac>) -> Vec<MetaFile> {
+        let marker = storage.join(Self::JPL_RETRY_MARKER);
+
+        match description {
+            Some(meta) => {
+                let mut files = meta.files;
+
+                if !files.iter().any(Self::is_jpl_bpc) {
+                    if marker.exists() {
+                        debug!("(anise) daily JPL model already retried");
+                    } else if File::create(&marker).is_ok() {
+                        info!("(anise) retrying the daily JPL model");
+                        files.push(Self::nyx_anise_jpl_bpc());
+                    }
+                }
+
+                files
+            },
+            None => {
+                let _ = remove_file(&marker);
+
+                vec![
+                    Self::nyx_anise_de440s_bsp(),
+                    Self::nyx_anise_pck11_pca(),
+                    Self::nyx_anise_jpl_bpc(),
+                ]
+            },
+        }
+    }
+
     /// Time anise gives a download before giving up.
     const ANISE_DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -184,7 +221,9 @@ impl QcContext {
     /// storage is created, which requires internet access. The daily JPL
     /// Earth orientation model is optional: when it cannot be retrieved,
     /// the [Almanac] is stored without it and the lower precision frame
-    /// model applies until the local storage is removed. When the mandatory
+    /// model applies. The download is retried once per local storage,
+    /// the next time the [Almanac] is set up; past that, the model is
+    /// only retrieved when the local storage is removed. When the mandatory
     /// files cannot be retrieved either, the almanac embedded in anise is
     /// used and nothing is stored, so the download is attempted next time.
     /// Returns the [Almanac] and whether it contains the JPL model.
@@ -216,21 +255,19 @@ impl QcContext {
         let local_storage_s = local_storage.to_string_lossy().to_string();
 
         // Meta almanac for local storage management
-        let mut meta_almanac = match MetaAlmanac::new(local_storage_s) {
+        let description = match MetaAlmanac::new(local_storage_s) {
             Ok(meta) => {
                 debug!("(anise) from local storage");
-                meta
+                Some(meta)
             },
             Err(_) => {
                 debug!("(anise) local storage setup");
-                MetaAlmanac {
-                    files: vec![
-                        Self::nyx_anise_de440s_bsp(),
-                        Self::nyx_anise_pck11_pca(),
-                        Self::nyx_anise_jpl_bpc(),
-                    ],
-                }
+                None
             },
+        };
+
+        let mut meta_almanac = MetaAlmanac {
+            files: Self::files_to_setup(&storage, description),
         };
 
         let mut almanac = Almanac::default();
@@ -263,6 +300,11 @@ impl QcContext {
         }
 
         let has_jpl_bpc = stored.iter().any(Self::is_jpl_bpc);
+
+        if has_jpl_bpc {
+            // nothing left to retry
+            let _ = remove_file(storage.join(Self::JPL_RETRY_MARKER));
+        }
 
         // store what was loaded so it is not downloaded again
         let updated = MetaAlmanac { files: stored }.dumps()?;
@@ -489,6 +531,56 @@ mod test {
             .unwrap();
 
         (download, lock)
+    }
+
+    #[test]
+    fn jpl_model_retry() {
+        use crate::context::{MetaAlmanac, MetaFile};
+
+        let storage = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(QcContext::ANISE_ALMANAC_STORAGE)
+            .join("jpl-retry-test");
+
+        create_dir_all(&storage).unwrap();
+
+        let marker = storage.join(QcContext::JPL_RETRY_MARKER);
+
+        let without_jpl = || MetaAlmanac {
+            files: vec![MetaFile {
+                crc32: Some(0),
+                uri: "/anise/de440s.bsp".to_string(),
+            }],
+        };
+
+        // new storage: the marker of a previous storage is removed
+        File::create(&marker).unwrap();
+        let files = QcContext::files_to_setup(&storage, None);
+        assert_eq!(files.len(), 3);
+        assert!(files.iter().any(QcContext::is_jpl_bpc));
+        assert!(!marker.exists());
+
+        // model missing: retried once
+        let files = QcContext::files_to_setup(&storage, Some(without_jpl()));
+        assert_eq!(files.len(), 2);
+        assert!(files.iter().any(QcContext::is_jpl_bpc));
+        assert!(marker.is_file());
+
+        // still missing: not retried again
+        let files = QcContext::files_to_setup(&storage, Some(without_jpl()));
+        assert_eq!(files.len(), 1);
+        assert!(!files.iter().any(QcContext::is_jpl_bpc));
+        assert!(marker.is_file());
+
+        // model stored: description unchanged
+        let mut with_jpl = without_jpl();
+        with_jpl.files.push(MetaFile {
+            crc32: Some(0),
+            uri: "/anise/earth_latest_high_prec.bpc".to_string(),
+        });
+        let files = QcContext::files_to_setup(&storage, Some(with_jpl));
+        assert_eq!(files.len(), 2);
+
+        remove_dir_all(&storage).unwrap();
     }
 
     #[test]
