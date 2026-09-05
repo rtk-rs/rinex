@@ -51,7 +51,7 @@ impl SignalObservation {
     /// data when SNR or LLI are missing.
     pub fn is_ok(self) -> bool {
         let lli_ok = self.lli.unwrap_or(LliFlags::OK_OR_UNKNOWN) == LliFlags::OK_OR_UNKNOWN;
-        let snr_ok = self.snr.unwrap_or_default().strong();
+        let snr_ok = self.snr.map(|snr| snr.strong()).unwrap_or(true);
         lli_ok && snr_ok
     }
 
@@ -108,7 +108,7 @@ impl SignalObservation {
 
 #[cfg(test)]
 mod test {
-    use crate::observation::SignalObservation;
+    use crate::observation::{LliFlags, SignalObservation, SNR};
     use crate::prelude::{Carrier, Observable, SV};
     use std::str::FromStr;
 
@@ -167,5 +167,39 @@ mod test {
             tec.tec(),
             (gamma * f_l1 * f_l5 / (f_l1 - f_l5) * (g01_l1c.value - g01_l5q.value)).abs()
         );
+    }
+
+    #[test]
+    fn signal_validity() {
+        let g01 = SV::from_str("G01").unwrap();
+        let l1c = Observable::from_str("L1C").unwrap();
+
+        // no LLI, no SNR: OK, but not OK against a minimal SNR
+        let signal = SignalObservation::new(g01, l1c, 1.0);
+        assert!(signal.clone().is_ok());
+        assert!(!signal.is_ok_snr(SNR::DbHz30_35));
+
+        // strong SNR
+        let strong = signal.with_snr(SNR::DbHz36_41);
+        assert!(strong.clone().is_ok());
+        assert!(strong.is_ok_snr(SNR::DbHz30_35));
+        assert!(!strong.is_ok_snr(SNR::DbHz42_47));
+
+        // sane LLI flags
+        let mut flagged = strong.clone();
+        flagged.lli = Some(LliFlags::OK_OR_UNKNOWN);
+        assert!(flagged.clone().is_ok());
+        assert!(flagged.is_ok_snr(SNR::DbHz30_35));
+
+        // lock loss
+        let mut lock_loss = strong.clone();
+        lock_loss.lli = Some(LliFlags::LOCK_LOSS);
+        assert!(!lock_loss.clone().is_ok());
+        assert!(!lock_loss.is_ok_snr(SNR::DbHz30_35));
+
+        // weak SNR
+        let weak = signal.with_snr(SNR::DbHz18_23);
+        assert!(!weak.clone().is_ok());
+        assert!(!weak.is_ok_snr(SNR::DbHz30_35));
     }
 }
