@@ -58,11 +58,7 @@ impl SignalObservation {
     /// [Observation::is_ok] with additional SNR criteria to match (>=).
     /// SNR must then be present otherwise this is not OK.
     pub fn is_ok_snr(&self, min_snr: SNR) -> bool {
-        if self
-            .lli
-            .unwrap_or(LliFlags::OK_OR_UNKNOWN)
-            .intersects(LliFlags::OK_OR_UNKNOWN)
-        {
+        if self.lli.unwrap_or(LliFlags::OK_OR_UNKNOWN) == LliFlags::OK_OR_UNKNOWN {
             if let Some(snr) = self.snr {
                 snr >= min_snr
             } else {

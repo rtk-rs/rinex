@@ -227,14 +227,10 @@ impl Rinex {
     /// let rinex = Rinex::from_file("../test_resources/OBS/V3/DUTH0630.22O")
     ///     .unwrap();
     ///
-    /// for (key, signal) in rinex.phase_range_tracking_ok_iter() {
-    ///     let t = key.epoch;
-    ///     let flag = key.flag;
-    ///     assert!(flag.is_ok(), "all abnormal flags filtered out");
-    ///
+    /// for (t, signal) in rinex.phase_range_tracking_ok_iter() {
     ///     let sv = signal.sv; // signal source
-    ///     // RINEX measures [Observable::PhaseRange] in meters directly
-    ///     let phase_range_m = signal.value;
+    ///     // RINEX reports [Observable::PhaseRange] in cycles
+    ///     let phase_range_cycles = signal.value;
     /// }
     /// ```
     ///
@@ -247,26 +243,11 @@ impl Rinex {
     /// // retain only observations where [LliFlags] are present and sane.
     /// // You could even stack a minimal SNR.
     /// let tracking_confirmed = rinex.phase_range_tracking_ok_iter()
-    ///     .filter_map(|(k, v)| {
-    ///         if let Some(lli) = v.lli {
-    ///             if lli.is_ok() {
-    ///                 Some((k, v))
-    ///             } else {
-    ///                 None
-    ///             }
-    ///         } else {
-    ///             None
-    ///         }
-    ///     });
+    ///     .filter(|(_, signal)| signal.lli.is_some_and(|lli| lli.is_ok()));
     ///
-    /// for (key, signal) in rinex.tracking_confirmed() {
-    ///     let t = key.epoch;
-    ///     let flag = key.flag;
-    ///     assert!(flag.is_ok(), "all abnormal flags filtered out");
-    ///
+    /// for (t, signal) in tracking_confirmed {
     ///     let sv = signal.sv; // signal source
-    ///     // RINEX measures [Observable::PhaseRange] in meters directly
-    ///     let phase_range_m = signal.value;
+    ///     let phase_range_cycles = signal.value;
     /// }
     /// ```
     pub fn phase_range_tracking_ok_iter(
@@ -274,7 +255,7 @@ impl Rinex {
     ) -> Box<dyn Iterator<Item = (Epoch, &SignalObservation)> + '_> {
         Box::new(self.phase_range_sampling_ok_iter().filter_map(|(k, sig)| {
             if let Some(lli) = sig.lli {
-                if lli.intersects(LliFlags::OK_OR_UNKNOWN) {
+                if lli.is_ok() {
                     Some((k, sig))
                 } else {
                     None
@@ -660,7 +641,10 @@ impl Rinex {
 #[cfg(test)]
 mod test {
     use super::Combination;
-    use crate::prelude::{obs::EpochFlag, Carrier, Rinex};
+    use crate::prelude::{
+        obs::{EpochFlag, LliFlags},
+        Carrier, Rinex,
+    };
 
     #[test]
     fn gf_signal_combination() {
@@ -1350,5 +1334,35 @@ mod test {
         assert_eq!(anomalies.len(), 1);
         assert_eq!(anomalies[0].flag, EpochFlag::PowerFailure);
         assert_eq!(anomalies[0].epoch, key.epoch);
+    }
+
+    #[test]
+    fn phase_range_tracking_ok() {
+        let path = format!(
+            "{}/../test_resources/OBS/V3/DUTH0630.22O",
+            env!("CARGO_MANIFEST_DIR")
+        );
+
+        let rinex = Rinex::from_file(&path).unwrap();
+
+        let sampling_ok = rinex.phase_range_sampling_ok_iter().collect::<Vec<_>>();
+
+        let with_lli = sampling_ok
+            .iter()
+            .filter(|(_, sig)| sig.lli.is_some())
+            .count();
+
+        assert!(with_lli > 0, "no LLI flags in this file");
+
+        let expected = sampling_ok
+            .iter()
+            .filter(|(_, sig)| match sig.lli {
+                Some(lli) => !lli.intersects(LliFlags::LOCK_LOSS | LliFlags::HALF_CYCLE_SLIP),
+                None => true,
+            })
+            .count();
+
+        assert!(expected > 0);
+        assert_eq!(rinex.phase_range_tracking_ok_iter().count(), expected);
     }
 }
