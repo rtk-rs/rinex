@@ -1,11 +1,14 @@
 use std::{
     collections::HashMap,
     env,
-    fs::{create_dir_all, rename, File},
+    fs::{create_dir_all, remove_file, rename, File},
     io::Write,
-    path::Path,
+    path::{Path, PathBuf},
     sync::Mutex,
+    time::{Duration, SystemTime},
 };
+
+use platform_dirs::AppDirs;
 
 use rinex::prelude::{nav::Almanac, Rinex};
 
@@ -131,6 +134,51 @@ impl QcContext {
         file.uri.ends_with("earth_latest_high_prec.bpc")
     }
 
+    /// Time anise gives a download before giving up.
+    const ANISE_DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(30);
+
+    /// Local copy of a remote [MetaFile], as downloaded by anise.
+    fn anise_download_path(file: &MetaFile) -> Option<PathBuf> {
+        let file_name = file.uri.rsplit('/').next()?;
+        let app_dirs = AppDirs::new(Some("nyx-space/anise"), true)?;
+        Some(app_dirs.data_dir.join(file_name))
+    }
+
+    /// Removes what anise leaves behind when a download is interrupted:
+    /// its lock file and an empty copy of the remote file, which make
+    /// the next download wait for that lock. A lock older than the
+    /// download timeout does not belong to a download in progress.
+    /// A younger one might, and is left alone along with the file.
+    fn remove_stale_download(download: &Path, max_age: Duration) {
+        let mut lock = download.as_os_str().to_owned();
+        lock.push(".lock");
+        let lock = PathBuf::from(lock);
+
+        if let Ok(metadata) = lock.metadata() {
+            let age = metadata
+                .modified()
+                .ok()
+                .and_then(|modified| SystemTime::now().duration_since(modified).ok());
+
+            match age {
+                Some(age) if age > max_age => {
+                    warn!("(anise) removing stale lock {}", lock.display());
+                    if remove_file(&lock).is_err() {
+                        return;
+                    }
+                },
+                _ => return,
+            }
+        }
+
+        if let Ok(metadata) = download.metadata() {
+            if metadata.len() == 0 {
+                warn!("(anise) removing empty {}", download.display());
+                let _ = remove_file(download);
+            }
+        }
+    }
+
     /// Method to either download, retrieve or create a basic [Almanac].
     /// This will try to download the highest JPL model when the local
     /// storage is created, which requires internet access. The daily JPL
@@ -152,6 +200,17 @@ impl QcContext {
         // released when dropped, at the end of this function
         let lock = File::create(storage.join("anise.lock")).map_err(|_| QcCtxError::IO)?;
         lock.lock().map_err(|_| QcCtxError::IO)?;
+
+        // leftovers of interrupted downloads, before anise waits on them
+        for file in [
+            Self::nyx_anise_de440s_bsp(),
+            Self::nyx_anise_pck11_pca(),
+            Self::nyx_anise_jpl_bpc(),
+        ] {
+            if let Some(download) = Self::anise_download_path(&file) {
+                Self::remove_stale_download(&download, Self::ANISE_DOWNLOAD_TIMEOUT);
+            }
+        }
 
         let local_storage = storage.join("anise.dhall");
         let local_storage_s = local_storage.to_string_lossy().to_string();
@@ -407,7 +466,76 @@ impl std::fmt::Debug for QcContext {
 #[cfg(test)]
 mod test {
     use crate::{cfg::QcConfig, context::QcContext};
-    use std::thread;
+    use std::{
+        fs::{create_dir_all, remove_dir_all, File},
+        io::Write,
+        path::{Path, PathBuf},
+        thread,
+        time::{Duration, SystemTime},
+    };
+
+    /// Empty download and its lock, as left by an interrupted download
+    fn interrupted_download(dir: &Path, lock_age: Duration) -> (PathBuf, PathBuf) {
+        create_dir_all(dir).unwrap();
+
+        let download = dir.join("earth_latest_high_prec.bpc");
+        let lock = dir.join("earth_latest_high_prec.bpc.lock");
+
+        File::create(&download).unwrap();
+
+        File::create(&lock)
+            .unwrap()
+            .set_modified(SystemTime::now() - lock_age)
+            .unwrap();
+
+        (download, lock)
+    }
+
+    #[test]
+    fn stale_download_removal() {
+        let max_age = Duration::from_secs(30);
+
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(QcContext::ANISE_ALMANAC_STORAGE)
+            .join("stale-download-test");
+
+        // interrupted download: removed once the lock expired
+        let stale = dir.join("stale");
+        let (download, lock) = interrupted_download(&stale, max_age * 2);
+        QcContext::remove_stale_download(&download, max_age);
+        assert!(!lock.exists());
+        assert!(!download.exists());
+
+        // download in progress: untouched
+        let fresh = dir.join("fresh");
+        let (download, lock) = interrupted_download(&fresh, Duration::ZERO);
+        QcContext::remove_stale_download(&download, max_age);
+        assert!(lock.is_file());
+        assert!(download.is_file());
+
+        // lock removed by anise itself, empty file left behind: removed
+        let unlocked = dir.join("unlocked");
+        let (download, lock) = interrupted_download(&unlocked, Duration::ZERO);
+        std::fs::remove_file(&lock).unwrap();
+        QcContext::remove_stale_download(&download, max_age);
+        assert!(!download.exists());
+
+        // completed download: untouched
+        let complete = dir.join("complete");
+        let (download, lock) = interrupted_download(&complete, max_age * 2);
+        File::create(&download)
+            .unwrap()
+            .write_all(b"DAF/PCK")
+            .unwrap();
+        QcContext::remove_stale_download(&download, max_age);
+        assert!(!lock.exists());
+        assert!(download.is_file());
+
+        // nothing to remove
+        QcContext::remove_stale_download(&dir.join("missing.bpc"), max_age);
+
+        remove_dir_all(&dir).unwrap();
+    }
 
     /// Contexts deployed concurrently share one almanac setup
     #[test]
