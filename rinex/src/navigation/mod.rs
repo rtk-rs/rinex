@@ -40,7 +40,7 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::BTreeMap;
 
-use crate::prelude::{Epoch, SV};
+use crate::prelude::{Constellation, Epoch, ParsingError, TimeScale, SV};
 
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -59,3 +59,14 @@ pub struct NavKey {
 
 /// Navigation data are [NavFrame]s indexed by [NavKey]
 pub type Record = BTreeMap<NavKey, NavFrame>;
+
+/// [TimeScale] in which the navigation epochs of this [Constellation]
+/// are expressed.
+pub(crate) fn timescale(constellation: Constellation) -> Result<TimeScale, ParsingError> {
+    match constellation {
+        // NavIC time counts weeks from the GPS epoch and does not
+        // apply leap seconds: equivalent to GPST.
+        Constellation::IRNSS => Ok(TimeScale::GPST),
+        c => c.timescale().ok_or(ParsingError::NoTimescaleDefinition),
+    }
+}
