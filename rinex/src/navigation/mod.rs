@@ -21,7 +21,7 @@ pub use crate::navigation::{
     frame::{NavFrame, NavFrameType},
     health::{GeoHealth, GloHealth, Health, IrnssHealth},
     ionosphere::{BdModel, IonosphereModel, KbModel, KbRegionCode, NgModel, NgRegionFlags},
-    message::NavMessageType,
+    message::{NavMessageSubtype, NavMessageType},
     orbits::OrbitItem,
     system_time::SystemTime,
 };
@@ -51,6 +51,8 @@ pub struct NavKey {
     pub sv: SV,
     /// [NavMessageType] associated to following [NavFrame]
     pub msgtype: NavMessageType,
+    /// [NavMessageSubtype] (RINEX 4.02), only defined for a few ION messages
+    pub subtype: Option<NavMessageSubtype>,
     /// [NavFrame] type following
     pub frmtype: NavFrameType,
 }

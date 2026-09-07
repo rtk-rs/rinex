@@ -25,6 +25,7 @@ pub fn parse_epoch(header: &Header, content: &str) -> Result<(NavKey, NavFrame),
             epoch,
             sv,
             msgtype: NavMessageType::LNAV,
+            subtype: None,
             frmtype: NavFrameType::Ephemeris,
         };
 
