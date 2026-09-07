@@ -2,7 +2,7 @@ use crate::{
     epoch::parse_in_timescale as parse_epoch_in_timescale,
     navigation::{
         ephemeris::orbits::{closest_nav_standards, OrbitItem},
-        Ephemeris, NavMessageType,
+        timescale, Ephemeris, NavMessageType,
     },
     parse_f64,
     prelude::{Constellation, Epoch, ParsingError, TimeScale, Version, SV},
@@ -130,10 +130,7 @@ impl Ephemeris {
             },
         };
 
-        let ts = sv
-            .constellation
-            .timescale()
-            .ok_or(ParsingError::NoTimescaleDefinition)?;
+        let ts = timescale(sv.constellation)?;
 
         let epoch = parse_epoch_in_timescale(date.trim(), ts)?;
 

@@ -188,6 +188,9 @@ pub enum ParsingError {
     #[error("nav: invalid message type")]
     NavMsgType,
 
+    #[error("nav: invalid message subtype")]
+    NavMsgSubtype,
+
     #[error("nav: (ref) epoch week counter parsing")]
     NavEpochWeekCounter,
 
