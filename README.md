@@ -29,7 +29,7 @@ and keep an eye on the `#rinex` channel on Discord.
   - Surveying with GPS, Galileo, BeiDou and QZSS
 - Time scales: GPST, QZSST, BDT, GST, UTC, TAI
 - Efficient seamless compression and decompression
-- RINEX V4 full support
+- RINEX V4 support, up to revision 4.02
 - All RINEX formats supported (see following table), including
  - High Precision Clock products (for PPP)
  - IONEX (Ionosphere TEC maps)
@@ -141,7 +141,7 @@ performing advanced operations.
 Formats & revisions
 ===================
 
-The `RINEX` lib supports RINEX V4, that includes the new navigation frames.  
+The `RINEX` lib supports RINEX V4 up to revision 4.02, that includes the new navigation frames.  
 It also supports IONEX and Clock RINEX in their latest revisions. 
 
 The `SP3` lib supports rev D.
