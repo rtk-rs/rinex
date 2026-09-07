@@ -33,6 +33,15 @@ impl Header {
         }
 
         self.format_comments(w)?;
+
+        if let Some(license) = &self.license {
+            writeln!(w, "{}", fmt_rinex(license, "LICENSE OF USE"))?;
+        }
+
+        if let Some(doi) = &self.doi {
+            writeln!(w, "{}", fmt_rinex(doi, "DOI"))?;
+        }
+
         self.format_rinex_dependent(w)?;
 
         if let Some(rcvr) = &self.rcvr {

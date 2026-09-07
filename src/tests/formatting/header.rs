@@ -295,3 +295,24 @@ fn crinex_gal_v4_header_formatting() {
         ]),
     );
 }
+
+#[test]
+fn header_license_doi_formatting() {
+    let mut buf = BufWriter::new(Utf8Buffer::new(1024));
+
+    let mut header = Header::basic_obs()
+        .with_version(Version::new(4, 0))
+        .with_constellation(Constellation::GPS);
+
+    header.license = Some("CC BY 4.0".to_string());
+    header.doi = Some("https://doi.org/10.57677/BRD400DLR".to_string());
+
+    header.format(&mut buf).unwrap();
+
+    let content = buf.into_inner().unwrap().to_ascii_utf8();
+
+    let lines = content.lines().collect::<Vec<_>>();
+    assert!(lines
+        .contains(&"CC BY 4.0                                                   LICENSE OF USE"));
+    assert!(lines.contains(&"https://doi.org/10.57677/BRD400DLR                          DOI"));
+}
