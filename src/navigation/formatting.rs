@@ -1,12 +1,10 @@
-use itertools::Itertools;
-
 use std::io::{BufWriter, Write};
 
 use crate::{
     epoch::epoch_decompose as epoch_decomposition,
     error::FormattingError,
     navigation::{NavFrame, NavFrameType, NavKey, Record},
-    prelude::{Constellation, Header},
+    prelude::{Constellation, Epoch, Header},
 };
 
 pub(crate) struct NavFormatter {
@@ -118,37 +116,31 @@ fn format_epoch_v2v3<W: Write>(
     }
 }
 
+/// Formats the "yyyy mm dd hh mm ss" epoch of a RINEX 4 record.
+pub(crate) fn format_epoch_v4_fields(epoch: Epoch) -> String {
+    let (yyyy, m, d, hh, mm, ss, _) = epoch_decomposition(epoch);
+    format!(
+        "{:04} {:02} {:02} {:02} {:02} {:02}",
+        yyyy, m, d, hh, mm, ss
+    )
+}
+
+/// Formats the record header of a RINEX 4 record.
+/// The ephemeris epoch line follows, the other records write their
+/// own epoch line along with their data.
 fn format_epoch_v4<W: Write>(w: &mut BufWriter<W>, k: &NavKey) -> std::io::Result<()> {
-    let (yyyy, m, d, hh, mm, ss, _) = epoch_decomposition(k.epoch);
     match k.frmtype {
         NavFrameType::Ephemeris => {
             write!(
                 w,
-                "> EPH {:x} {}\n{:x} {:04} {:02} {:02} {:02} {:02} {:02}",
-                k.sv, k.msgtype, k.sv, yyyy, m, d, hh, mm, ss
+                "> EPH {:x} {}\n{:x} {}",
+                k.sv,
+                k.msgtype,
+                k.sv,
+                format_epoch_v4_fields(k.epoch)
             )
         },
-        NavFrameType::IonosphereModel => {
-            write!(
-                w,
-                "> ION {:x} {}\n        {:04} {:02} {:02} {:02} {:02} {:02}",
-                k.sv, k.msgtype, yyyy, m, d, hh, mm, ss
-            )
-        },
-        NavFrameType::SystemTimeOffset => {
-            write!(
-                w,
-                "> STO {:x} {}\n        {:04} {:02} {:02} {:02} {:02} {:02}",
-                k.sv, k.msgtype, yyyy, m, d, hh, mm, ss
-            )
-        },
-        NavFrameType::EarthOrientation => {
-            write!(
-                w,
-                "> EOP {:x} {}\n        {:04} {:02} {:02} {:02} {:02} {:02}",
-                k.sv, k.msgtype, yyyy, m, d, hh, mm, ss
-            )
-        },
+        frmtype => writeln!(w, "> {} {:x} {}", frmtype, k.sv, k.msgtype),
     }
 }
 
@@ -166,70 +158,28 @@ pub fn format<W: Write>(
         .constellation
         .ok_or(FormattingError::UndefinedConstellation)?;
 
-    // in chronological order
-    for epoch in rec.iter().map(|(k, _v)| k.epoch).unique().sorted() {
-        // per sorted constellations
-        for constell in rec
-            .iter()
-            .filter_map(|(k, _v)| {
-                if k.epoch == epoch {
-                    Some(k.sv.constellation)
-                } else {
-                    None
-                }
-            })
-            .unique()
-            .sorted()
-        {
-            // per sorted SV
-            for sv in rec
-                .iter()
-                .filter_map(|(k, _v)| {
-                    if k.epoch == epoch && k.sv.constellation == constell {
-                        Some(k.sv)
-                    } else {
-                        None
-                    }
-                })
-                .unique()
-                .sorted()
-            {
-                // per sorted frame type
-                for frmtype in rec
-                    .iter()
-                    .filter_map(|(k, _v)| {
-                        if k.epoch == epoch && k.sv == sv {
-                            Some(k.frmtype)
-                        } else {
-                            None
-                        }
-                    })
-                    .unique()
-                    .sorted()
-                {
-                    // format this entry
-                    if let Some((k, v)) = rec
-                        .iter()
-                        .filter(|(k, _v)| k.epoch == epoch && k.sv == sv && k.frmtype == frmtype)
-                        .reduce(|k, _| k)
-                    {
-                        // format epoch
-                        if v4 {
-                            format_epoch_v4(writer, k)?;
-                        } else {
-                            format_epoch_v2v3(writer, k, v2, &file_constell)?;
-                        }
-
-                        // format entry
-                        match v {
-                            NavFrame::EPH(eph) => eph.format(writer, k.sv, version, k.msgtype)?,
-                            _ => {},
-                        };
-                    }
-                }
+    // the record is sorted by key: chronological order, then vehicle,
+    // then message type. Every entry is written, including messages of
+    // different types sharing an epoch and vehicle.
+    for (k, v) in rec.iter() {
+        if v4 {
+            format_epoch_v4(writer, k)?;
+        } else {
+            match v {
+                NavFrame::EPH(_) => format_epoch_v2v3(writer, k, v2, &file_constell)?,
+                // no record representation before RINEX 4
+                _ => continue,
             }
         }
+
+        match v {
+            NavFrame::EPH(eph) => eph.format(writer, k.sv, version, k.msgtype)?,
+            NavFrame::STO(sto) => sto.format_v4(writer)?,
+            NavFrame::EOP(eop) => eop.format_v4(writer, k.epoch)?,
+            NavFrame::ION(model) => model.format_v4(writer, k.epoch)?,
+        }
     }
+
     Ok(())
 }
 
@@ -351,11 +301,8 @@ G01 2023 03 12 00 00 00"
 
         let utf8_ascii = inner.to_ascii_utf8();
 
-        assert_eq!(
-            &utf8_ascii,
-            "> ION G12 LNAV
-        2023 03 12 00 08 54"
-        );
+        // the model writes the epoch line along with its data
+        assert_eq!(&utf8_ascii, "> ION G12 LNAV\n");
     }
 
     #[test]
@@ -376,11 +323,7 @@ G01 2023 03 12 00 00 00"
 
         let utf8_ascii = inner.to_ascii_utf8();
 
-        assert_eq!(
-            &utf8_ascii,
-            "> STO C21 CNVX
-        2023 03 12 00 20 00"
-        );
+        assert_eq!(&utf8_ascii, "> STO C21 CNVX\n");
     }
 
     #[test]
@@ -401,10 +344,6 @@ G01 2023 03 12 00 00 00"
 
         let utf8_ascii = inner.to_ascii_utf8();
 
-        assert_eq!(
-            &utf8_ascii,
-            "> EOP G27 CNVX
-        2023 03 14 16 51 12"
-        );
+        assert_eq!(&utf8_ascii, "> EOP G27 CNVX\n");
     }
 }

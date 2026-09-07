@@ -2,7 +2,10 @@ use crate::{
     epoch::epoch_decompose,
     error::FormattingError,
     fmt_rinex,
-    navigation::{formatting::NavFormatter, time::TimeOffset},
+    navigation::{
+        formatting::{format_epoch_v4_fields, NavFormatter},
+        time::TimeOffset,
+    },
     prelude::{Epoch, TimeScale},
 };
 
@@ -16,6 +19,7 @@ impl TimeOffset {
             (TimeScale::GPST, TimeScale::GST) => "GPGA",
             (TimeScale::GPST, TimeScale::BDT) => "GPBD",
             (TimeScale::QZSST, TimeScale::UTC) => "QZUT",
+            (TimeScale::QZSST, TimeScale::GPST) => "QZGP",
             (TimeScale::QZSST, TimeScale::GST) => "QZGA",
             (TimeScale::QZSST, TimeScale::BDT) => "QZBD",
             (TimeScale::GST, TimeScale::UTC) => "GAUT",
@@ -99,21 +103,25 @@ impl TimeOffset {
         Ok(())
     }
 
+    /// Formats the RINEX 4 STO record (Table A33), following the
+    /// "> STO" record header. The message transmission time is not
+    /// stored: the reference time (seconds of week) is written in its slot.
     pub(crate) fn format_v4<W: Write>(&self, w: &mut BufWriter<W>) -> Result<(), FormattingError> {
         let t = Epoch::from_time_of_week(self.t_ref.0, self.t_ref.1, self.lhs);
-        let (y, m, d, hh, mm, ss, _) = epoch_decompose(t);
 
-        writeln!(
+        write!(
             w,
-            "    {:04} {:02} {:02} {:02} {:02} {:02} {}",
-            y,
-            m,
-            d,
-            hh,
-            mm,
-            ss,
+            "    {} {}",
+            format_epoch_v4_fields(t),
             self.to_lhs_rhs_timescales(),
         )?;
+
+        // UTC identifier, column 63
+        if let Some(utc) = &self.utc {
+            write!(w, "{:34}{}", "", utc)?;
+        }
+
+        writeln!(w)?;
 
         writeln!(
             w,
