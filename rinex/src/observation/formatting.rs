@@ -1,10 +1,10 @@
 //! OBS RINEX formatting
 use crate::{
-    epoch::format as epoch_format,
+    epoch::{epoch_decompose, format as epoch_format},
     hatanaka::Compressor,
     observation::Record,
     observation::{ClockObservation, HeaderFields, ObsKey},
-    prelude::{Constellation, Header, RinexType, SV},
+    prelude::{Constellation, Header, RinexType, Version, SV},
     FormattingError,
 };
 
@@ -17,7 +17,8 @@ pub fn format<W: Write>(
     record: &Record,
     header: &Header,
 ) -> Result<(), FormattingError> {
-    let major = header.version.major;
+    let version = header.version;
+    let major = version.major;
 
     let header = header
         .obs
@@ -30,7 +31,7 @@ pub fn format<W: Write>(
         if major < 3 {
             format_v2(w, header, record)
         } else {
-            format_v3(w, header, record)
+            format_v3(w, header, record, version)
         }
     }
 }
@@ -62,28 +63,41 @@ fn format_epoch_v3<W: Write>(
     k: &ObsKey,
     sv_list: &[SV],
     clock: Option<ClockObservation>,
+    version: Version,
 ) -> Result<(), FormattingError> {
     let numsat = sv_list.len();
 
-    if let Some(clock) = clock {
-        // receiver clock offset: F15.12 in columns 42-56
-        writeln!(
-            w,
-            "> {}  {} {:2}      {:15.12}",
-            epoch_format(k.epoch, RinexType::ObservationData, 3),
-            k.flag,
-            numsat,
-            clock.offset_s,
-        )?;
+    write!(
+        w,
+        "> {}  {} {:2}",
+        epoch_format(k.epoch, RinexType::ObservationData, 3),
+        k.flag,
+        numsat,
+    )?;
+
+    // RINEX 4.02 (Table A3): the epoch seconds (F11.7) may be extended
+    // down to the picosecond by an optional "1X,I5.5" field following
+    // the clock offset. Only written when the epoch is not a multiple
+    // of 100 ns, which the F11.7 field cannot represent.
+    let picoseconds = if version >= Version::new(4, 2) {
+        let (_, _, _, _, _, _, nanos) = epoch_decompose(k.epoch);
+        (nanos % 100) * 1_000
     } else {
-        writeln!(
-            w,
-            "> {}  {} {:2}",
-            epoch_format(k.epoch, RinexType::ObservationData, 3),
-            k.flag,
-            numsat,
-        )?;
+        0
+    };
+
+    // receiver clock offset: F15.12 in columns 42-56
+    if let Some(clock) = clock {
+        write!(w, "      {:15.12}", clock.offset_s)?;
+    } else if picoseconds > 0 {
+        write!(w, "      {:15}", "")?;
     }
+
+    if picoseconds > 0 {
+        write!(w, " {:05}", picoseconds)?;
+    }
+
+    writeln!(w)?;
 
     Ok(())
 }
@@ -92,6 +106,7 @@ fn format_v3<W: Write>(
     w: &mut BufWriter<W>,
     header: &HeaderFields,
     record: &Record,
+    version: Version,
 ) -> Result<(), FormattingError> {
     let observables = &header.codes;
 
@@ -114,7 +129,7 @@ fn format_v3<W: Write>(
             .collect::<Vec<_>>();
 
         // encode new epoch
-        format_epoch_v3(w, k, &sv_list, v.clock)?;
+        format_epoch_v3(w, k, &sv_list, v.clock, version)?;
 
         // by sorted constellation then SV
         for constell in constell_list.iter() {
@@ -283,7 +298,7 @@ mod test {
 
     use crate::prelude::{
         obs::{EpochFlag, ObsKey},
-        Epoch, SV,
+        Epoch, Version, SV,
     };
 
     use std::io::BufWriter;
@@ -466,7 +481,7 @@ mod test {
         ];
 
         let mut buf = BufWriter::new(Utf8Buffer::new(1024));
-        format_epoch_v3(&mut buf, &key, &sv_list, None).unwrap();
+        format_epoch_v3(&mut buf, &key, &sv_list, None, Version::new(3, 0)).unwrap();
         let content = buf.into_inner().unwrap().to_ascii_utf8();
         assert_eq!(content, "> 2021 01 01 00 00 00.0000000  0  4\n",);
 
@@ -484,7 +499,7 @@ mod test {
         ];
 
         let mut buf = BufWriter::new(Utf8Buffer::new(1024));
-        format_epoch_v3(&mut buf, &key, &sv_list, None).unwrap();
+        format_epoch_v3(&mut buf, &key, &sv_list, None, Version::new(3, 0)).unwrap();
         let content = buf.into_inner().unwrap().to_ascii_utf8();
         assert_eq!(content, "> 2021 01 01 00 00 00.0000000  0 10\n",);
     }

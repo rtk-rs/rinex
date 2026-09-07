@@ -4,7 +4,7 @@ use crate::{
     observation::{
         ClockObservation, EpochFlag, LliFlags, ObsKey, Observations, SignalObservation, SNR,
     },
-    prelude::{Constellation, Header, Observable, ParsingError, TimeScale, Version, SV},
+    prelude::{Constellation, Duration, Header, Observable, ParsingError, TimeScale, Version, SV},
 };
 
 use std::{
@@ -94,12 +94,10 @@ pub fn parse_epoch(
     }
 
     let (date, rem) = line.split_at(offset);
-    let epoch = parse_epoch_in_timescale(date, ts)?;
+    let mut epoch = parse_epoch_in_timescale(date, ts)?;
 
     let (flag, rem) = rem.split_at(3);
     let flag = EpochFlag::from_str(flag.trim())?;
-
-    let key = ObsKey { epoch, flag };
 
     let (num_sat, rem) = rem.split_at(3);
     let num_sat = num_sat
@@ -130,8 +128,24 @@ pub fn parse_epoch(
                 +3   // flag
                 +3; // n_sat
             if line.len() > min_len {
-                // RINEX3: clock offset precision was increased
-                Some(line.split_at(min_len).1.trim()) // this handles it naturally
+                let tail = line.split_at(min_len).1;
+
+                // RINEX 4.02: optional "1X,I5.5" field after the clock offset,
+                // extending the epoch seconds (F11.7) down to the picosecond.
+                // The clock offset always carries a decimal point, the extension
+                // is a pure digit field; this tells them apart when the clock
+                // offset is missing and the line is not padded.
+                let mut clock = None;
+                for item in tail.split_ascii_whitespace() {
+                    if item.contains('.') {
+                        clock = Some(item);
+                    } else if let Ok(picos) = item.parse::<u32>() {
+                        // hifitime Epoch resolution is 1 ns: the last 3 digits
+                        // are dropped (floored, like the F11.7 field itself)
+                        epoch += Duration::from_total_nanoseconds((picos / 1_000) as i128);
+                    }
+                }
+                clock
             } else {
                 None
             }
@@ -142,6 +156,8 @@ pub fn parse_epoch(
             observations.clock = Some(ClockObservation::default().with_offset_s(epoch, offset_s));
         }
     }
+
+    let key = ObsKey { epoch, flag };
 
     match flag {
         EpochFlag::Ok | EpochFlag::PowerFailure | EpochFlag::CycleSlip => {
@@ -668,6 +684,63 @@ G09  25493930.890   133971510.403 6        41.250                    25493926.95
                     snr: Some(SNR::DbHz36_41), // RINEX code 6
                 },
             ],
+        );
+    }
+
+    #[test]
+    fn test_parse_v3_picoseconds() {
+        // RINEX 4.02 (Table A3): 5 extra digits after the clock offset
+        // extend the epoch seconds down to the picosecond.
+        // The first two digits (tens of ns, ns) land in the epoch,
+        // the trailing three are below the 1 ns resolution.
+        let content = "> 2022 03 04 00 00 00.0000000  0  1        .000000001520 12345
+G01  20832393.682   109474991.854 8        49.500
+";
+        let epoch = Epoch::from_str("2022-03-04T00:00:00.000000012 GPST").unwrap();
+        generic_observation_epoch_decoding_test(
+            content,
+            3,
+            Constellation::GPS,
+            &[("GPS", "C1C, L1C, S1C")],
+            "2022-03-04T00:00:00 GPST",
+            3,
+            "2022-03-04T00:00:00.000000012 GPST",
+            EpochFlag::Ok,
+            Some(ClockObservation::default().with_offset_s(epoch, 1.520E-9)),
+            vec![SignalObservation {
+                sv: SV::from_str("G01").unwrap(),
+                observable: Observable::from_str("C1C").unwrap(),
+                value: 20832393.682,
+                lli: None,
+                snr: None,
+            }],
+        );
+    }
+
+    #[test]
+    fn test_parse_v3_picoseconds_without_clock() {
+        // RINEX 4.02 (Table A3): picosecond digits with the optional
+        // clock offset field left blank
+        let content = "> 2022 03 04 00 00 00.0000000  0  1                       99000
+G01  20832393.682   109474991.854 8        49.500
+";
+        generic_observation_epoch_decoding_test(
+            content,
+            3,
+            Constellation::GPS,
+            &[("GPS", "C1C, L1C, S1C")],
+            "2022-03-04T00:00:00 GPST",
+            3,
+            "2022-03-04T00:00:00.000000099 GPST",
+            EpochFlag::Ok,
+            None,
+            vec![SignalObservation {
+                sv: SV::from_str("G01").unwrap(),
+                observable: Observable::from_str("C1C").unwrap(),
+                value: 20832393.682,
+                lli: None,
+                snr: None,
+            }],
         );
     }
 
