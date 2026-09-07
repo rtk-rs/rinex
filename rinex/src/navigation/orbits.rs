@@ -102,7 +102,8 @@ impl OrbitItem {
                 let float = f64::from_str(&content.replace('D', "e"))
                     .map_err(|_| ParsingError::OrbitUnsignedData)?;
                 let unsigned = float as u32;
-                let status = GloStatus::from_bits(unsigned).unwrap_or(GloStatus::empty());
+                // bits the flags do not describe are retained
+                let status = GloStatus::from_bits_retain(unsigned);
                 Ok(OrbitItem::GloStatus(status))
             },
             "health" => {
@@ -110,36 +111,37 @@ impl OrbitItem {
                 let float = f64::from_str(&content.replace('D', "e"))
                     .map_err(|_| ParsingError::OrbitUnsignedData)?;
                 let unsigned = float as u32;
+                // Values the health enums do not describe are kept as
+                // raw integers so the record can be written back.
                 match constellation {
                     Constellation::GPS | Constellation::QZSS => {
-                        let flag: health::Health =
-                            FromPrimitive::from_u32(unsigned).unwrap_or(health::Health::default());
-                        Ok(OrbitItem::Health(flag))
+                        match FromPrimitive::from_u32(unsigned) {
+                            Some(flag) => Ok(OrbitItem::Health(flag)),
+                            None => Ok(OrbitItem::U32(unsigned)),
+                        }
                     },
-                    Constellation::Glonass => {
-                        let flag: health::GloHealth = FromPrimitive::from_u32(unsigned)
-                            .unwrap_or(health::GloHealth::default());
-                        Ok(OrbitItem::GloHealth(flag))
+                    Constellation::Glonass => match FromPrimitive::from_u32(unsigned) {
+                        Some(flag) => Ok(OrbitItem::GloHealth(flag)),
+                        None => Ok(OrbitItem::U32(unsigned)),
                     },
-                    Constellation::Galileo => {
-                        let flags = health::GalHealth::from_bits(unsigned as u8)
-                            .unwrap_or(health::GalHealth::empty());
-                        Ok(OrbitItem::GalHealth(flags))
+                    Constellation::Galileo => match u8::try_from(unsigned) {
+                        Ok(bits) => Ok(OrbitItem::GalHealth(health::GalHealth::from_bits_retain(
+                            bits,
+                        ))),
+                        Err(_) => Ok(OrbitItem::U32(unsigned)),
                     },
-                    Constellation::IRNSS => {
-                        let flag: health::IrnssHealth = num::FromPrimitive::from_u32(unsigned)
-                            .unwrap_or(health::IrnssHealth::default());
-                        Ok(OrbitItem::IrnssHealth(flag))
+                    Constellation::IRNSS => match FromPrimitive::from_u32(unsigned) {
+                        Some(flag) => Ok(OrbitItem::IrnssHealth(flag)),
+                        None => Ok(OrbitItem::U32(unsigned)),
                     },
                     c => {
                         if c.is_sbas() {
-                            let flag: health::GeoHealth = num::FromPrimitive::from_u32(unsigned)
-                                .unwrap_or(health::GeoHealth::default());
-                            Ok(OrbitItem::GeoHealth(flag))
+                            match FromPrimitive::from_u32(unsigned) {
+                                Some(flag) => Ok(OrbitItem::GeoHealth(flag)),
+                                None => Ok(OrbitItem::U32(unsigned)),
+                            }
                         } else {
-                            // Constellation::Mixed will not happen here,
-                            // it's always defined in the database
-                            unreachable!("unhandled case!");
+                            Ok(OrbitItem::U32(unsigned))
                         }
                     },
                 }
@@ -311,6 +313,35 @@ mod test {
                     );
                 }
             }
+        }
+    }
+
+    #[test]
+    fn health_out_of_enum_range() {
+        // GPS LNAV health is a 6 bit field: values the Health enum
+        // does not describe are kept as raw integers
+        assert_eq!(
+            OrbitItem::new("health", "6.300000000000E+01", Constellation::GPS).unwrap(),
+            OrbitItem::U32(63)
+        );
+        assert_eq!(
+            OrbitItem::new("health", "1.000000000000E+00", Constellation::GPS).unwrap(),
+            OrbitItem::Health(health::Health::L1Healthy)
+        );
+        assert_eq!(
+            OrbitItem::new("health", "5.000000000000E+00", Constellation::Glonass).unwrap(),
+            OrbitItem::U32(5)
+        );
+        assert_eq!(
+            OrbitItem::new("health", "4.000000000000E+00", Constellation::Glonass).unwrap(),
+            OrbitItem::GloHealth(health::GloHealth::Unhealthy)
+        );
+        // bit flags: undescribed bits are retained
+        let status =
+            OrbitItem::new("gloStatus", "1.470000000000E+02", Constellation::Glonass).unwrap();
+        match status {
+            OrbitItem::GloStatus(status) => assert_eq!(status.bits(), 147),
+            _ => panic!("wrong item {:?}", status),
         }
     }
 
