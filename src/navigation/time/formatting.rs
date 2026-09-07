@@ -90,7 +90,9 @@ impl TimeOffset {
             fmt_rinex(
                 &format!(
                     "{} {}{} {:6}{:5}",
-                    self.to_lhs_rhs_timescales(),
+                    self.time_system
+                        .as_deref()
+                        .unwrap_or_else(|| self.to_lhs_rhs_timescales()),
                     NavFormatter::new_time_system_correction_v3_offset(self.polynomial.0),
                     NavFormatter::new_time_system_correction_v3_drift(self.polynomial.1),
                     self.t_ref.1 / 1_000_000_000,
@@ -113,7 +115,9 @@ impl TimeOffset {
             w,
             "    {} {}",
             format_epoch_v4_fields(t),
-            self.to_lhs_rhs_timescales(),
+            self.time_system
+                .as_deref()
+                .unwrap_or_else(|| self.to_lhs_rhs_timescales()),
         )?;
 
         // UTC identifier, column 63

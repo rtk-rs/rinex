@@ -25,6 +25,14 @@ impl TimeOffset {
             "BDGP" => Ok((TimeScale::BDT, TimeScale::GPST)),
             // "SBAS"
             "SBUT" => Ok((TimeScale::GPST, TimeScale::UTC)),
+            // GLONASS: no dedicated TimeScale, UTC(SU) based
+            "GLUT" => Ok((TimeScale::UTC, TimeScale::UTC)),
+            "GLGP" => Ok((TimeScale::UTC, TimeScale::GPST)),
+            // NavIC: GPST aligned
+            "IRUT" => Ok((TimeScale::GPST, TimeScale::UTC)),
+            "IRGP" => Ok((TimeScale::GPST, TimeScale::GPST)),
+            // beidou / glonass
+            "BDGL" => Ok((TimeScale::BDT, TimeScale::UTC)),
             _ => Err(ParsingError::NavInvalidTimescale),
         }
     }
@@ -117,13 +125,10 @@ impl TimeOffset {
 
         let a1 = parse_f64(a1.trim()).map_err(|_| ParsingError::NavTimeOffsetParinsg)?;
 
-        Ok(Self::from_time_of_week(
-            week,
-            seconds * 1_000_000_000,
-            lhs,
-            rhs,
-            (a0, a1, 0.0),
-        ))
+        let mut time_offset =
+            Self::from_time_of_week(week, seconds * 1_000_000_000, lhs, rhs, (a0, a1, 0.0));
+        time_offset.time_system = Some(timescales.trim().to_string());
+        Ok(time_offset)
     }
 
     /// Parse [TimeOffset] from RINEXv4 standard
@@ -161,6 +166,7 @@ impl TimeOffset {
 
         let mut time_offset = Self::from_time_of_week(t_week, t_nanos, lhs, rhs, (a0, a1, a2));
         time_offset.utc = utc;
+        time_offset.time_system = Some(timescales.to_string());
 
         Ok(time_offset)
     }
@@ -297,6 +303,12 @@ mod test {
             let expected =
                 TimeOffset::from_time_of_week(week, sec * 1_000_000_000, lhs, rhs, (a0, a1, 0.0));
 
+            let expected = TimeOffset {
+                time_system: Some(content[..4].to_string()),
+
+                ..expected
+            };
+
             let parsed = TimeOffset::parse_v3(content).unwrap();
 
             assert_eq!(parsed, expected);
@@ -368,6 +380,63 @@ mod test {
                     panic!("two lines expected (only)!");
                 }
             }
+        }
+    }
+
+    #[test]
+    fn parsing_v4_time_systems() {
+        // RINEX 4.02 pairs without a dedicated hifitime TimeScale keep
+        // their four letter code, and every pair writes back as read
+        let line_2 =
+            "     5.184000000000e+05 1.862645149231e-09 8.881784197001e-16 0.000000000000e+00";
+
+        for (line_1, code, lhs, rhs) in [
+            (
+                "    2024 02 03 00 00 00 GLUT                                  UTC(SU)           ",
+                "GLUT",
+                TimeScale::UTC,
+                TimeScale::UTC,
+            ),
+            (
+                "    2024 02 03 00 00 00 GLGP",
+                "GLGP",
+                TimeScale::UTC,
+                TimeScale::GPST,
+            ),
+            (
+                "    2023 06 24 00 00 00 IRUT",
+                "IRUT",
+                TimeScale::GPST,
+                TimeScale::UTC,
+            ),
+            (
+                "    2023 06 24 00 00 00 IRGP",
+                "IRGP",
+                TimeScale::GPST,
+                TimeScale::GPST,
+            ),
+            (
+                "    2021 07 05 23 20 00 BDGL",
+                "BDGL",
+                TimeScale::BDT,
+                TimeScale::UTC,
+            ),
+            (
+                "    2020 09 18 19 56 30 GPUT",
+                "GPUT",
+                TimeScale::GPST,
+                TimeScale::UTC,
+            ),
+        ] {
+            let parsed = TimeOffset::parse_v4(line_1, line_2).unwrap();
+            assert_eq!(parsed.lhs, lhs, "{}", code);
+            assert_eq!(parsed.rhs, rhs, "{}", code);
+            assert_eq!(parsed.time_system.as_deref(), Some(code));
+
+            let mut buf = BufWriter::new(Utf8Buffer::new(256));
+            parsed.format_v4(&mut buf).unwrap();
+            let content = buf.into_inner().unwrap().to_ascii_utf8();
+            assert_eq!(&content[..28], &line_1[..28]);
         }
     }
 }
