@@ -65,23 +65,10 @@ fn parse_orbits(
                 line = rem;
                 continue;
             }
-            /*
-             * In NAV RINEX, unresolved data fields are either
-             * omitted (handled previously) or put a zeros
-             */
-            if !content.contains(".000000000000E+00") {
-                if let Some((key, token)) = fields.get(key_index) {
-                    //println!(
-                    //    "Key \"{}\"(index: {}) | Token \"{}\" | Content \"{}\"",
-                    //    key,
-                    //    key_index,
-                    //    token,
-                    //    content.trim()
-                    //); //DEBUG
-                    if !key.contains("spare") {
-                        if let Ok(item) = OrbitItem::new(token, content, constell) {
-                            map.insert(key.to_string(), item);
-                        }
+            if let Some((key, token)) = fields.get(key_index) {
+                if !key.contains("spare") {
+                    if let Ok(item) = OrbitItem::new(token, content, constell) {
+                        map.insert(key.to_string(), item);
                     }
                 }
             }
@@ -242,7 +229,7 @@ impl Ephemeris {
 #[cfg(test)]
 mod test {
     use crate::{
-        navigation::{Ephemeris, NavMessageType},
+        navigation::{Ephemeris, Health, NavMessageType, OrbitItem},
         prelude::{Constellation, Version},
     };
 
@@ -536,6 +523,36 @@ mod test {
         assert_eq!(ephemeris.get_orbit_f64("velX"), None);
         assert_eq!(ephemeris.get_orbit_f64("satPosY"), Some(-0.216949155273E5));
         assert_eq!(ephemeris.get_orbit_f64("satPosZ"), Some(0.109021518555E5));
+    }
+
+    #[test]
+    fn zero_and_unit_fields_are_kept() {
+        // GPS LNAV, uppercase exponent: fields worth 0 or 1 (health,
+        // L2 codes, L2 P data flag) must be stored like any other
+        let content =
+            "     9.600000000000E+01 3.384375000000E+01 4.106242470052E-09-2.157708626665E+00
+     1.812353730202E-06 2.041313482914E-02 9.221956133842E-06 5.153679471970E+03
+     2.952000000000E+05 3.911554813385E-08 2.599865457638E+00 1.955777406693E-08
+     9.634440880622E-01 1.856875000000E+02 8.945076080635E-01-8.169626089140E-09
+    -5.964534141059E-11 1.000000000000E+00 2.213000000000E+03 0.000000000000E+00
+     2.000000000000E+00 0.000000000000E+00 1.396983861923E-09 9.600000000000E+01
+     2.880180000000E+05 4.000000000000E+00";
+        let orbits = parse_orbits(
+            Version::new(4, 0),
+            NavMessageType::LNAV,
+            Constellation::GPS,
+            content.lines(),
+        )
+        .unwrap();
+        assert_eq!(orbits.get("l2Codes"), Some(&OrbitItem::F64(1.0)));
+        assert_eq!(orbits.get("l2pDataFlag"), Some(&OrbitItem::F64(0.0)));
+        assert_eq!(orbits.get("svAccuracy"), Some(&OrbitItem::F64(2.0)));
+        assert_eq!(
+            orbits.get("health"),
+            Some(&OrbitItem::Health(Health::Unhealthy))
+        );
+        assert_eq!(orbits.get("fitInt"), Some(&OrbitItem::F64(4.0)));
+        assert_eq!(orbits.len(), 26 - 0);
     }
 
     #[test]
