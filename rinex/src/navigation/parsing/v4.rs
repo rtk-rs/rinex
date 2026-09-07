@@ -312,6 +312,69 @@ I10 2023 06 24 00 05 00 1.527369022369e-07 1.364242052659e-12 0.000000000000e+00
     }
 
     #[test]
+    fn glonass_cdma_ephemeris() {
+        // RINEX 4.02 Table A18: L1OC and L3OC share the same layout,
+        // except for the group delay field on line 3.
+        for (msgtype, delay) in [
+            (NavMessageType::L1OC, "tgdL2OCp"),
+            (NavMessageType::L3OC, "iscL3OCp"),
+        ] {
+            let content = format!(
+                "> EPH R26 {}
+R26 2024 02 03 00 15 00-1.605716170161e-05 1.652011860642e-12-2.081668171172e-17
+     1.812154053020e+04-2.071979139000e+00 5.729816621169e-10 1.000000000000e+00
+    -2.325615360260e+03 1.285475494340e+00-1.047737896442e-09 1.000000000000e+00
+     1.781341854668e+04 2.280306640081e+00-9.458744898438e-10 0.000000000000e+00
+     2.000000000000e+00 1.000000000000e+01 7.500000000000e-01 7.500000000000e-01
+     0.000000000000e+00 0.000000000000e+00 0.000000000000e+00 0.000000000000e+00
+     0.000000000000e+00 0.000000000000e+00 0.000000000000e+00 0.000000000000e+00
+     0.000000000000e+00 0.000000000000e+00 0.000000000000e+00 0.000000000000e+00
+     1.500000000000e+01 5.000000000000e+00                    5.184000000000e+05
+",
+                msgtype
+            );
+            let (key, frame) = parse(&content).unwrap();
+            assert_eq!(key.sv, SV::from_str("R26").unwrap());
+            assert_eq!(key.frmtype, NavFrameType::Ephemeris);
+            assert_eq!(key.msgtype, msgtype);
+            assert_eq!(key.subtype, None);
+            assert_eq!(
+                key.epoch,
+                Epoch::from_str("2024-02-03T00:15:00 UTC").unwrap()
+            );
+            let eph = frame.as_ephemeris().unwrap();
+            assert_eq!(eph.clock_bias, -1.605716170161e-05);
+            assert_eq!(eph.clock_drift, 1.652011860642e-12);
+            assert_eq!(eph.clock_drift_rate, -2.081668171172e-17);
+            assert_eq!(eph.get_orbit_f64("satPosX"), Some(1.812154053020e+04));
+            assert_eq!(eph.get_orbit_f64("velX"), Some(-2.071979139000e+00));
+            assert_eq!(eph.get_orbit_f64("accelX"), Some(5.729816621169e-10));
+            assert!(eph.orbits.get("health").is_some());
+            assert_eq!(eph.get_orbit_f64("satPosY"), Some(-2.325615360260e+03));
+            assert_eq!(
+                eph.orbits.get("dataValidity").and_then(|v| v.as_u8()),
+                Some(1)
+            );
+            assert_eq!(eph.get_orbit_f64("satPosZ"), Some(1.781341854668e+04));
+            assert_eq!(eph.get_orbit_f64("accelZ"), Some(-9.458744898438e-10));
+            // zero valued: get_orbit_f64 hides zeros
+            assert_eq!(eph.orbits.get(delay).and_then(|v| v.as_f64()), Some(0.0));
+            assert_eq!(eph.orbits.get("satType").and_then(|v| v.as_u8()), Some(2));
+            assert_eq!(
+                eph.orbits.get("sourceFlags").and_then(|v| v.as_u8()),
+                Some(10)
+            );
+            assert_eq!(eph.get_orbit_f64("aode"), Some(0.75));
+            assert_eq!(eph.get_orbit_f64("aodc"), Some(0.75));
+            assert_eq!(eph.get_orbit_f64("uraiOrb"), Some(15.0));
+            assert_eq!(eph.get_orbit_f64("uraiClk"), Some(5.0));
+            assert_eq!(eph.get_orbit_f64("t_tm"), Some(5.184000000000e+05));
+            // no frequency channel in CDMA messages
+            assert_eq!(eph.glonass_freq_channel(), None);
+        }
+    }
+
+    #[test]
     fn record_header_bad_subtype() {
         let content = "> ION J01 CNVX XXXX
     2021 07 05 23 30 42 7.450580596924e-09 2.235174179077e-08-5.960464477539e-08
