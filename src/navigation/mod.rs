@@ -20,7 +20,10 @@ pub use crate::navigation::{
     ephemeris::{flags::*, orbits::OrbitItem, Ephemeris},
     frame::{NavFrame, NavFrameType},
     header::HeaderFields,
-    ionosphere::{BdModel, IonosphereModel, KbModel, KbRegionCode, NgModel, NgRegionFlags},
+    ionosphere::{
+        BdModel, GloCdmaModel, IonosphereModel, KbModel, KbRegionCode, NavicKbModel,
+        NavicNeqnModel, NavicNeqnRegion, NgModel, NgRegionFlags,
+    },
     message::{NavMessageSubtype, NavMessageType},
     time::TimeOffset,
 };

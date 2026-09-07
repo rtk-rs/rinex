@@ -1,7 +1,8 @@
 use crate::{
     navigation::{
-        timescale, BdModel, EarthOrientation, Ephemeris, IonosphereModel, KbModel, KbRegionCode,
-        NavFrame, NavFrameType, NavKey, NavMessageSubtype, NavMessageType, NgModel, TimeOffset,
+        timescale, BdModel, EarthOrientation, Ephemeris, GloCdmaModel, IonosphereModel, KbModel,
+        KbRegionCode, NavFrame, NavFrameType, NavKey, NavMessageSubtype, NavMessageType,
+        NavicKbModel, NavicNeqnModel, NgModel, TimeOffset,
     },
     prelude::{Constellation, Epoch, ParsingError, SV},
 };
@@ -58,6 +59,23 @@ pub fn parse(content: &str) -> Result<(NavKey, NavFrame), ParsingError> {
                 NavMessageType::IFNV => {
                     let (epoch, model) = NgModel::parse(lines, ts)?;
                     (epoch, IonosphereModel::NequickG(model))
+                },
+                // RINEX 4.02: NavIC L1NV models, told apart by the subtype
+                NavMessageType::L1NV => match subtype {
+                    Some(NavMessageSubtype::KLOB) => {
+                        let (epoch, model) = NavicKbModel::parse(lines, ts)?;
+                        (epoch, IonosphereModel::NavicKlobuchar(model))
+                    },
+                    Some(NavMessageSubtype::NEQN) => {
+                        let (epoch, model) = NavicNeqnModel::parse(lines, ts)?;
+                        (epoch, IonosphereModel::NavicNequick(model))
+                    },
+                    _ => return Err(ParsingError::NavMsgSubtype),
+                },
+                // RINEX 4.02: GLONASS CDMA model
+                NavMessageType::LXOC => {
+                    let (epoch, model) = GloCdmaModel::parse(lines, ts)?;
+                    (epoch, IonosphereModel::GlonassCdma(model))
                 },
                 NavMessageType::CNVX => match sv.constellation {
                     Constellation::BeiDou => {
