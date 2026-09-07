@@ -20,7 +20,10 @@ pub use crate::navigation::{
     ephemeris::Ephemeris,
     frame::{NavFrame, NavFrameType},
     health::{GeoHealth, GloHealth, Health, IrnssHealth},
-    ionosphere::{BdModel, IonosphereModel, KbModel, KbRegionCode, NgModel, NgRegionFlags},
+    ionosphere::{
+        BdModel, GloCdmaModel, IonosphereModel, KbModel, KbRegionCode, NavicKbModel,
+        NavicNeqnModel, NavicNeqnRegion, NgModel, NgRegionFlags,
+    },
     message::{NavMessageSubtype, NavMessageType},
     orbits::OrbitItem,
     system_time::SystemTime,

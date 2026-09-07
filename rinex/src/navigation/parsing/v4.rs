@@ -1,7 +1,8 @@
 use crate::{
     navigation::{
-        timescale, BdModel, EarthOrientation, Ephemeris, IonosphereModel, KbModel, KbRegionCode,
-        NavFrame, NavFrameType, NavKey, NavMessageSubtype, NavMessageType, NgModel, SystemTime,
+        timescale, BdModel, EarthOrientation, Ephemeris, GloCdmaModel, IonosphereModel, KbModel,
+        KbRegionCode, NavFrame, NavFrameType, NavKey, NavMessageSubtype, NavMessageType,
+        NavicKbModel, NavicNeqnModel, NgModel, SystemTime,
     },
     prelude::{Constellation, ParsingError, SV},
 };
@@ -50,6 +51,23 @@ pub fn parse(content: &str) -> Result<(NavKey, NavFrame), ParsingError> {
                 NavMessageType::IFNV => {
                     let (epoch, model) = NgModel::parse(lines, ts)?;
                     (epoch, IonosphereModel::NequickG(model))
+                },
+                // RINEX 4.02: NavIC L1NV models, told apart by the subtype
+                NavMessageType::L1NV => match subtype {
+                    Some(NavMessageSubtype::KLOB) => {
+                        let (epoch, model) = NavicKbModel::parse(lines, ts)?;
+                        (epoch, IonosphereModel::NavicKlobuchar(model))
+                    },
+                    Some(NavMessageSubtype::NEQN) => {
+                        let (epoch, model) = NavicNeqnModel::parse(lines, ts)?;
+                        (epoch, IonosphereModel::NavicNequick(model))
+                    },
+                    _ => return Err(ParsingError::NavMsgSubtype),
+                },
+                // RINEX 4.02: GLONASS CDMA model
+                NavMessageType::LXOC => {
+                    let (epoch, model) = GloCdmaModel::parse(lines, ts)?;
+                    (epoch, IonosphereModel::GlonassCdma(model))
                 },
                 NavMessageType::CNVX => match sv.constellation {
                     Constellation::BeiDou => {
@@ -372,6 +390,85 @@ R26 2024 02 03 00 15 00-1.605716170161e-05 1.652011860642e-12-2.081668171172e-17
             // no frequency channel in CDMA messages
             assert_eq!(eph.glonass_freq_channel(), None);
         }
+    }
+
+    #[test]
+    fn navic_l1nv_ionosphere() {
+        // RINEX 4.02 Table A41: same message type, told apart by the subtype
+        let klob = "> ION I10 L1NV KLOB
+    2023 06 24 00 07 30 1.000000000000e+00
+     5.867332220078e-08 2.533197402954e-07-1.430511474609e-06-7.510185241699e-06
+     1.495040000000e+05-5.406720000000e+05 2.883584000000e+06 8.323072000000e+06
+     5.000000000000e+01 1.100000000000e+02 0.000000000000e+00 5.000000000000e+01
+";
+        let (key, frame) = parse(klob).unwrap();
+        assert_eq!(key.sv, SV::from_str("I10").unwrap());
+        assert_eq!(key.frmtype, NavFrameType::IonosphereModel);
+        assert_eq!(key.msgtype, NavMessageType::L1NV);
+        assert_eq!(key.subtype, Some(NavMessageSubtype::KLOB));
+        assert_eq!(
+            key.epoch,
+            Epoch::from_str("2023-06-24T00:07:30 GPST").unwrap()
+        );
+        let model = frame
+            .as_ionosphere_model()
+            .and_then(|m| m.as_navic_klobuchar())
+            .unwrap();
+        assert_eq!(model.iodk, 1.0);
+        assert_eq!(model.alpha.0, 5.867332220078e-08);
+        assert_eq!(model.beta.3, 8.323072000000e+06);
+        assert_eq!(model.longitude_deg, (50.0, 110.0));
+        assert_eq!(model.latitude_deg, (0.0, 50.0));
+
+        let neqn = "> ION I10 L1NV NEQN
+    2023 06 24 00 17 24 0.000000000000e+00
+     1.982500000000e+02 0.000000000000e+00 0.000000000000e+00 1.000000000000e+00
+     3.000000000000e+01 1.300000000000e+02-3.000000000000e+01-1.000000000000e+01
+     2.085000000000e+02-3.085937500000e-01-3.417968750000e-03 1.000000000000e+00
+     3.000000000000e+01 1.300000000000e+02-5.000000000000e+00 3.000000000000e+01
+     1.982500000000e+02 0.000000000000e+00 0.000000000000e+00 1.000000000000e+00
+     3.000000000000e+01 1.300000000000e+02 3.500000000000e+01 5.000000000000e+01
+";
+        let (key, frame) = parse(neqn).unwrap();
+        assert_eq!(key.msgtype, NavMessageType::L1NV);
+        assert_eq!(key.subtype, Some(NavMessageSubtype::NEQN));
+        assert_eq!(
+            key.epoch,
+            Epoch::from_str("2023-06-24T00:17:24 GPST").unwrap()
+        );
+        let model = frame
+            .as_ionosphere_model()
+            .and_then(|m| m.as_navic_nequick())
+            .unwrap();
+        assert_eq!(model.iodn, 0.0);
+        assert_eq!(model.regions[1].a.0, 208.5);
+        assert_eq!(model.regions[2].modip_deg, (35.0, 50.0));
+
+        // the subtype is mandatory for L1NV ION records
+        let missing = klob.replace(" KLOB", "");
+        assert!(matches!(parse(&missing), Err(ParsingError::NavMsgSubtype)));
+    }
+
+    #[test]
+    fn glonass_lxoc_ionosphere() {
+        // RINEX 4.02 Table A41
+        let content = "> ION R22 LXOC
+    2024 02 03 00 01 09 1.000000000000e+00 1.410000000000e+02 5.000000000000e+00
+";
+        let (key, frame) = parse(content).unwrap();
+        assert_eq!(key.sv, SV::from_str("R22").unwrap());
+        assert_eq!(key.frmtype, NavFrameType::IonosphereModel);
+        assert_eq!(key.msgtype, NavMessageType::LXOC);
+        assert_eq!(key.subtype, None);
+        assert_eq!(
+            key.epoch,
+            Epoch::from_str("2024-02-03T00:01:09 UTC").unwrap()
+        );
+        let model = frame
+            .as_ionosphere_model()
+            .and_then(|m| m.as_glonass_cdma())
+            .unwrap();
+        assert_eq!((model.c_a, model.c_f107, model.c_ap), (1.0, 141.0, 5.0));
     }
 
     #[test]
