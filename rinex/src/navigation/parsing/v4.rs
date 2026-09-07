@@ -173,6 +173,59 @@ mod test {
     }
 
     #[test]
+    fn glonass_lxoc_sto() {
+        // RINEX 4.02 Table A41
+        let content = "> STO R26 LXOC
+    2024 02 03 00 15 00 GLUT                                  UTC(SU)
+     5.184000000000e+05-8.335337042809e-08-4.618527782441e-14 0.000000000000e+00
+";
+        let (key, frame) = parse(content).unwrap();
+        assert_eq!(key.sv, SV::from_str("R26").unwrap());
+        assert_eq!(key.frmtype, NavFrameType::SystemTimeOffset);
+        assert_eq!(key.msgtype, NavMessageType::LXOC);
+        assert_eq!(key.subtype, None);
+        assert_eq!(
+            key.epoch,
+            Epoch::from_str("2024-02-03T00:15:00 UTC").unwrap()
+        );
+        match frame {
+            NavFrame::STO(sto) => {
+                assert_eq!(sto.system, "GLUT");
+                assert_eq!(sto.utc, "UTC(SU)");
+                assert_eq!(sto.t_tm, 518400);
+                assert_eq!(sto.a, (-8.335337042809e-08, -4.618527782441e-14, 0.0));
+            },
+            _ => panic!("wrong frame: {:?}", frame),
+        }
+    }
+
+    #[test]
+    fn glonass_lxoc_eop() {
+        // RINEX 4.02 Table A41
+        let content = "> EOP R04 LXOC
+    2024 02 02 21 00 00 6.079101562500e-02-2.380371093750e-03 0.000000000000e+00
+                        2.203369140625e-01 1.281738281250e-03 0.000000000000e+00
+     5.183940000000e+05 3.387451171875e-03-2.441406250000e-04 0.000000000000e+00
+";
+        let (key, frame) = parse(content).unwrap();
+        assert_eq!(key.sv, SV::from_str("R04").unwrap());
+        assert_eq!(key.frmtype, NavFrameType::EarthOrientation);
+        assert_eq!(key.msgtype, NavMessageType::LXOC);
+        assert_eq!(
+            key.epoch,
+            Epoch::from_str("2024-02-02T21:00:00 UTC").unwrap()
+        );
+        match frame {
+            NavFrame::EOP(eop) => {
+                assert_eq!(eop.x.0, 6.079101562500e-02);
+                assert_eq!(eop.y.0, 2.203369140625e-01);
+                assert_eq!(eop.t_tm, 518394);
+            },
+            _ => panic!("wrong frame: {:?}", frame),
+        }
+    }
+
+    #[test]
     fn record_header_bad_subtype() {
         let content = "> ION J01 CNVX XXXX
     2021 07 05 23 30 42 7.450580596924e-09 2.235174179077e-08-5.960464477539e-08

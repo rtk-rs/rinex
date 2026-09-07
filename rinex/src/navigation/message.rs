@@ -37,6 +37,14 @@ pub enum NavMessageType {
     CNV3,
     /// CNVX special marker
     CNVX,
+    /// NavIC L1 NAV message (RINEX 4.02)
+    L1NV,
+    /// Glonass L1OC CDMA message (RINEX 4.02)
+    L1OC,
+    /// Glonass L3OC CDMA message (RINEX 4.02)
+    L3OC,
+    /// LXOC: Glonass CDMA STO, EOP and ION messages (RINEX 4.02)
+    LXOC,
 }
 
 impl std::str::FromStr for NavMessageType {
@@ -59,6 +67,10 @@ impl std::str::FromStr for NavMessageType {
             "CNV2" => Ok(Self::CNV2),
             "CNV3" => Ok(Self::CNV3),
             "CNVX" => Ok(Self::CNVX),
+            "L1NV" => Ok(Self::L1NV),
+            "L1OC" => Ok(Self::L1OC),
+            "L3OC" => Ok(Self::L3OC),
+            "LXOC" => Ok(Self::LXOC),
             _ => Err(ParsingError::NavMsgType),
         }
     }
@@ -81,6 +93,10 @@ impl std::fmt::Display for NavMessageType {
             Self::CNV2 => write!(f, "CNV2"),
             Self::CNV3 => write!(f, "CNV3"),
             Self::CNVX => write!(f, "CNVX"),
+            Self::L1NV => write!(f, "L1NV"),
+            Self::L1OC => write!(f, "L1OC"),
+            Self::L3OC => write!(f, "L3OC"),
+            Self::LXOC => write!(f, "LXOC"),
         }
     }
 }
@@ -130,6 +146,23 @@ impl std::fmt::Display for NavMessageSubtype {
 mod test {
     use super::*;
     use std::str::FromStr;
+
+    #[test]
+    fn message_type() {
+        for (code, msgtype) in [
+            ("LNAV", NavMessageType::LNAV),
+            ("FDMA", NavMessageType::FDMA),
+            ("CNVX", NavMessageType::CNVX),
+            ("L1NV", NavMessageType::L1NV),
+            ("L1OC", NavMessageType::L1OC),
+            ("L3OC", NavMessageType::L3OC),
+            ("LXOC", NavMessageType::LXOC),
+        ] {
+            assert_eq!(NavMessageType::from_str(code).unwrap(), msgtype);
+            assert_eq!(msgtype.to_string(), code);
+        }
+        assert!(NavMessageType::from_str("LEG").is_err());
+    }
 
     #[test]
     fn message_subtype() {
