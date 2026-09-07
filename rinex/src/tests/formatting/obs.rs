@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use crate::{
     observation::HeaderFields,
-    prelude::{Constellation, Epoch, Observable, Rinex},
+    prelude::{Constellation, Epoch, Observable, Rinex, Version},
     tests::formatting::{generic_formatted_lines_test, Utf8Buffer},
 };
 
@@ -58,6 +58,65 @@ fn obs_v3_clock_offset_formatting() {
     // round trip
     let dut = Rinex::parse(&mut BufReader::new(Cursor::new(formatted.as_str()))).unwrap();
     assert_eq!(dut.record, model.record);
+}
+
+#[test]
+fn obs_v4_picoseconds_formatting() {
+    // RINEX 4.02 (Table A3): optional picosecond extension of the epoch
+    // seconds, "1X,I5.5" right after the clock offset field.
+    let content = read_resource("OBS/V4/ACRG00GHA_R_20240010000_01H_30S_MO.rnx")
+        .lines()
+        .map(|line| {
+            if line.contains("RINEX VERSION / TYPE") {
+                format!("     4.02{}", &line[9..])
+            } else if line.starts_with("> 2024 01 01 00 00 00.0000000") {
+                // 12345 ps: 12 ns land in the epoch, 345 ps are below resolution
+                format!("{} 12345", line)
+            } else if line.starts_with("> 2024 01 01 00 15 30.0000000") {
+                // epoch without clock offset, blank F15.12 field
+                format!("{}                      99000", line)
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+        + "\n";
+
+    let (model, formatted) = parse_and_format(&content);
+
+    let t0 = Epoch::from_str("2024-01-01T00:00:00.000000012 GPST").unwrap();
+    let t1 = Epoch::from_str("2024-01-01T00:15:30.000000099 GPST").unwrap();
+    assert!(model.record.as_obs().unwrap().keys().any(|k| k.epoch == t0));
+    assert!(model.record.as_obs().unwrap().keys().any(|k| k.epoch == t1));
+
+    let lines = epoch_lines(&formatted);
+    assert_eq!(
+        lines[0],
+        "> 2024 01 01 00 00 00.0000000  0  1       0.000000001520 12000"
+    );
+    assert_eq!(
+        lines[1],
+        "> 2024 01 01 00 00 30.0000000  0  1       0.000000003404"
+    );
+    assert!(lines.contains(&"> 2024 01 01 00 15 30.0000000  0  1                      99000"));
+
+    // round trip
+    let dut = Rinex::parse(&mut BufReader::new(Cursor::new(formatted.as_str()))).unwrap();
+    assert_eq!(dut.header.version, model.header.version);
+    assert_eq!(dut.record, model.record);
+
+    // not written for revisions prior 4.02
+    let mut old = model.clone();
+    old.header.version = Version::new(4, 1);
+    let mut buf = BufWriter::new(Utf8Buffer::new(65536));
+    old.format(&mut buf).unwrap();
+    let formatted = buf.into_inner().unwrap().to_ascii_utf8();
+    let lines = epoch_lines(&formatted);
+    assert_eq!(
+        lines[0],
+        "> 2024 01 01 00 00 00.0000000  0  1       0.000000001520"
+    );
 }
 
 #[test]
