@@ -472,6 +472,38 @@ R26 2024 02 03 00 15 00-1.605716170161e-05 1.652011860642e-12-2.081668171172e-17
     }
 
     #[test]
+    fn gps_cnav_flags() {
+        // RINEX 4.02 Table A10: optional integer flags after wn_op
+        // (bit 0 integrity status, bit 1 L2C phasing, bit 2 alert)
+        let content = "> EPH G04 CNAV
+G04 2019 03 14 03 30 00 1.330042141490e-04 7.226219622680e-12 0.000000000000e+00
+     2.001762390137e-03 6.914062500000e-01 4.625906973308e-09 1.887277537485e+00
+     1.024454832077e-08 3.348654136062e-04 8.376315236092e-06 5.153800325291e+03
+     2.412000000000e+05-4.656612873077e-09 5.171544951605e-01 2.328306436539e-08
+     9.601927657114e-01 2.174140625000e+02-1.737767543851e+00-8.034028170143e-09
+    -2.950122884460e-10-1.312310522376e-14-2.000000000000e+00 2.000000000000e+00
+     0.000000000000e+00 7.000000000000e+00-8.789356797934e-09 5.000000000000e+00
+    -5.820766091347e-10-6.606569513679e-09-1.178705133498e-08-1.178705133498e-08
+     3.558540000000e+05 2.044000000000e+03";
+
+        // RINEX 4.00 / 4.01: no flags (Table A12 example)
+        let (key, frame) = parse(content).unwrap();
+        assert_eq!(key.msgtype, NavMessageType::CNAV);
+        let eph = frame.as_ephemeris().unwrap();
+        assert_eq!(eph.get_orbit_f64("t_tm"), Some(3.558540000000e+05));
+        assert_eq!(eph.get_orbit_f64("wn_op"), Some(2044.0));
+        assert_eq!(eph.orbits.get("flags"), None);
+
+        // RINEX 4.02: flags = 5 (integrity status and alert)
+        let content = format!("{} 5.000000000000e+00\n", content);
+        let (_, frame) = parse(&content).unwrap();
+        let eph = frame.as_ephemeris().unwrap();
+        assert_eq!(eph.get_orbit_f64("t_tm"), Some(3.558540000000e+05));
+        assert_eq!(eph.get_orbit_f64("wn_op"), Some(2044.0));
+        assert_eq!(eph.orbits.get("flags").and_then(|v| v.as_u8()), Some(5));
+    }
+
+    #[test]
     fn record_header_bad_subtype() {
         let content = "> ION J01 CNVX XXXX
     2021 07 05 23 30 42 7.450580596924e-09 2.235174179077e-08-5.960464477539e-08
