@@ -346,6 +346,16 @@ mod test {
             ),
             (
                 Constellation::Glonass,
+                Version::new(4, 0),
+                NavMessageType::L1OC,
+            ),
+            (
+                Constellation::Glonass,
+                Version::new(4, 0),
+                NavMessageType::L3OC,
+            ),
+            (
+                Constellation::Glonass,
                 Version::new(2, 0),
                 NavMessageType::LNAV,
             ),
