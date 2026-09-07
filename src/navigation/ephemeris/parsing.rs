@@ -49,24 +49,24 @@ fn parse_orbits(
             false => &line[4..],
         };
 
-        let mut nb_missing = 4 - (line.len() / word_size);
-        // println!("LINE \"{}\" | NB MISSING {}", line, nb_missing); //DEBUG
+        // number of fields found on this line, blank or not
+        let mut nb_fields = 0;
 
         loop {
             if line.is_empty() {
-                key_index += nb_missing;
+                // fields omitted at the end of the line
+                key_index += 4_usize.saturating_sub(nb_fields);
                 break;
             }
 
             let (val_str, rem) = line.split_at(std::cmp::min(word_size, line.len()));
             let val_str = val_str.trim();
-            // println!("CONTENT \"{}\"", content); // DEBUG
+            nb_fields += 1;
 
             // handle omitted fields
             if val_str.is_empty() {
                 // omitted field
                 key_index += 1;
-                nb_missing = nb_missing.saturating_sub(1);
                 line = rem;
                 continue;
             }
@@ -224,8 +224,10 @@ impl Ephemeris {
 mod test {
     use crate::{
         navigation::{Ephemeris, NavMessageType},
-        prelude::{Constellation, Version},
+        prelude::{Constellation, Epoch, TimeScale, Version, SV},
     };
+
+    use std::str::FromStr;
 
     use super::parse_orbits;
 
@@ -510,5 +512,42 @@ mod test {
         assert_eq!(ephemeris.get_orbit_f64("velX"), None);
         assert_eq!(ephemeris.get_orbit_f64("satPosY"), Some(-0.216949155273E5));
         assert_eq!(ephemeris.get_orbit_f64("satPosZ"), Some(0.109021518555E5));
+    }
+
+    #[test]
+    fn blank_field_on_short_line() {
+        // A blank field followed by omitted trailing fields on the same
+        // line must not shift the fields of the following lines.
+        // GPS LNAV V4 line 5: idot, (blank l2 codes), week, omitted l2p flag
+        let content =
+            "     9.800000000000e+01-1.718750000000e+00 4.639836124941e-09 2.148941747752e+00
+    -1.881271600723e-07 3.355251392350e-04 8.245930075645e-06 5.153800453186e+03
+     3.600000000000e+05-1.676380634308e-08 5.171400020311e-01 1.490116119385e-08
+     9.601921900531e-01 2.187187500000e+02-1.736906885738e+00-8.044977962767e-09
+    -2.932264997750e-10                    2.044000000000e+03
+     4.000000000000e+00 6.300000000000e+01-8.847564458847e-09 8.660000000000e+02
+     3.553500000000e+05 4.000000000000e+00";
+        let orbits = parse_orbits(
+            Version::new(4, 0),
+            NavMessageType::LNAV,
+            Constellation::GPS,
+            content.lines(),
+        )
+        .unwrap();
+        let ephemeris = Ephemeris {
+            clock_bias: 0.0,
+            clock_drift: 0.0,
+            clock_drift_rate: 0.0,
+            orbits,
+        };
+        assert_eq!(ephemeris.get_orbit_f64("idot"), Some(-2.932264997750e-10));
+        assert_eq!(ephemeris.get_orbit_f64("l2Codes"), None);
+        assert_eq!(ephemeris.get_week(), Some(2044));
+        assert_eq!(ephemeris.get_orbit_f64("l2p"), None);
+        assert_eq!(ephemeris.get_orbit_f64("accuracy"), Some(4.0));
+        assert_eq!(ephemeris.get_orbit_f64("tgd"), Some(-8.847564458847e-09));
+        assert_eq!(ephemeris.get_orbit_f64("iodc"), Some(866.0));
+        assert_eq!(ephemeris.get_orbit_f64("t_tm"), Some(3.553500000000e+05));
+        assert_eq!(ephemeris.get_orbit_f64("fitInt"), Some(4.0));
     }
 }
