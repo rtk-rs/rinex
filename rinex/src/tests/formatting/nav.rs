@@ -1,7 +1,7 @@
 //! Navigation RINEX formatting round trips
 use crate::{
     navigation::{NavFrameType, NavMessageType, OrbitItem, Record},
-    prelude::{Constellation, Rinex, Version},
+    prelude::{Constellation, FormattingError, Rinex, Version},
     tests::formatting::Utf8Buffer,
 };
 
@@ -365,4 +365,78 @@ fn nav_v3_to_v2_conversion() {
     for (k, frame) in gps {
         assert_eq!(dut_rec.get(k), Some(frame), "{:?}", k);
     }
+}
+
+#[test]
+fn nav_nothing_representable_is_an_error() {
+    let model = parse(&read_resource("NAV/V4/rinex402_examples_MN.rnx"));
+
+    let is_legacy = |k: &crate::navigation::NavKey| {
+        k.frmtype == NavFrameType::Ephemeris
+            && matches!(
+                k.msgtype,
+                NavMessageType::LNAV
+                    | NavMessageType::FDMA
+                    | NavMessageType::INAV
+                    | NavMessageType::FNAV
+                    | NavMessageType::D1
+                    | NavMessageType::D2
+                    | NavMessageType::SBAS
+            )
+    };
+
+    let try_format = |rinex: &Rinex| {
+        let mut buf = BufWriter::new(Utf8Buffer::new(1 << 16));
+        rinex.format(&mut buf)
+    };
+
+    // modern messages, STO, EOP and ION only: nothing RINEX 3 can carry
+    let mut modern = model.clone();
+    modern.header.version = Version::new(3, 5);
+    modern
+        .record
+        .as_mut_nav()
+        .unwrap()
+        .retain(|k, _| !is_legacy(k));
+    assert!(!modern.record.as_nav().unwrap().is_empty());
+    assert!(matches!(
+        try_format(&modern),
+        Err(FormattingError::NoRepresentableFrame)
+    ));
+
+    // the same record is fine as RINEX 4
+    modern.header.version = Version::new(4, 2);
+    assert!(try_format(&modern).is_ok());
+
+    // one legacy ephemeris is enough: the rest is skipped
+    let mut partial = model.clone();
+    partial.header.version = Version::new(3, 5);
+    partial
+        .record
+        .as_mut_nav()
+        .unwrap()
+        .retain(|k, _| !is_legacy(k) || k.msgtype == NavMessageType::FDMA);
+    assert!(try_format(&partial).is_ok());
+
+    // RINEX 2 GPS file from GLONASS ephemerides only
+    let mut glonass = model.clone();
+    glonass.header.version = Version::new(2, 11);
+    glonass.header.constellation = Some(Constellation::GPS);
+    glonass
+        .record
+        .as_mut_nav()
+        .unwrap()
+        .retain(|k, _| k.msgtype == NavMessageType::FDMA);
+    assert!(matches!(
+        try_format(&glonass),
+        Err(FormattingError::NoRepresentableFrame)
+    ));
+    glonass.header.constellation = Some(Constellation::Glonass);
+    assert!(try_format(&glonass).is_ok());
+
+    // an empty record writes an empty file
+    let mut empty = model.clone();
+    empty.header.version = Version::new(3, 5);
+    empty.record.as_mut_nav().unwrap().clear();
+    assert!(try_format(&empty).is_ok());
 }

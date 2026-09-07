@@ -6,8 +6,8 @@ use crate::{
     error::FormattingError,
     navigation::{
         orbits::closest_nav_standards, BdModel, EarthOrientation, Ephemeris, GloCdmaModel,
-        IonosphereModel, KbModel, KbRegionCode, NavFrameType, NavKey, NavMessageType, NavicKbModel,
-        NavicNeqnModel, NgModel, OrbitItem, Record, SystemTime,
+        IonosphereModel, KbModel, KbRegionCode, NavFrame, NavFrameType, NavKey, NavMessageType,
+        NavicKbModel, NavicNeqnModel, NgModel, OrbitItem, Record, SystemTime,
     },
     prelude::{Constellation, Header, RinexType, Version},
 };
@@ -392,7 +392,10 @@ fn format_ionosphere_model<W: Write>(
 ///   modern messages (CNAV, CNV1 to CNV3, L1NV, L1OC, L3OC) and the
 ///   STO, EOP and ION records have no representation there and are
 ///   skipped. RINEX 2 files describe a single constellation: when the
-///   header names one, the other satellites are skipped too.
+///   header names one, the other satellites are skipped too. When the
+///   record is not empty and none of its frames can be written,
+///   [FormattingError::NoRepresentableFrame] is returned before
+///   anything is written.
 /// - written as RINEX 4, ephemerides parsed from RINEX 2 or 3 are
 ///   given their RINEX 4 message type: FDMA for GLONASS, SBAS for
 ///   SBAS, INAV or FNAV for Galileo from the data source flags, D1 or
@@ -413,6 +416,22 @@ pub fn format<W: Write>(
         None
     };
 
+    // frames with a representation prior RINEX 4
+    let representable = |k: &NavKey, frame: &NavFrame| {
+        if frame.as_ephemeris().is_none() || !is_legacy_message(k.msgtype, k.sv.constellation) {
+            return false;
+        }
+        match constellation {
+            Some(constellation) if constellation.is_sbas() => k.sv.constellation.is_sbas(),
+            Some(constellation) => k.sv.constellation == constellation,
+            None => true,
+        }
+    };
+
+    if major < 4 && !rec.is_empty() && !rec.iter().any(|(k, frame)| representable(k, frame)) {
+        return Err(FormattingError::NoRepresentableFrame);
+    }
+
     for (k, frame) in rec.iter() {
         if let Some(eph) = frame.as_ephemeris() {
             if major > 3 {
@@ -423,18 +442,8 @@ pub fn format<W: Write>(
                 format_epoch_v4(writer, &key)?;
                 format_ephemeris(writer, &key, key.msgtype, eph, version, exponent)?;
             } else {
-                if !is_legacy_message(k.msgtype, k.sv.constellation) {
+                if !representable(k, frame) {
                     continue;
-                }
-                if let Some(constellation) = constellation {
-                    let same = if constellation.is_sbas() {
-                        k.sv.constellation.is_sbas()
-                    } else {
-                        k.sv.constellation == constellation
-                    };
-                    if !same {
-                        continue;
-                    }
                 }
                 format_epoch_v2v3(writer, k, major)?;
                 // every RINEX 2/3 orbit definition is filed as LNAV

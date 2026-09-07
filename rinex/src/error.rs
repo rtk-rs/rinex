@@ -191,6 +191,8 @@ pub enum FormattingError {
     MissingObservableDefinition,
     #[error("nav: unknown radio message")]
     NoNavigationDefinition,
+    #[error("nav: no frame can be written in this revision")]
+    NoRepresentableFrame,
     #[error("nav: missing grid defs")]
     NoGridDefinition,
 }
