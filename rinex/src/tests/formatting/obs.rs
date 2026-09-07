@@ -3,11 +3,62 @@ use std::str::FromStr;
 
 use crate::{
     observation::HeaderFields,
-    prelude::{Constellation, Epoch, Observable},
+    prelude::{Constellation, Epoch, Observable, Rinex},
     tests::formatting::{generic_formatted_lines_test, Utf8Buffer},
 };
 
-use std::io::BufWriter;
+use std::io::{BufReader, BufWriter, Cursor};
+use std::path::Path;
+
+/// Reads a test resource into memory
+fn read_resource(path: &str) -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../test_resources")
+        .join(path);
+    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {}", path.display(), e))
+}
+
+/// Parses `content`, formats it back and returns (parsed, formatted text)
+fn parse_and_format(content: &str) -> (Rinex, String) {
+    let rinex = Rinex::parse(&mut BufReader::new(Cursor::new(content))).unwrap();
+    let mut buf = BufWriter::new(Utf8Buffer::new(65536));
+    rinex.format(&mut buf).unwrap();
+    let formatted = buf.into_inner().unwrap().to_ascii_utf8();
+    (rinex, formatted)
+}
+
+/// Returns the epoch lines (starting with '>') of a V3+ observation file
+fn epoch_lines(content: &str) -> Vec<&str> {
+    content.lines().filter(|l| l.starts_with('>')).collect()
+}
+
+#[test]
+fn obs_v3_clock_offset_formatting() {
+    let content = read_resource("OBS/V4/ACRG00GHA_R_20240010000_01H_30S_MO.rnx");
+    let (model, formatted) = parse_and_format(&content);
+
+    let lines = epoch_lines(&formatted);
+    assert_eq!(lines.len(), epoch_lines(&content).len());
+
+    // clock offset is F15.12 in columns 42-56
+    assert_eq!(
+        lines[0],
+        "> 2024 01 01 00 00 00.0000000  0  1       0.000000001520"
+    );
+    assert_eq!(
+        lines[1],
+        "> 2024 01 01 00 00 30.0000000  0  1       0.000000003404"
+    );
+
+    // epoch without clock offset
+    assert!(lines
+        .iter()
+        .any(|line| line.len() == "> 2024 01 01 00 00 00.0000000  0  1".len()));
+
+    // round trip
+    let dut = Rinex::parse(&mut BufReader::new(Cursor::new(formatted.as_str()))).unwrap();
+    assert_eq!(dut.record, model.record);
+}
 
 #[test]
 fn obs_v1_single_line_formatting() {

@@ -66,9 +66,10 @@ fn format_epoch_v3<W: Write>(
     let numsat = sv_list.len();
 
     if let Some(clock) = clock {
+        // receiver clock offset: F15.12 in columns 42-56
         writeln!(
             w,
-            "> {}  {} {:2}  {:13.4}",
+            "> {}  {} {:2}      {:15.12}",
             epoch_format(k.epoch, RinexType::ObservationData, 3),
             k.flag,
             numsat,
