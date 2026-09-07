@@ -21,7 +21,7 @@ pub use crate::navigation::{
     frame::{NavFrame, NavFrameType},
     header::HeaderFields,
     ionosphere::{BdModel, IonosphereModel, KbModel, KbRegionCode, NgModel, NgRegionFlags},
-    message::NavMessageType,
+    message::{NavMessageSubtype, NavMessageType},
     time::TimeOffset,
 };
 
@@ -42,7 +42,16 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::BTreeMap;
 
-use crate::prelude::{Epoch, SV};
+use crate::prelude::{Constellation, Epoch, ParsingError, TimeScale, SV};
+
+/// [TimeScale] of the navigation messages of a [Constellation].
+/// NavIC messages are expressed in GPST (RINEX 4.02 Table A30).
+pub(crate) fn timescale(constellation: Constellation) -> Result<TimeScale, ParsingError> {
+    match constellation {
+        Constellation::IRNSS => Ok(TimeScale::GPST),
+        c => c.timescale().ok_or(ParsingError::NoTimescaleDefinition),
+    }
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -58,6 +67,10 @@ pub struct NavKey {
 
     /// [NavFrame] type following.
     pub frmtype: NavFrameType,
+
+    /// [NavMessageSubtype], optional fourth field of the RINEX 4.02
+    /// record header, telling apart otherwise identical records.
+    pub subtype: Option<NavMessageSubtype>,
 }
 
 /// Navigation data are [NavFrame]s indexed by [NavKey].

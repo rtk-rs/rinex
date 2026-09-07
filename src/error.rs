@@ -128,6 +128,9 @@ pub enum ParsingError {
     NavInvalidTimescale,
     #[error("nav: invalid message type")]
     NavMsgType,
+
+    #[error("nav: invalid message subtype")]
+    NavMsgSubtype,
     #[error("nav: (ref) epoch week counter parsing")]
     NavEpochWeekCounter,
     #[error("nav: time offset parsing")]

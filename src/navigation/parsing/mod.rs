@@ -26,6 +26,7 @@ pub fn parse_epoch(header: &Header, content: &str) -> Result<(NavKey, NavFrame),
             sv,
             msgtype: NavMessageType::LNAV,
             frmtype: NavFrameType::Ephemeris,
+            subtype: None,
         };
 
         let frame = NavFrame::EPH(eph);
@@ -79,7 +80,7 @@ pub fn is_new_epoch(line: &str, v: Version) -> bool {
 
 #[cfg(test)]
 mod test {
-    use super::{is_new_epoch, parse_epoch};
+    use super::{is_new_epoch, parse_epoch, parse_v4_epoch};
 
     use crate::{
         navigation::{NavFrameType, NavMessageType},
@@ -456,5 +457,46 @@ mod test {
                 panic!("Got unexpected key \"{}\" for GLOV3 record", k);
             }
         }
+    }
+
+    #[test]
+    fn v4_record_header_line() {
+        use crate::navigation::{ionosphere::KbRegionCode, NavMessageSubtype};
+        use crate::prelude::{Constellation, SV};
+
+        // blank PRN: the record names the constellation only
+        let content = "> STO E   IFNV
+    2020 09 15 00 00 00 GAUT                                  UTCGAL
+     6.048000000000e+05-1.862645149231e-09 8.881784197001e-16 0.000000000000e+00";
+        let (k, _) = parse_v4_epoch(content).unwrap();
+        assert_eq!(k.sv, SV::new(Constellation::Galileo, 0));
+        assert_eq!(k.msgtype, NavMessageType::IFNV);
+        assert_eq!(k.subtype, None);
+        assert_eq!(k.epoch, Epoch::from_str("2020-09-15T00:00:00 GST").unwrap());
+
+        // RINEX 4.02 subtype: QZSS region code
+        let content = "> ION J01 CNVX JAPN
+    2022 06 08 09 59 48 1.024454832077E-08 2.235174179077E-08-5.960464477539E-08
+    -1.192092895508E-07 9.625600000000E+04 1.310720000000E+05-6.553600000000E+04
+    -5.898240000000E+05 0.000000000000E+00";
+        let (k, frame) = parse_v4_epoch(content).unwrap();
+        assert_eq!(k.subtype, Some(NavMessageSubtype::JAPN));
+        let model = frame.as_ionosphere_model().unwrap().as_klobuchar().unwrap();
+        assert_eq!(model.region, KbRegionCode::Japan);
+
+        // unknown subtype
+        let content = content.replace("JAPN", "WEST");
+        assert!(parse_v4_epoch(&content).is_err());
+
+        // NavIC records are expressed in GPST
+        let content = "> STO I02 LNAV
+    2020 09 15 02 05 36 IRUT
+     6.048000000000e+05 0.000000000000e+00 0.000000000000e+00 0.000000000000e+00";
+        let (k, _) = parse_v4_epoch(content).unwrap();
+        assert_eq!(k.msgtype, NavMessageType::LNAV);
+        assert_eq!(
+            k.epoch,
+            Epoch::from_str("2020-09-15T02:05:36 GPST").unwrap()
+        );
     }
 }
