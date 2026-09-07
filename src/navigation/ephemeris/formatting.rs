@@ -33,31 +33,39 @@ impl Ephemeris {
             },
         };
 
-        // starts with (clock_bias, drift, rate)
+        // starts with (clock_bias, drift, rate).
+        // SBAS messages carry the transmission time (seconds of week)
+        // in the drift rate slot, stored as the "week" orbit item.
         // epoch has already been buffered
+        let third = if sv_constellation == Constellation::SBAS {
+            self.get_orbit_f64("week").unwrap_or(self.clock_drift_rate)
+        } else {
+            self.clock_drift_rate
+        };
+
         write!(
             w,
             "{}{}{}",
             NavFormatter::new(self.clock_bias),
             NavFormatter::new(self.clock_drift),
-            NavFormatter::new(self.clock_drift_rate),
+            NavFormatter::new(third),
         )?;
+
+        // orbit lines: three leading blanks in RINEX 2, four from RINEX 3 on.
+        // Fields absent from the record are left blank, as the parser
+        // read them.
+        let padding = if version.major < 3 { "   " } else { "    " };
+        const BLANK: &str = "                   ";
 
         // following standard specs
         let data_fields = &standard_specs.items;
-        for i in 0..data_fields.len() {
-            if let Some(value) = self.get_orbit_f64(data_fields[i].0) {
-                if i % 4 == 0 {
-                    write!(w, "\n   {}", NavFormatter::new(value))?;
-                } else {
-                    write!(w, "{}", NavFormatter::new(value))?;
-                }
-            } else {
-                if i % 4 == 0 {
-                    write!(w, "\n   {}", NavFormatter::new(0.0))?;
-                } else {
-                    write!(w, "{}", NavFormatter::new(0.0))?;
-                }
+        for (i, (field, _)) in data_fields.iter().enumerate() {
+            if i % 4 == 0 {
+                write!(w, "\n{}", padding)?;
+            }
+            match self.get_orbit_f64(field) {
+                Some(value) => write!(w, "{}", NavFormatter::new(value))?,
+                None => write!(w, "{}", BLANK)?,
             }
         }
 
@@ -83,7 +91,6 @@ mod test {
     #[test]
     fn ephemeris_formatting() {
         let g01 = SV::from_str("G01").unwrap();
-        let version = Version::from_str("2.0").unwrap();
         let msgtype = NavMessageType::LNAV;
 
         let ephemeris = Ephemeris {
@@ -101,6 +108,9 @@ mod test {
             .collect(),
         };
 
+        // RINEX 2: orbit lines indented by three blanks,
+        // fields absent from the record left blank
+        let version = Version::from_str("2.0").unwrap();
         let utf8 = Utf8Buffer::new(1024);
         let mut writer = BufWriter::new(utf8);
 
@@ -109,19 +119,71 @@ mod test {
             .unwrap();
 
         let inner = writer.into_inner().unwrap();
-
         let utf8 = inner.to_ascii_utf8();
 
         assert_eq!(
             utf8,
             "-1.000000000000E-04-2.000000000000E-11 0.000000000000E+00
-    1.000000000000E+00 2.000000000000E+00 3.000000000000E+00 0.000000000000E+00
-    5.000000000000E+00 0.000000000000E+00 0.000000000000E+00 0.000000000000E+00
-    0.000000000000E+00 0.000000000000E+00 0.000000000000E+00 0.000000000000E+00
-    0.000000000000E+00 0.000000000000E+00 0.000000000000E+00 0.000000000000E+00
-    0.000000000000E+00 0.000000000000E+00 0.000000000000E+00 0.000000000000E+00
-    0.000000000000E+00 0.000000000000E+00 0.000000000000E+00 0.000000000000E+00
-    0.000000000000E+00 0.000000000000E+00\n"
+    1.000000000000E+00 2.000000000000E+00 3.000000000000E+00                   
+    5.000000000000E+00                                                         
+                                                                               
+                                                                               
+                                                                               
+                                                                               
+                                         \n"
         );
+
+        // RINEX 3: four blanks
+        let version = Version::from_str("3.0").unwrap();
+        let utf8 = Utf8Buffer::new(1024);
+        let mut writer = BufWriter::new(utf8);
+
+        ephemeris
+            .format(&mut writer, g01, version, msgtype)
+            .unwrap();
+
+        let inner = writer.into_inner().unwrap();
+        let utf8 = inner.to_ascii_utf8();
+
+        assert!(utf8.starts_with(
+            "-1.000000000000E-04-2.000000000000E-11 0.000000000000E+00
+     1.000000000000E+00 2.000000000000E+00 3.000000000000E+00                   
+     5.000000000000E+00"
+        ));
+    }
+
+    #[test]
+    fn sbas_ephemeris_formatting() {
+        // SBAS: the transmission time (seconds of week) is written
+        // in the clock drift rate slot
+        let s36 = SV::from_str("S36").unwrap();
+        let version = Version::from_str("3.0").unwrap();
+
+        let ephemeris = Ephemeris {
+            clock_bias: 0.0,
+            clock_drift: 0.0,
+            clock_drift_rate: 0.0,
+            orbits: [
+                ("week".to_string(), OrbitItem::U32(437280)),
+                ("satPosX".to_string(), OrbitItem::F64(42003.688)),
+            ]
+            .into_iter()
+            .collect(),
+        };
+
+        let utf8 = Utf8Buffer::new(1024);
+        let mut writer = BufWriter::new(utf8);
+
+        ephemeris
+            .format(&mut writer, s36, version, NavMessageType::LNAV)
+            .unwrap();
+
+        let inner = writer.into_inner().unwrap();
+        let utf8 = inner.to_ascii_utf8();
+
+        assert!(utf8.starts_with(
+            " 0.000000000000E+00 0.000000000000E+00 4.372800000000E+05
+     4.200368800000E+04"
+        ));
     }
 }
