@@ -1,6 +1,6 @@
 use crate::{
     epoch::parse_in_timescale as parse_epoch_in_timescale,
-    navigation::{orbits::closest_nav_standards, Ephemeris, NavMessageType, OrbitItem},
+    navigation::{orbits::closest_nav_standards, timescale, Ephemeris, NavMessageType, OrbitItem},
     prelude::{Constellation, Epoch, ParsingError, TimeScale, Version, SV},
 };
 
@@ -127,10 +127,7 @@ impl Ephemeris {
             },
         };
 
-        let ts = sv
-            .constellation
-            .timescale()
-            .ok_or(ParsingError::NoTimescaleDefinition)?;
+        let ts = timescale(sv.constellation)?;
 
         let epoch = parse_epoch_in_timescale(date.trim(), ts)?;
 
@@ -271,6 +268,42 @@ mod test {
     //     }
     //     map
     // }
+
+    #[test]
+    fn navic_orbit_v3() {
+        // RINEX 4.02 Table A32 LNAV example, without the record header
+        let content =
+            "     1.690000000000e+02-5.793750000000e+02 4.834487090078e-09-4.281979621524e-01
+    -1.904368400574e-05 2.015684265643e-03-3.430992364883e-06 6.493289550781e+03
+     1.803360000000e+05 2.495944499969e-07-1.337499015334e+00 7.450580596924e-08
+     5.022043764738e-01 1.946250000000e+02-2.970970345572e+00-4.461614415577e-09
+    -9.578970431139e-10                    2.123000000000e+03
+     2.000000000000e+00 0.000000000000e+00-1.862645149231e-09
+     1.804920000000e+05";
+        let orbits = parse_orbits(
+            Version::new(3, 5),
+            NavMessageType::LNAV,
+            Constellation::IRNSS,
+            content.lines(),
+        )
+        .unwrap();
+        let ephemeris = Ephemeris {
+            clock_bias: 0.0,
+            clock_drift: 0.0,
+            clock_drift_rate: 0.0,
+            orbits,
+        };
+        assert_eq!(ephemeris.get_orbit_f64("iodec"), Some(1.690000000000e+02));
+        assert_eq!(ephemeris.get_orbit_f64("m0"), Some(-4.281979621524e-01));
+        assert_eq!(ephemeris.get_orbit_f64("e"), Some(2.015684265643e-03));
+        assert_eq!(ephemeris.get_orbit_f64("toe"), Some(1.803360000000e+05));
+        assert_eq!(ephemeris.get_orbit_f64("omega"), Some(-2.970970345572e+00));
+        assert_eq!(ephemeris.get_orbit_f64("idot"), Some(-9.578970431139e-10));
+        assert_eq!(ephemeris.get_week(), Some(2123));
+        assert_eq!(ephemeris.get_orbit_f64("ura"), Some(2.0));
+        assert_eq!(ephemeris.get_orbit_f64("tgd"), Some(-1.862645149231e-09));
+        assert_eq!(ephemeris.get_orbit_f64("t_tm"), Some(1.804920000000e+05));
+    }
 
     #[test]
     fn gal_orbit() {
