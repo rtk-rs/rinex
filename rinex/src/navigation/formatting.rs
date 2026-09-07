@@ -22,7 +22,16 @@ fn format_epoch_v4<W: Write>(w: &mut BufWriter<W>, k: &NavKey) -> std::io::Resul
     let (yyyy, m, d, hh, mm, ss, _) = epoch_decomposition(k.epoch);
 
     // record header line: "> TYP SVN MSGT [SUBT]"
-    write!(w, "> {} {:x} {}", k.frmtype, k.sv, k.msgtype)?;
+    if k.sv.prn == 0 {
+        // constellation only, blank PRN
+        write!(
+            w,
+            "> {} {:x}   {}",
+            k.frmtype, k.sv.constellation, k.msgtype
+        )?;
+    } else {
+        write!(w, "> {} {:x} {}", k.frmtype, k.sv, k.msgtype)?;
+    }
     if let Some(subtype) = k.subtype {
         write!(w, " {}", subtype)?;
     }
@@ -149,7 +158,7 @@ mod test {
 
     use super::{format_epoch_v2v3, format_epoch_v4};
     use crate::navigation::{NavFrameType, NavKey, NavMessageSubtype, NavMessageType};
-    use crate::prelude::{Epoch, SV};
+    use crate::prelude::{Constellation, Epoch, SV};
     use crate::tests::formatting::Utf8Buffer;
     use std::io::BufWriter;
     use std::str::FromStr;
@@ -252,6 +261,32 @@ G01 2023 03 12 00 00 00"
             &utf8_ascii,
             "> ION I10 CNVX KLOB
         2023 06 24 00 07 30"
+        );
+    }
+
+    #[test]
+    fn navfmt_v4_blank_prn() {
+        let buf = Utf8Buffer::new(1024);
+        let mut writer = BufWriter::new(buf);
+
+        let key = NavKey {
+            epoch: Epoch::from_str("2020-09-15T00:00:00 UTC").unwrap(),
+            sv: SV::new(Constellation::Galileo, 0),
+            frmtype: NavFrameType::from_str("STO").unwrap(),
+            msgtype: NavMessageType::from_str("IFNV").unwrap(),
+            subtype: None,
+        };
+
+        format_epoch_v4(&mut writer, &key).unwrap();
+
+        let inner = writer.into_inner().unwrap();
+
+        let utf8_ascii = inner.to_ascii_utf8();
+
+        assert_eq!(
+            &utf8_ascii,
+            "> STO E   IFNV
+        2020 09 15 00 00 00"
         );
     }
 

@@ -50,7 +50,8 @@ use crate::prelude::{Constellation, Epoch, ParsingError, TimeScale, SV};
 pub struct NavKey {
     /// [Epoch] of publication
     pub epoch: Epoch,
-    /// [SV] source
+    /// [SV] source. STO, EOP and ION records may name the
+    /// constellation only, which is represented by PRN 0.
     pub sv: SV,
     /// [NavMessageType] associated to following [NavFrame]
     pub msgtype: NavMessageType,

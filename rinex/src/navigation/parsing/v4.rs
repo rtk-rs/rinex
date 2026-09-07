@@ -23,7 +23,15 @@ pub fn parse(content: &str) -> Result<(NavKey, NavFrame), ParsingError> {
 
     // frmtype defines message to follow
     let frmtype = class.trim().parse::<NavFrameType>()?;
-    let sv = svnn.trim().parse::<SV>()?;
+
+    // STO, EOP and ION records may name the constellation only
+    // (blank PRN): represented by PRN 0.
+    let svnn = svnn.trim();
+    let sv = if svnn.len() == 1 {
+        SV::new(svnn.parse::<Constellation>()?, 0)
+    } else {
+        svnn.parse::<SV>()?
+    };
 
     // message type, followed by an optional subtype (RINEX 4.02)
     let mut items = rem.split_ascii_whitespace();
@@ -128,7 +136,7 @@ mod test {
             IonosphereModel, IrnssHealth, KbRegionCode, NavFrame, NavFrameType, NavMessageSubtype,
             NavMessageType, OrbitItem,
         },
-        prelude::{Epoch, ParsingError, TimeScale, SV},
+        prelude::{Constellation, Epoch, ParsingError, TimeScale, SV},
     };
     use std::str::FromStr;
 
@@ -501,6 +509,28 @@ G04 2019 03 14 03 30 00 1.330042141490e-04 7.226219622680e-12 0.000000000000e+00
         assert_eq!(eph.get_orbit_f64("t_tm"), Some(3.558540000000e+05));
         assert_eq!(eph.get_orbit_f64("wn_op"), Some(2044.0));
         assert_eq!(eph.orbits.get("flags").and_then(|v| v.as_u8()), Some(5));
+    }
+
+    #[test]
+    fn record_header_blank_prn() {
+        // RINEX 4.02 Table A41: constellation only, no PRN
+        let content = "> STO E   IFNV
+    2020 09 15 00 00 00 GAUT                                  UTCGAL
+     1.735000000000e+05-1.862645149231e-09 0.000000000000e+00 0.000000000000e+00
+";
+        let (key, frame) = parse(content).unwrap();
+        assert_eq!(key.sv, SV::new(Constellation::Galileo, 0));
+        assert_eq!(key.frmtype, NavFrameType::SystemTimeOffset);
+        assert_eq!(key.msgtype, NavMessageType::IFNV);
+        assert_eq!(
+            key.epoch,
+            Epoch::from_str("2020-09-15T00:00:00 GST").unwrap()
+        );
+        let sto = frame.as_system_time().unwrap();
+        assert_eq!(sto.system, "GAUT");
+        assert_eq!(sto.utc, "UTCGAL");
+        assert_eq!(sto.t_tm, 173500);
+        assert_eq!(sto.a, (-1.862645149231e-09, 0.0, 0.0));
     }
 
     #[test]
