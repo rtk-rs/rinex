@@ -548,8 +548,13 @@ impl Header {
 
                 observation.clock_offset_applied = n > 0;
             } else if marker.contains("# OF SATELLITES") {
-                // ---> we don't need this info,
-                //     user can determine it by analyzing the record
+                // IONEX: number of contributing satellites.
+                // Observation RINEX: determined from the record instead.
+                if rinex_type == Type::IonosphereMaps {
+                    if let Ok(u) = content.trim().parse::<u32>() {
+                        ionex = ionex.with_nb_satellites(u)
+                    }
+                }
             } else if marker.contains("PRN / # OF OBS") {
                 // ---> we don't need this info,
                 //     user can determine it by analyzing the record
@@ -849,11 +854,6 @@ impl Header {
                 // IONEX
                 if let Ok(u) = content.trim().parse::<u32>() {
                     ionex = ionex.with_nb_stations(u)
-                }
-            } else if marker.contains("# OF SATELLITES") {
-                // IONEX
-                if let Ok(u) = content.trim().parse::<u32>() {
-                    ionex = ionex.with_nb_satellites(u)
                 }
             /*
              * Initial TEC map scaling

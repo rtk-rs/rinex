@@ -219,6 +219,12 @@ pub(crate) fn parse_utc(s: &str) -> Result<Epoch, ParsingError> {
     parse_in_timescale(s, TimeScale::UTC)
 }
 
+/// Formats [Epoch] as the 6I6 fields of the IONEX epoch descriptions
+pub(crate) fn format_ionex_utc(e: Epoch) -> String {
+    let (y, m, d, hh, mm, ss, _) = epoch_decompose(e.to_time_scale(TimeScale::UTC));
+    format!("{:6}{:6}{:6}{:6}{:6}{:6}", y, m, d, hh, mm, ss)
+}
+
 pub(crate) fn parse_ionex_utc(s: &str) -> Result<Epoch, ParsingError> {
     let (mut y, mut m, mut d, mut hh, mut mm, mut ss) = (0_i32, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8);
     for (index, field) in s.split_ascii_whitespace().enumerate() {

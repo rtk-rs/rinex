@@ -208,7 +208,27 @@ impl Header {
             },
             Type::DORIS => {},
             Type::AntennaData => {},
-            Type::IonosphereMaps => {},
+            Type::IonosphereMaps => {
+                let system = self
+                    .ionex
+                    .as_ref()
+                    .map(|ionex| ionex.reference.ionex_label())
+                    .unwrap_or_else(|| "GNSS".to_string());
+
+                writeln!(
+                    w,
+                    "{}",
+                    fmt_rinex(
+                        &format!(
+                            "{:>8}            {:<20}{}",
+                            format!("{}.{}", major, minor),
+                            "IONOSPHERE MAPS",
+                            system
+                        ),
+                        "IONEX VERSION / TYPE"
+                    )
+                )?;
+            },
         }
 
         Ok(())

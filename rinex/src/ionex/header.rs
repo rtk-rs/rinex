@@ -4,6 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    epoch::format_ionex_utc,
     fmt_rinex,
     ionex::{BiasSource, Grid, MappingFunction, RefSystem},
     linspace::Linspace,
@@ -91,87 +92,140 @@ impl Default for HeaderFields {
 }
 
 impl HeaderFields {
-    /// Formats [HeaderFields] into [BufWriter].
+    /// Formats [HeaderFields] into [BufWriter], in the layout
+    /// the header parser reads back.
     pub(crate) fn format<W: Write>(&self, w: &mut BufWriter<W>) -> Result<(), FormattingError> {
+        if let Some(description) = &self.description {
+            for line in Self::wrap_words(description, 60) {
+                writeln!(w, "{}", fmt_rinex(&line, "DESCRIPTION"))?;
+            }
+        }
+
+        writeln!(
+            w,
+            "{}",
+            fmt_rinex(
+                &format_ionex_utc(self.epoch_of_first_map),
+                "EPOCH OF FIRST MAP"
+            )
+        )?;
+
+        writeln!(
+            w,
+            "{}",
+            fmt_rinex(
+                &format_ionex_utc(self.epoch_of_last_map),
+                "EPOCH OF LAST MAP"
+            )
+        )?;
+
+        writeln!(
+            w,
+            "{}",
+            fmt_rinex(&format!("{:6}", self.number_of_maps), "# OF MAPS IN FILE")
+        )?;
+
+        let mapping = match self.mapping {
+            Some(MappingFunction::CosZ) => "COSZ",
+            Some(MappingFunction::QFac) => "QFAC",
+            None => "NONE",
+        };
+
+        writeln!(
+            w,
+            "{}",
+            fmt_rinex(&format!("  {}", mapping), "MAPPING FUNCTION")
+        )?;
+
+        writeln!(
+            w,
+            "{}",
+            fmt_rinex(
+                &format!("{:8.1}", self.elevation_cutoff),
+                "ELEVATION CUTOFF"
+            )
+        )?;
+
+        if let Some(observables) = &self.observables {
+            writeln!(w, "{}", fmt_rinex(observables, "OBSERVABLES USED"))?;
+        }
+
+        if self.nb_stations > 0 {
+            writeln!(
+                w,
+                "{}",
+                fmt_rinex(&format!("{:6}", self.nb_stations), "# OF STATIONS")
+            )?;
+        }
+
+        if self.nb_satellites > 0 {
+            writeln!(
+                w,
+                "{}",
+                fmt_rinex(&format!("{:6}", self.nb_satellites), "# OF SATELLITES")
+            )?;
+        }
+
+        writeln!(
+            w,
+            "{}",
+            fmt_rinex(&format!("{:8.1}", self.base_radius), "BASE RADIUS")
+        )?;
+
         writeln!(
             w,
             "{}",
             fmt_rinex(&format!("{:6}", self.map_dimension), "MAP DIMENSION")
         )?;
 
-        // altitude grid
-        let (start, end, spacing) = (
-            self.grid.height.start,
-            self.grid.height.end,
-            self.grid.height.spacing,
-        );
-
-        writeln!(
-            w,
-            "{}",
-            fmt_rinex(
-                &format!("{} {} {}", start, end, spacing),
-                "HGT1 / HGT2 / DHGT"
-            )
-        )?;
-
-        // latitude grid
-        let (start, end, spacing) = (
-            self.grid.latitude.start,
-            self.grid.latitude.end,
-            self.grid.latitude.spacing,
-        );
-
-        writeln!(
-            w,
-            "{}",
-            fmt_rinex(
-                &format!("{} {} {}", start, end, spacing),
-                "LAT1 / LAT2 / DLAT"
-            )
-        )?;
-
-        // longitude grid
-        let (start, end, spacing) = (
-            self.grid.longitude.start,
-            self.grid.longitude.end,
-            self.grid.longitude.spacing,
-        );
-
-        writeln!(
-            w,
-            "{}",
-            fmt_rinex(
-                &format!("{} {} {}", start, end, spacing),
-                "LON1 / LON2 / DLON"
-            )
-        )?;
-
-        // elevation cutoff
-        writeln!(
-            w,
-            "{}",
-            fmt_rinex(&format!("{}", self.elevation_cutoff), "ELEVATION CUTOFF")
-        )?;
-
-        // mapping function
-        if let Some(map_f) = &self.mapping {
+        for (linspace, marker) in [
+            (&self.grid.height, "HGT1 / HGT2 / DHGT"),
+            (&self.grid.latitude, "LAT1 / LAT2 / DLAT"),
+            (&self.grid.longitude, "LON1 / LON2 / DLON"),
+        ] {
             writeln!(
                 w,
                 "{}",
-                fmt_rinex(&format!("{:?}", map_f), "MAPPING FUNCTION")
+                fmt_rinex(
+                    &format!(
+                        "  {:6.1}{:6.1}{:6.1}",
+                        linspace.start, linspace.end, linspace.spacing
+                    ),
+                    marker
+                )
             )?;
-        } else {
-            writeln!(w, "{}", fmt_rinex("NONE", "MAPPING FUNCTION"))?;
         }
 
-        // time of first map
-        writeln!(w, "{}", fmt_rinex("TODO", "EPOCH OF FIRST MAP"))?;
-
-        // time of last map
-        writeln!(w, "{}", fmt_rinex("TODO", "EPOCH OF LAST MAP"))?;
+        writeln!(
+            w,
+            "{}",
+            fmt_rinex(&format!("{:6}", self.exponent), "EXPONENT")
+        )?;
 
         Ok(())
+    }
+
+    /// Splits text into lines of at most `width` characters,
+    /// on blanks so the parser recovers the same words.
+    fn wrap_words(text: &str, width: usize) -> Vec<String> {
+        let mut lines = Vec::new();
+        let mut line = String::new();
+
+        for word in text.split(' ') {
+            if !line.is_empty() && line.len() + 1 + word.len() > width {
+                lines.push(std::mem::take(&mut line));
+            }
+            if !line.is_empty() {
+                line.push(' ');
+            }
+            line.push_str(word);
+        }
+
+        if !line.is_empty() {
+            lines.push(line);
+        }
+
+        lines
     }
 
     /// Copies self and returns with updated number of maps

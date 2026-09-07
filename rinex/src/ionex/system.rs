@@ -54,7 +54,12 @@ impl std::str::FromStr for ObsSystem {
 
 impl std::fmt::Display for ObsSystem {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.write_str(&self.to_string())
+        match self {
+            Self::BENt => f.write_str("BEN"),
+            Self::ENVisat => f.write_str("ENV"),
+            Self::ERS => f.write_str("ERS"),
+            Self::IRI => f.write_str("IRI"),
+        }
     }
 }
 
@@ -87,7 +92,11 @@ impl std::str::FromStr for Model {
 
 impl std::fmt::Display for Model {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.write_str(&self.to_string())
+        match self {
+            Self::MIX => f.write_str("MIX"),
+            Self::NNS => f.write_str("NNS"),
+            Self::TOP => f.write_str("TOP"),
+        }
     }
 }
 
@@ -103,6 +112,19 @@ impl std::fmt::Display for RefSystem {
             Self::GnssConstellation(c) => c.fmt(f),
             Self::ObservationSystem(s) => s.fmt(f),
             Self::Model(m) => m.fmt(f),
+        }
+    }
+}
+
+impl RefSystem {
+    /// Satellite system field of the "IONEX VERSION / TYPE" line,
+    /// as accepted by [RefSystem::from_str].
+    pub(crate) fn ionex_label(&self) -> String {
+        match self {
+            Self::GnssConstellation(Constellation::Mixed) => "GNSS".to_string(),
+            Self::GnssConstellation(constellation) => format!("{:E}", constellation),
+            Self::ObservationSystem(system) => system.to_string(),
+            Self::Model(model) => model.to_string(),
         }
     }
 }
