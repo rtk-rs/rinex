@@ -634,4 +634,28 @@ mod test {
             assert_eq!(eph.get_orbit_f64("t_tm"), Some(5.184000000000e+05));
         }
     }
+
+    #[test]
+    fn cnav_flags_field() {
+        // RINEX 4.02 Table A10: optional flags after wn_op
+        let content =
+            "G04 2019 03 14 03 30 00 1.330042141490e-04 7.226219622680e-12 0.000000000000e+00
+     2.001762390137e-03 6.914062500000e-01 4.625906973308e-09 1.887277537485e+00
+     1.024454832077e-08 3.348654136062e-04 8.376315236092e-06 5.153800325291e+03
+     2.412000000000e+05-4.656612873077e-09 5.171544951605e-01 2.328306436539e-08
+     9.601927657114e-01 2.174140625000e+02-1.737767543851e+00-8.034028170143e-09
+    -2.950122884460e-10-1.312310522376e-14-2.000000000000e+00 2.000000000000e+00
+     0.000000000000e+00 7.000000000000e+00-8.789356797934e-09 5.000000000000e+00
+    -5.820766091347e-10-6.606569513679e-09-1.178705133498e-08-1.178705133498e-08
+     3.558540000000e+05 2.044000000000e+03";
+        let (_, _, eph) =
+            Ephemeris::parse_v4(NavMessageType::CNAV, content.lines(), TimeScale::GPST).unwrap();
+        assert_eq!(eph.get_orbit_f64("wn_op"), Some(2044.0));
+        assert_eq!(eph.get_orbit_f64("flags"), None);
+
+        let content = format!("{} 3.000000000000e+00", content);
+        let (_, _, eph) =
+            Ephemeris::parse_v4(NavMessageType::CNAV, content.lines(), TimeScale::GPST).unwrap();
+        assert_eq!(eph.get_orbit_f64("flags"), Some(3.0));
+    }
 }
