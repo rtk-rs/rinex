@@ -30,9 +30,10 @@ impl SystemTime {
         let utc = rem.trim().to_string();
         let epoch = parse_epoch_in_timescale(epoch.trim(), ts)?;
 
-        let (a0, rem) = line_2.split_at(23);
-        let (a1, rem) = rem.split_at(19);
-        let (a2, time) = rem.split_at(19);
+        // STO MESSAGE LINE 1: t_tm, A0, A1, A2 (Table A33)
+        let (time, rem) = line_2.split_at(23);
+        let (a0, rem) = rem.split_at(19);
+        let (a1, a2) = rem.split_at(19);
         let t_tm = f64::from_str(time.trim()).map_err(|_| ParsingError::SystemTimeData)?;
 
         Ok((
@@ -66,10 +67,10 @@ mod test {
                 "2022-06-08T00:00:00 GST",
                 "GAUT",
                 "UTCGAL",
-                0,
-                2.952070000000E+05,
+                295207,
                 -1.862645149231E-09,
                 8.881784197001E-16,
+                0.0,
             ),
             (
                 "    2022 06 10 19 56 48 GPUT                                  UTC(USNO)",
@@ -77,10 +78,10 @@ mod test {
                 "2022-06-10T19:56:48 GPST",
                 "GPUT",
                 "UTC(USNO)",
-                0,
-                2.952840000000E+05,
+                295284,
                 9.313225746155E-10,
                 2.664535259100E-15,
+                0.0,
             ),
         ] {
             let test_epoch = Epoch::from_str(test_epoch).unwrap();
