@@ -128,6 +128,8 @@ pub enum ParsingError {
     NavFrameClass,
     #[error("nav: invalid message type")]
     NavMsgType,
+    #[error("nav: invalid message subtype")]
+    NavMsgSubtype,
     #[error("nav: unknown radio message")]
     NoNavigationDefinition,
     #[error("nav: unsigned radio field")]
