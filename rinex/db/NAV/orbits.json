@@ -171,7 +171,8 @@
             "iscL5I5": "f64",
             "iscL5Q5": "f64",
             "t_tm": "f64",
-            "wn_op": "f64"
+            "wn_op": "f64",
+            "flags": "u8"
         }
     },
     {
@@ -214,7 +215,8 @@
             "spare1": "xxxx",
             "spare2": "xxxx",
             "t_tm": "f64",
-            "wn_op": "f64"
+            "wn_op": "f64",
+            "flags": "u8"
         }
     },
     {
@@ -510,7 +512,8 @@
             "iscL5I5": "f64",
             "iscL5Q5": "f64",
             "t_tm": "f64",
-            "wn_op": "f64"
+            "wn_op": "f64",
+            "flags": "u8"
         }
     },
     {
@@ -553,7 +556,8 @@
             "spare1": "xxxx",
             "spare2": "xxxx",
             "t_tm": "f64",
-            "wn_op": "f64"
+            "wn_op": "f64",
+            "flags": "u8"
         }
     },
     {
