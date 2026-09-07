@@ -1,5 +1,6 @@
 use crate::{
     doris::format as format_doris_observations,
+    ionex::format as format_ionex_maps,
     meteo::format as format_meteo_observations,
     navigation::format as format_navigation,
     observation::format as format_observations,
@@ -23,6 +24,8 @@ impl Record {
             format_doris_observations(w, rec, header)
         } else if let Some(rec) = self.as_nav() {
             format_navigation(w, rec, header)
+        } else if let Some(rec) = self.as_ionex() {
+            format_ionex_maps(w, rec, header)
         } else {
             Ok(())
         }

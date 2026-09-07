@@ -66,6 +66,19 @@ impl TEC {
         });
     }
 
+    /// Returns the TEC estimate quantized in 10^exponent TECu,
+    /// as written in IONEX maps.
+    pub(crate) fn quantized_tecu(&self, exponent: i8) -> i64 {
+        Quantized::new(self.tecu(), -exponent).quantized
+    }
+
+    /// Returns the RMS estimate quantized in 10^exponent TECu,
+    /// as written in IONEX RMS maps.
+    pub(crate) fn quantized_rms(&self, exponent: i8) -> Option<i64> {
+        let rms = self.rms_tec()?;
+        Some(Quantized::new(rms, -exponent).quantized)
+    }
+
     /// Returns Total Electron Content estimate, in TECu (=10^-16 m-2)
     pub fn tecu(&self) -> f64 {
         self.tecu.real_value()

@@ -50,6 +50,8 @@ pub(crate) use parsing::{
 
 pub(crate) use quantized::Quantized;
 
+pub(crate) use formatting::format;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 

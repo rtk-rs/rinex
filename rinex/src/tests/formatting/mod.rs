@@ -1,4 +1,5 @@
 pub mod header;
+pub mod ionex;
 pub mod obs;
 
 use std::collections::HashMap;
@@ -18,7 +19,7 @@ impl Write for Utf8Buffer {
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        self.inner.clear();
+        // nothing pending: the content stays available
         Ok(())
     }
 }
