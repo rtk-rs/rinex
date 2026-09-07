@@ -155,6 +155,10 @@ pub enum ParsingError {
     NequickGData,
     #[error("nav:ion bdgim data")]
     BdgimData,
+    #[error("nav:ion navic data")]
+    NavicIonosphereData,
+    #[error("nav:ion glonass cdma data")]
+    GlonassIonosphereData,
     #[error("nav:sto data")]
     SystemTimeData,
     #[error("ionex: earth obs sat")]
