@@ -232,6 +232,11 @@ impl OrbitItem {
 
                                 Ok(OrbitItem::GlonassHealth(flags))
                             },
+                            (NavMessageType::LNAV | NavMessageType::L1NV, Constellation::IRNSS) => {
+                                let flags = IrnssHealth::from_bits_retain(unsigned);
+
+                                Ok(OrbitItem::IrnssHealth(flags))
+                            },
                             (
                                 NavMessageType::LNAV | NavMessageType::D1 | NavMessageType::D2,
                                 Constellation::BeiDou,
