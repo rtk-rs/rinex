@@ -143,13 +143,10 @@ pub struct DecompressorExpert<const M: usize> {
     epoch_descriptor: String,
     epoch_desc_len: usize, // for internal logic
 
-    /// Stored index of current BLANKS
-    /// for correct flags omition in this case
-    blanking_indexes: Vec<usize>,
+    /// Missing observations of the line being decompressed
+    blanks: Vec<bool>,
     /// Vehicles of the epoch being decompressed
     epoch_svs: Vec<SV>,
-    /// Cleaned up flags buffer (single malloc)
-    flags_buf: String,
 
     /// [TextDiff] decompression kernel for observation flags
     flags_diff: HashMap<SV, TextDiff>,
@@ -182,9 +179,8 @@ impl<const M: usize> Default for DecompressorExpert<M> {
             obs_diff: HashMap::with_capacity(8),         // cannot initialize yet
             flags_diff: HashMap::with_capacity(8),       // cannot initialize yet
             epoch_descriptor: String::with_capacity(256),
-            blanking_indexes: Vec::with_capacity(32),
+            blanks: Vec::with_capacity(64),
             epoch_svs: Vec::with_capacity(64),
-            flags_buf: String::with_capacity(32),
             clock_diff: NumDiff::<M>::new(0, M),
         }
     }
@@ -286,9 +282,8 @@ impl<const M: usize> DecompressorExpert<M> {
             epoch_diff: TextDiff::new(""),
             obs_diff: HashMap::with_capacity(8), // cannot initialize yet
             flags_diff: HashMap::with_capacity(8), // cannot initialize yet
-            blanking_indexes: Vec::with_capacity(32),
+            blanks: Vec::with_capacity(64),
             epoch_svs: Vec::with_capacity(64),
-            flags_buf: String::with_capacity(32),
             epoch_descriptor: String::with_capacity(256),
             clock_diff: NumDiff::<M>::new(0, M),
         }
@@ -380,6 +375,16 @@ impl<const M: usize> DecompressorExpert<M> {
 
             // proceed
             self.numsat = numsat;
+
+            // The text kernel never shrinks: when fewer vehicles are observed
+            // than in a previous epoch, stale identifiers trail the description.
+            // Only numsat vehicles are meaningful.
+            let expected_len = Self::sv_slice_start(self.v3, self.numsat);
+            if self.epoch_desc_len > expected_len {
+                self.epoch_descriptor.truncate(expected_len);
+                self.epoch_desc_len = expected_len;
+            }
+
             self.state = State::Clock;
             Ok(0)
         } else {
@@ -447,15 +452,18 @@ impl<const M: usize> DecompressorExpert<M> {
             produced += fmt_len;
         }
 
-        buf[produced] = b'\n'; // conclude 1st line
-        produced += 1;
-
-        // construct all following lines that need to be wrapped and padded
+        // construct all following lines that need to be wrapped and padded:
+        // 12 SVs (36 characters) per continuation line.
+        // Lines are separated by '\n', the caller terminates the last one.
         let mut offset = 67;
-        let nb_extra = (self.epoch_desc_len - Self::V1_NUMSAT_OFFSET) / 36;
+        let nb_extra = div_ceil(self.epoch_desc_len.saturating_sub(67), 36);
 
         for _ in 0..nb_extra {
-            // extra padding (TODO: improve this blanking)
+            // conclude previous line
+            buf[produced] = b'\n';
+            produced += 1;
+
+            // extra padding
             buf[produced..produced + 32].copy_from_slice(&[
                 b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ',
                 b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ', b' ',
@@ -472,10 +480,6 @@ impl<const M: usize> DecompressorExpert<M> {
 
             offset += size;
             produced += size;
-
-            // terminate this line
-            buf[produced] = b'\n';
-            produced += 1;
         }
 
         produced
@@ -595,22 +599,27 @@ impl<const M: usize> DecompressorExpert<M> {
 
         let obs = self
             .get_observables(&self.sv.constellation)
-            .expect("failed to determine sv definition");
+            .ok_or(Error::SatelliteIdentification)?;
 
         self.numobs = obs.len();
         self.state = State::Observation;
         Ok(produced)
     }
 
-    /// Process following line, in [State::Observation]
-    fn run_observation(&mut self, line: &str, len: usize, buf: &mut [u8]) -> Result<usize, Error> {
-        let mut consumed = 0;
+    /// Process following line, in [State::Observation].
+    ///
+    /// A compressed observation line is made of exactly `numobs` fields
+    /// separated by a single blank, followed by the (text compressed)
+    /// LLI/SNR flags of all observables. A field is either empty (missing
+    /// observation), a kernel reset `m&value`, or a compressed value.
+    /// Trailing missing fields and unchanged flags are usually trimmed
+    /// off the line by the compressor.
+    fn run_observation(&mut self, line: &str, _len: usize, buf: &mut [u8]) -> Result<usize, Error> {
+        let line = line.trim_end();
+        let line_len = line.len();
+        let numobs = self.numobs;
+
         let mut produced = 0;
-
-        self.blanking_indexes.clear(); // new run
-
-        #[cfg(feature = "log")]
-        trace!("[{:x}] LINE \"{}\"", self.sv, line);
 
         if self.v3 {
             // prepend SVNN identity
@@ -621,367 +630,131 @@ impl<const M: usize> DecompressorExpert<M> {
             produced += 3;
         }
 
-        // Retrieving observations is complex.
-        // When signal sampling was not feasible: data is omitted (blanked) by a single '_'
-        // Which is not particularly clever and means the data flags can only provided at the end of the line.
-        // Since data flags are text compressed, it can create some weird situations.
-        for ptr in 0..self.numobs {
-            // We must output something for each expected data points (whatever happens).
-            // So we default to a BLANK, which simplifies the code to follow vastly.
-            // In otherwords, the following code only implements successfull cases (mostly).
-            let mut formatted = "                ".to_string();
+        self.blanks.clear();
+        self.blanks.resize(numobs, true);
 
-            // Tries to locate a '_': to locate next '_', which is either
-            // - when found, this is normal line progression
-            // - when not found, this is a blanking
-            let offset = line[consumed..].find(' ');
+        let mut pos = 0;
 
-            if let Some(offset) = offset {
-                if offset > 1 {
-                    // observation (made of at least two digits)
-                    // Determine whether this is a kernel reset or compression continuation
+        for ptr in 0..numobs {
+            // V1: at most 5 observations per line
+            if !self.v3 && ptr > 0 && ptr % 5 == 0 {
+                buf[produced] = b'\n';
+                produced += 1;
+            }
 
-                    let slice = line[consumed..consumed + offset].trim();
-
-                    //#[tracecfg(feature = "log")]
-                    //debug!("slice \"{}\" [{}/{}]", &slice, ptr + 1, self.numobs);
-
-                    if let Some(offset) = slice.find('&') {
-                        if offset == 1 {
-                            // valid core reset pattern
-                            if let Ok(level) = slice[..offset].parse::<usize>() {
-                                if let Ok(value) = slice[offset + 1..].parse::<i64>() {
-                                    if let Some(kernel) = self.obs_diff.get_mut(&(self.sv, ptr)) {
-                                        kernel.force_init(value, level);
-                                    } else {
-                                        let kernel = NumDiff::<M>::new(value, level);
-                                        self.obs_diff.insert((self.sv, ptr), kernel);
-                                    }
-                                    formatted = format!("{:14.3}  ", value as f64 / 1000.0);
-                                }
-                            }
-                        }
-                        // non valid core reset patterns:
-                        // we output a BLANK
-                    } else {
-                        // compressed data case
-                        if let Ok(value) = slice.parse::<i64>() {
-                            if let Some(kernel) = self.obs_diff.get_mut(&(self.sv, ptr)) {
-                                let value = kernel.decompress(value)?;
-                                let value = value as f64 / 1000.0;
-                                formatted = format!("{:14.3}  ", value).to_string();
-                            }
-                        }
-                    }
-
-                    consumed += offset + 1; // consume until this point
-                } else {
-                    // this is either BLANK or highly compressed (=single digit value)
-                    let slice = line[consumed..consumed + offset].trim();
-
-                    if slice.len() > 0 {
-                        // this is a digit (highly compressed value)
-
-                        //#[cfg(feature = "log")]
-                        //debug!("slice \"{}\" [{}/{}]", &slice, ptr + 1, self.numobs);
-
-                        if let Ok(value) = slice.parse::<i64>() {
-                            if let Some(kernel) = self.obs_diff.get_mut(&(self.sv, ptr)) {
-                                let value = kernel.decompress(value)?;
-                                let value = value as f64 / 1000.0;
-                                formatted = format!("{:14.3}  ", value).to_string();
-                            }
-                        }
-                        consumed += 2; // consume this byte
-                    } else {
-                        consumed += 1;
-                        self.blanking_indexes.push(ptr);
-                    }
-                }
-
-                let fmt_len = formatted.len(); // TODO: improve, this is constant
-                let bytes = formatted.as_bytes();
-
-                // push into user
-                buf[produced..produced + fmt_len].copy_from_slice(&bytes);
-                produced += fmt_len;
-
-                // handle V1 padding and wrapping
-                if !self.v3 {
-                    if (ptr % 5) == 4 {
-                        // TODO: improve; this is constant
-                        let formatted = "\n".to_string();
-                        let bytes = formatted.as_bytes();
-                        let fmt_len = formatted.len();
-
-                        buf[produced..produced + fmt_len].copy_from_slice(&bytes);
-                        produced += fmt_len;
-                    }
-                }
-
-                // this may cause trimed lines to panic on next '_' search
-                // so we exist the loop so we do not overflow
-                if consumed >= len {
-                    break;
+            // grab next field, if the line was not trimmed before it
+            let field = if pos < line_len {
+                let rest = &line[pos..];
+                match rest.find(' ') {
+                    Some(size) => {
+                        pos += size + 1;
+                        &rest[..size]
+                    },
+                    None => {
+                        pos = line_len;
+                        rest
+                    },
                 }
             } else {
-                // early line termination.
-                // This happens when last observations are all missing (possibly more than one)
-                // and observation "flags" are all fully compressed (100% compression factor)
+                ""
+            };
 
-                // if we have leftovers, that means we have one last observation
-                if len > consumed {
-                    let mut formatted = "                ".to_string();
+            let value = self.decompress_field(ptr, field)?;
 
-                    // grab slice
-                    let slice = line[consumed..].trim();
+            let formatted = match value {
+                Some(value) => format!("{:14.3}  ", value as f64 / 1000.0),
+                None => "                ".to_string(),
+            };
 
-                    //#[cfg(feature = "log")]
-                    //debug!("slice \"{}\" [{}/{}]", &slice, ptr + 1, self.numobs);
+            self.blanks[ptr] = value.is_none();
 
-                    if let Some(offset) = slice.find('&') {
-                        if offset == 1 {
-                            // valid core reset pattern
-                            if let Ok(level) = slice[..offset].parse::<usize>() {
-                                if let Ok(value) = slice[offset + 1..].parse::<i64>() {
-                                    if let Some(kernel) = self.obs_diff.get_mut(&(self.sv, ptr)) {
-                                        kernel.force_init(value, level);
-                                    } else {
-                                        let kernel = NumDiff::<M>::new(value, level);
-                                        self.obs_diff.insert((self.sv, ptr), kernel);
-                                    }
-                                    formatted = format!("{:14.3}  ", value as f64 / 1000.0);
-                                }
-                            }
-                        }
-                        // non valid core reset patterns:
-                        // we output a BLANK
-                    } else {
-                        // compressed data case
-                        if let Ok(value) = slice.parse::<i64>() {
-                            if let Some(kernel) = self.obs_diff.get_mut(&(self.sv, ptr)) {
-                                let value = kernel.decompress(value)?;
-                                let value = value as f64 / 1000.0;
-                                formatted = format!("{:14.3}  ", value).to_string();
-                            }
-                        }
-                    }
-
-                    let fmt_len = formatted.len(); // TODO: improve, this is constant
-                    let bytes = formatted.as_bytes();
-
-                    // push into user
-                    buf[produced..produced + fmt_len].copy_from_slice(&bytes);
-                    produced += fmt_len;
-
-                    // handle V1 padding & wrapping
-                    if !self.v3 {
-                        // TODO: improve; this is constant
-                        let formatted = "\n                 ".to_string();
-                        let fmt_len = formatted.len();
-                        let bytes = formatted.as_bytes();
-
-                        buf[produced..produced + fmt_len].copy_from_slice(&bytes);
-                        produced += fmt_len;
-                    }
-                }
-
-                // 1. we need to push all required BLANKING
-                // 2. we need to preserve data flags
-                // 3. and finally conclude this SV
-                let nb_missing = self.numobs - ptr - 1;
-
-                let formatted = "                ".to_string();
-                let fmt_len = formatted.len(); // IMPROVE: this is constant
-                let bytes = formatted.as_bytes();
-
-                // fill required nb of blanks
-                for j in 0..nb_missing {
-                    // push into user
-                    buf[produced..produced + fmt_len].copy_from_slice(&bytes);
-                    produced += fmt_len;
-
-                    // handle V1 padding & wrapping
-                    if !self.v3 {
-                        if (ptr + j) % 5 == 4 {
-                            // TODO: improve, this is constant
-                            let formatted = "\n            ".to_string();
-                            let fmt_len = formatted.len();
-                            let bytes = formatted.as_bytes();
-
-                            buf[produced..produced + fmt_len].copy_from_slice(&bytes);
-                            produced += fmt_len;
-                        }
-                    }
-                }
-
-                // trick to preserve data flags
-                let textdiff = self
-                    .flags_diff
-                    .get_mut(&self.sv)
-                    .expect("internal error: bad crinex content?");
-
-                let flags = textdiff.decompress("").trim_end();
-                let flags_len = flags.len();
-
-                //println!("PRESERVED \"{}\"", flags); // DEBUG
-                Self::write_flags(flags, flags_len, self.numobs, self.v3, buf);
-
-                // conclude this SV
-                self.sv_ptr += 1;
-
-                #[cfg(feature = "log")]
-                trace!("[{:x} CONCLUDED {}/{}]", self.sv, self.sv_ptr, self.numsat);
-
-                if self.sv_ptr == self.numsat {
-                    #[cfg(feature = "log")]
-                    trace!("[END OF EPOCH]");
-
-                    self.state = State::Epoch;
-                    return Ok(produced);
-                } else {
-                    // identify next satellite
-                    if let Some(sat) = self.next_satellite() {
-                        self.sv = sat;
-                    } else {
-                        // failed to grab next satellite
-
-                        #[cfg(feature = "log")]
-                        error!("failed to determine next sat");
-                        self.state = State::Epoch;
-                        return Ok(produced);
-                    }
-
-                    // identify next number of physics
-                    let constellation = if self.sv.constellation.is_sbas() {
-                        Constellation::SBAS
-                    } else {
-                        self.sv.constellation
-                    };
-
-                    if let Some(observables) = self.get_observables(&constellation) {
-                        self.numobs = observables.len();
-
-                        // proceed
-                        self.state = State::Observation;
-                        return Ok(produced);
-                    } else {
-                        #[cfg(feature = "log")]
-                        error!("failed to identify next physics: forced reset");
-
-                        self.state = State::Epoch;
-                        return Ok(produced);
-                    }
-                }
-            }
-        } // for
-
-        // at this point, we're either left with two cases
-        // - "data flags" in the buffer
-        // - empty buffer, which is the case when all flags should be preserved
-        // and the compressor trimmed the lines entirely
-        if consumed < len {
-            // flags recovering
-            let flags = &line[consumed..].trim_end();
-
-            #[cfg(feature = "log")]
-            trace!("flags buffer=\"{}\"", flags);
-
-            if let Some(kernel) = self.flags_diff.get_mut(&self.sv) {
-                let flags = kernel.decompress(flags);
-                let flags_len = flags.len();
-
-                self.flags_buf = flags.to_string();
-
-                // blank flags for which observation is blanked
-                // otherwise, .decompress("") will return past value
-                for index in &self.blanking_indexes {
-                    if flags_len > (index * 2) {
-                        self.flags_buf
-                            .replace_range(2 * index..(2 * index + 1), " ");
-                    }
-                    if flags_len > index * 2 + 1 {
-                        self.flags_buf
-                            .replace_range(2 * index + 1..(2 * index + 2), " ");
-                    }
-                }
-
-                // update len
-                let flags_len = self.flags_buf.len();
-
-                #[cfg(feature = "log")]
-                trace!(
-                    "recovered flags \"{}\" (len={}, numobs={})",
-                    &self.flags_buf,
-                    flags_len,
-                    self.numobs
-                );
-
-                // copy all flags to user
-                Self::write_flags(&self.flags_buf, flags_len, self.numobs, self.v3, buf);
-            } else {
-                #[cfg(feature = "log")]
-                error!("internal error: no kernel found for sat={}", self.sv);
-                self.state = State::Epoch; // forced reset
-            }
+            let bytes = formatted.as_bytes();
+            buf[produced..produced + bytes.len()].copy_from_slice(bytes);
+            produced += bytes.len();
         }
 
-        self.obs_ptr = 0;
+        // whatever remains is the compressed flags text.
+        // When the line was trimmed, flags are simply unchanged.
+        let compressed_flags = if pos < line_len { &line[pos..] } else { "" };
 
-        // move on to next state
+        let textdiff = self
+            .flags_diff
+            .get_mut(&self.sv)
+            .expect("internal error: bad crinex content?");
+
+        let flags = textdiff.decompress(compressed_flags);
+
+        Self::write_flags(flags, &self.blanks, self.v3, buf);
+
+        // conclude this SV
         self.sv_ptr += 1;
 
-        #[cfg(feature = "log")]
-        trace!("[{:x} CONCLUDED {}/{}]", self.sv, self.sv_ptr, self.numsat);
-
         if self.sv_ptr == self.numsat {
-            #[cfg(feature = "log")]
-            trace!("[END OF EPOCH]");
-
-            // proceed to normal reset
             self.state = State::Epoch;
-            Ok(produced)
         } else {
-            // identify next sat
-            if let Some(sat) = self.next_satellite() {
-                // process next satellite
-                self.sv = sat;
+            self.sv = self
+                .next_satellite()
+                .ok_or(Error::SatelliteIdentification)?;
 
-                // identify next physics
-                let constellation = if self.sv.constellation.is_sbas() {
-                    Constellation::SBAS
-                } else {
-                    self.sv.constellation
-                };
-
-                if let Some(observables) = self.get_observables(&constellation) {
-                    self.numobs = observables.len();
-
-                    // proceed
-                    self.state = State::Observation;
-                    Ok(produced)
-                } else {
-                    #[cfg(feature = "log")]
-                    error!("failed to identify next physics: forced reset");
-
-                    self.state = State::Epoch;
-                    Ok(produced) // we have streamed data
-                }
+            let constellation = if self.sv.constellation.is_sbas() {
+                Constellation::SBAS
             } else {
-                // failed to grab next sat: should never happen here in current impl
-                // force reset
-                #[cfg(feature = "log")]
-                error!("failed to determine next sat: forced reset");
+                self.sv.constellation
+            };
 
-                self.state = State::Epoch;
-                self.epoch_descriptor.clear();
+            self.numobs = self
+                .get_observables(&constellation)
+                .ok_or(Error::SatelliteIdentification)?
+                .len();
+        }
 
-                Ok(produced)
+        Ok(produced)
+    }
+
+    /// Decompresses one observation field of the current SV.
+    /// Returns the recovered value (in 10^-3 units), or None when the
+    /// observation is missing or the field is not interpretable.
+    fn decompress_field(&mut self, ptr: usize, field: &str) -> Result<Option<i64>, Error> {
+        if field.is_empty() {
+            return Ok(None);
+        }
+
+        let bytes = field.as_bytes();
+
+        if bytes.len() > 2 && bytes[1] == b'&' {
+            // kernel reset
+            let level = match field[..1].parse::<usize>() {
+                Ok(level) => level,
+                Err(_) => return Ok(None),
+            };
+            let value = match field[2..].parse::<i64>() {
+                Ok(value) => value,
+                Err(_) => return Ok(None),
+            };
+
+            if let Some(kernel) = self.obs_diff.get_mut(&(self.sv, ptr)) {
+                kernel.force_init(value, level);
+            } else {
+                let kernel = NumDiff::<M>::new(value, level);
+                self.obs_diff.insert((self.sv, ptr), kernel);
             }
+
+            return Ok(Some(value));
+        }
+
+        let value = match field.parse::<i64>() {
+            Ok(value) => value,
+            Err(_) => return Ok(None),
+        };
+
+        // compressed value: meaningless without a kernel
+        match self.obs_diff.get_mut(&(self.sv, ptr)) {
+            Some(kernel) => Ok(Some(kernel.decompress(value)?)),
+            None => Ok(None),
         }
     }
 
-    /// Retrieves reference to GNSS observables for said [Constellation].
+    /// Helper to retrieve observable for given system
     fn get_observables(&self, constellation: &Constellation) -> Option<&Vec<Observable>> {
         // in case of (multi-gnss) "mixed" files,
         // we only stored one description using "mixed"
@@ -997,62 +770,34 @@ impl<const M: usize> DecompressorExpert<M> {
         }
     }
 
-    /// Insert data flags into buffer that we already have
-    /// partially encoded. This concludes the buffer publication in Observation state.
-    fn write_flags(flags: &str, flags_len: usize, numobs: usize, v3: bool, buf: &mut [u8]) {
-        if v3 {
-            Self::write_v3_flags(flags, flags_len, numobs, buf);
-        } else {
-            Self::write_v1_flags(flags, flags_len, buf);
-        }
-    }
-
-    /// Formats Data "flags" into mutable buffer, following standardized format.
-    fn write_v1_flags(flags: &str, flags_len: usize, buf: &mut [u8]) {
-        let mut offset = 14;
+    /// Inserts the LLI/SNR flags into the observation line(s) already
+    /// formatted in the buffer. Observables that are missing keep their
+    /// flags in the kernel but are printed fully blank.
+    fn write_flags(flags: &str, blanks: &[bool], v3: bool, buf: &mut [u8]) {
         let bytes = flags.as_bytes();
 
-        for i in 0..flags_len {
-            let lli_idx = i * 2;
-            if flags_len > lli_idx {
-                if !flags[lli_idx..lli_idx + 1].eq(" ") {
-                    buf[offset] = bytes[i * 2];
+        for (i, blank) in blanks.iter().enumerate() {
+            if *blank {
+                continue;
+            }
+
+            let offset = if v3 {
+                3 + i * 16 // SVNN prefix, no wrapping
+            } else {
+                i * 16 + i / 5 // 5 observations per line
+            };
+
+            if let Some(lli) = bytes.get(i * 2) {
+                if *lli != b' ' {
+                    buf[offset + 14] = *lli;
                 }
             }
 
-            let snr_idx = lli_idx + 1;
-            if flags_len > snr_idx {
-                if !flags[snr_idx..snr_idx + 1].eq(" ") {
-                    buf[offset + 1] = bytes[(i * 2) + 1];
+            if let Some(snr) = bytes.get(i * 2 + 1) {
+                if *snr != b' ' {
+                    buf[offset + 15] = *snr;
                 }
             }
-
-            offset += 16;
-
-            if (i % 5) == 4 {
-                offset += 1; // padding + wrapping
-            }
-        }
-    }
-
-    /// Formats Data "flags" into mutable buffer, following standardized format.
-    fn write_v3_flags(flags: &str, flags_len: usize, numobs: usize, buf: &mut [u8]) {
-        let mut offset = 17;
-        let bytes = flags.as_bytes();
-        for i in 0..numobs {
-            let lli_idx = i * 2;
-            if flags_len > lli_idx {
-                if !flags[lli_idx..lli_idx + 1].eq(" ") {
-                    buf[offset] = bytes[i * 2];
-                }
-            }
-            let snr_idx = lli_idx + 1;
-            if flags_len > snr_idx {
-                if !flags[snr_idx..snr_idx + 1].eq(" ") {
-                    buf[offset + 1] = bytes[(i * 2) + 1];
-                }
-            }
-            offset += 16;
         }
     }
 }
@@ -1246,7 +991,7 @@ mod test {
 
     #[test]
     fn v1_flags_format() {
-        for (flags, _numobs, buffer, expected) in [
+        for (flags, numobs, buffer, expected) in [
             (
                 " 5",
                 3,
@@ -1301,7 +1046,7 @@ mod test {
             let mut buf = [0; 256];
             buf[..buffer_len].copy_from_slice(&bytes);
 
-            Decompressor::write_v1_flags(flags, flags_len, &mut buf);
+            Decompressor::write_flags(flags, &vec![false; numobs], false, &mut buf);
 
             let output = from_utf8(&buf[..expected.len()]).expect("did not generate valid UTF-8");
 
@@ -1326,7 +1071,7 @@ mod test {
 
             let numobs = buffer.split_ascii_whitespace().count() - 1;
 
-            Decompressor::write_v3_flags(flags, flags_len, numobs, &mut buf);
+            Decompressor::write_flags(flags, &vec![false; numobs], true, &mut buf);
 
             let output = from_utf8(&buf[..expected.len()]).expect("did not generate valid UTF-8");
 
