@@ -636,3 +636,19 @@ fn obs_null_substract() {
         generic_null_rinex_test(&diffed);
     }
 }
+
+mod v2_clock_offset {
+    use crate::prelude::Rinex;
+
+    /// RINEX 2 epoch line with fewer than twelve vehicles and a receiver
+    /// clock offset: the SV slots between the list and the offset are
+    /// blank and must not reach the SV parser (which panics on an empty
+    /// string).
+    #[test]
+    fn v2_epoch_line_with_clock_offset() {
+        let rinex = Rinex::from_file("data/OBS/V2/delf0010_clock.21o").unwrap();
+        assert_eq!(rinex.epoch_iter().count(), 24);
+        assert_eq!(rinex.sv_iter().count(), 3);
+        assert_eq!(rinex.signal_observations_iter().count(), 24 * 3 * 7);
+    }
+}
