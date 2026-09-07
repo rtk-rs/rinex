@@ -43,12 +43,19 @@ impl Ephemeris {
             self.clock_drift_rate
         };
 
+        // RINEX 2 records use the 'D' exponent letter
+        let formatter = if version.major < 3 {
+            NavFormatter::new_v2
+        } else {
+            NavFormatter::new
+        };
+
         write!(
             w,
             "{}{}{}",
-            NavFormatter::new(self.clock_bias),
-            NavFormatter::new(self.clock_drift),
-            NavFormatter::new(third),
+            formatter(self.clock_bias),
+            formatter(self.clock_drift),
+            formatter(third),
         )?;
 
         // orbit lines: three leading blanks in RINEX 2, four from RINEX 3 on.
@@ -64,7 +71,7 @@ impl Ephemeris {
                 write!(w, "\n{}", padding)?;
             }
             match self.get_orbit_f64(field) {
-                Some(value) => write!(w, "{}", NavFormatter::new(value))?,
+                Some(value) => write!(w, "{}", formatter(value))?,
                 None => write!(w, "{}", BLANK)?,
             }
         }
@@ -108,7 +115,7 @@ mod test {
             .collect(),
         };
 
-        // RINEX 2: orbit lines indented by three blanks,
+        // RINEX 2: orbit lines indented by three blanks, 'D' exponent,
         // fields absent from the record left blank
         let version = Version::from_str("2.0").unwrap();
         let utf8 = Utf8Buffer::new(1024);
@@ -123,9 +130,9 @@ mod test {
 
         assert_eq!(
             utf8,
-            "-1.000000000000E-04-2.000000000000E-11 0.000000000000E+00
-    1.000000000000E+00 2.000000000000E+00 3.000000000000E+00                   
-    5.000000000000E+00                                                         
+            "-1.000000000000D-04-2.000000000000D-11 0.000000000000D+00
+    1.000000000000D+00 2.000000000000D+00 3.000000000000D+00                   
+    5.000000000000D+00                                                         
                                                                                
                                                                                
                                                                                

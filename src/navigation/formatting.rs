@@ -11,6 +11,8 @@ pub(crate) struct NavFormatter {
     value: f64,
     width: usize,
     precision: usize,
+    /// Exponent letter: 'E', or 'D' in RINEX 2 records
+    exponent: char,
 }
 
 impl NavFormatter {
@@ -19,6 +21,16 @@ impl NavFormatter {
             value,
             width: 15,
             precision: 12,
+            exponent: 'E',
+        }
+    }
+
+    /// Same formatting, with a 'D' exponent letter as found in
+    /// RINEX 2 navigation records.
+    pub fn new_v2(value: f64) -> Self {
+        Self {
+            exponent: 'D',
+            ..Self::new(value)
         }
     }
 
@@ -27,6 +39,7 @@ impl NavFormatter {
             value,
             width: 3,
             precision: 4,
+            exponent: 'E',
         }
     }
 
@@ -35,6 +48,7 @@ impl NavFormatter {
             value,
             width: 17,
             precision: 12,
+            exponent: 'E',
         }
     }
 
@@ -43,6 +57,7 @@ impl NavFormatter {
             value,
             width: 14,
             precision: 10,
+            exponent: 'E',
         }
     }
 
@@ -51,6 +66,7 @@ impl NavFormatter {
             value,
             width: 13,
             precision: 9,
+            exponent: 'E',
         }
     }
 }
@@ -77,7 +93,11 @@ impl std::fmt::Display for NavFormatter {
                 .parse::<i32>()
                 .unwrap();
             let formatted_exponent = format!("{}{:02}", exp_sign, exp_value);
-            write!(f, "{}{}E{}", sign_str, base, formatted_exponent)
+            write!(
+                f,
+                "{}{}{}{}",
+                sign_str, base, self.exponent, formatted_exponent
+            )
         } else {
             write!(f, "{}", formatted)
         }
@@ -95,11 +115,13 @@ fn format_epoch_v2v3<W: Write>(
     let decis = nanos / 100_000;
 
     if v2 && *file_constell != Constellation::Mixed {
+        // RINEX 2: PRN, two digit year, month, day, hour and minute
+        // as I2, seconds as F5.1
         write!(
             w,
-            "{:02} {:02} {:02} {:02} {:02} {:02} {:2}.{:01}",
+            "{:2} {:2} {:2} {:2} {:2} {:2} {:2}.{:01}",
             k.sv.prn,
-            yyyy - 2000,
+            yyyy % 100,
             m,
             d,
             hh,
@@ -207,6 +229,16 @@ mod test {
             let formatted = NavFormatter::new(value);
             assert_eq!(formatted.to_string(), expected);
         }
+
+        // RINEX 2 records: 'D' exponent
+        for (value, expected) in [
+            (0.0, " 0.000000000000D+00"),
+            (-1.0e-4, "-1.000000000000D-04"),
+            (5.153693731310e+03, " 5.153693731310D+03"),
+        ] {
+            let formatted = NavFormatter::new_v2(value);
+            assert_eq!(formatted.to_string(), expected);
+        }
     }
 
     #[test]
@@ -255,7 +287,7 @@ mod test {
 
         let utf8_ascii = inner.to_ascii_utf8();
 
-        assert_eq!(&utf8_ascii, "01 23 01 01 00 00  0.0");
+        assert_eq!(&utf8_ascii, " 1 23  1  1  0  0  0.0");
     }
 
     #[test]
