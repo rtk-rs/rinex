@@ -37,7 +37,7 @@ clap = { version = "4.4.13", features = ["derive", "color"] }
 serde = { version = "1", default-features = false, features = ["derive"] }
 
 # gnss-rs = { version = "2.2.3", features = ["serde"] }
-gnss-rs = { git = "https://github.com/rtk-rs/gnss", branch = "main", features = ["serde"] }
+gnss-rs = { version = "2.3.1", features = ["serde"] }
 
 rinex = { path = "../rinex", version = "=0.17.0-alpha-1", features = ["full"] }
 rinex-qc-traits = { path = "../qc-traits", version = "=0.2.1", features = ["processing"] }

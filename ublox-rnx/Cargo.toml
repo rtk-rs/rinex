@@ -24,4 +24,4 @@ clap = { version = "4.4.10", features = ["derive", "color"] }
 rinex = { path = "../rinex", version = "=0.17.0-alpha-1", features = ["serde", "nav", "obs", "clock"] }
 
 # gnss-rs = { version = "2.2.3", features = ["serde"] }
-gnss-rs = { git = "https://github.com/rtk-rs/gnss", branch = "main", features = ["serde"] }
+gnss-rs = { version = "2.3.1", features = ["serde"] }

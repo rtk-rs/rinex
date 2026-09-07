@@ -1,36 +1,39 @@
 use log::{error, info};
 
-use std::{cell::RefCell, collections::HashMap};
+use std::collections::HashMap;
 
 use crate::{
     context::{meta::ObsMetaData, QcContext},
     navigation::{
-        carrier_to_rtk, clock::ClockContext, orbit::OrbitalContext, signal::SignalSource,
+        clock::ClockContext, environment::EnvironmentContext, eph::NullEphemeris,
+        orbit::OrbitalContext, pvt::NavPvtSolver, signal::SignalSource, time::AbsoluteTimeContext,
     },
     QcError, QcRtkCggttsError,
 };
 
-use itertools::Itertools;
-
 use gnss_rtk::prelude::{
-    Candidate, Carrier as RTKCarrier, ClockCorrection, Config as RTKConfig, Duration, Epoch,
-    IonosphereBias as RTKIonosphereBias, Observation, Orbit, Solver, SPEED_OF_LIGHT_M_S,
+    Candidate, Carrier as RTKCarrier, Config as RTKConfig, Duration, Epoch,
+    IonosphereBias as RTKIonosphereBias, Observation, Solver, UserParameters, SPEED_OF_LIGHT_M_S,
 };
-
-use rinex::prelude::Observable;
-
-use super::eph::EphemerisContext;
 
 use cggtts::prelude::Track as CggttsTrack;
 
-use anise::math::Vector6;
+/// [Solver] deployed by [NavCggttsSolver]
+type CggttsSolver<'a> = Solver<
+    NullEphemeris,
+    OrbitalContext<'a>,
+    EnvironmentContext,
+    ClockContext<'a>,
+    AbsoluteTimeContext,
+>;
 
 /// [NavCggttsSolver] is an efficient structure to consume [QcContext]
 /// and resolve all possible CGGTTS [Track]s from it.
 pub struct NavCggttsSolver<'a> {
+    pool: Vec<Candidate>,
     signal: SignalSource<'a>,
-    solver: Solver,
-    eph_ctx: RefCell<EphemerisContext<'a>>,
+    solver: CggttsSolver<'a>,
+    params: UserParameters,
     observations: HashMap<RTKCarrier, Observation>,
     // /// Track scheduling table
     // scheduler: CggttsScheduler,
@@ -44,138 +47,23 @@ impl<'a> Iterator for NavCggttsSolver<'a> {
     type Item = Result<CggttsTrack, QcRtkCggttsError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let collected = self.signal.collect_epoch();
+        let (t, signals) = match self.signal.collect_epoch() {
+            Some(collected) => collected,
+            None => {
+                info!("consumed all signals");
+                return None;
+            },
+        };
 
-        if collected.is_none() {
-            info!("consumed all signals");
-            return None;
-        }
+        NavPvtSolver::candidates(&mut self.pool, &mut self.observations, t, signals);
 
-        // clock snapshot
-        let _clock = ClockContext::new(&self.eph_ctx);
+        // attempt resolution
+        match self.solver.ppp(t, self.params, &self.pool) {
+            Ok(pvt_solution) => {
+                let refsys = pvt_solution.clock_offset_s;
 
-        // gather candidates
-        let (t, signals) = collected.unwrap();
-
-        let sv_list = signals
-            .iter()
-            .map(|sig| sig.sv)
-            .unique()
-            .collect::<Vec<_>>();
-
-        // per unique SV
-        for sv in sv_list.iter() {
-            self.observations.clear();
-
-            // per unique carrier
-            for carrier in signals
-                .iter()
-                .filter_map(|sig| {
-                    if sig.sv == *sv {
-                        if let Ok(carrier) = sig.observable.carrier(sig.sv.constellation) {
-                            carrier_to_rtk(&carrier)
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                })
-                .unique()
-            {
-                // gather observations
-                for signal in signals.iter().filter_map(|sig| {
-                    if sig.sv == *sv {
-                        let mut is_interesting = sig.observable.is_phase_range_observable();
-                        is_interesting |= sig.observable.is_pseudo_range_observable();
-                        is_interesting |= sig.observable.is_doppler_observable();
-                        is_interesting |= sig.observable.is_ssi_observable();
-
-                        if is_interesting {
-                            Some(sig)
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                }) {
-                    match signal.observable {
-                        Observable::PhaseRange(_) => {
-                            if let Some(observation) = self.observations.get_mut(&carrier) {
-                                observation.phase = Some(signal.value);
-                            } else {
-                                self.observations.insert(
-                                    carrier,
-                                    Observation::ambiguous_phase_range(carrier, signal.value, None),
-                                );
-                            }
-                        },
-                        Observable::Doppler(_) => {
-                            if let Some(observation) = self.observations.get_mut(&carrier) {
-                                observation.doppler = Some(signal.value);
-                            } else {
-                                self.observations.insert(
-                                    carrier,
-                                    Observation::doppler(carrier, signal.value, None),
-                                );
-                            }
-                        },
-                        Observable::PseudoRange(_) => {
-                            if let Some(observation) = self.observations.get_mut(&carrier) {
-                                observation.pseudo = Some(signal.value);
-                            } else {
-                                self.observations.insert(
-                                    carrier,
-                                    Observation::pseudo_range(carrier, signal.value, None),
-                                );
-                            }
-                        },
-                        Observable::SSI(_) => {
-                            if let Some(observation) = self.observations.get_mut(&carrier) {
-                                observation.snr = Some(signal.value);
-                            }
-                        },
-                        _ => unreachable!("filtered out"),
-                    }
-                }
-            }
-
-            // create candidate
-            let mut observations = Vec::new();
-            for (_, observation) in self.observations.iter() {
-                observations.push(observation.clone());
-            }
-
-            let mut candidate = Candidate::new(*sv, t, observations);
-
-            if let Some((toc, _toe, eph)) = self.eph_ctx.borrow_mut().select(t, candidate.sv) {
-                if let Some(tgd) = eph.tgd() {
-                    candidate.set_group_delay(tgd);
-                }
-
-                if let Some(dt) = eph.clock_correction(toc, t, *sv, 5) {
-                    let correction = ClockCorrection::without_relativistic_correction(dt);
-                    candidate.set_clock_correction(correction);
-                } else {
-                    error!("{}({}): clock correction", t, *sv);
-                }
-            } else {
-                error!("{}({}): ephemeris selection", t, *sv);
-            }
-
-            // orbital snapshot
-            let orbit = OrbitalContext::new(&self.eph_ctx);
-
-            // attempt resolution
-            match self.solver.resolve(t, &[candidate], orbit) {
-                Ok((_, pvt_solution)) => {
-                    // clear for next time
-                    let sv_pvt = pvt_solution.sv.get(&sv).unwrap(); // infaillible @ this point
-
-                    let (azimuth_deg, elevation_deg) = (sv_pvt.azimuth, sv_pvt.elevation);
-
-                    let refsys = pvt_solution.dt.to_seconds();
+                for sv_pvt in pvt_solution.sv.iter() {
+                    let (azimuth_deg, elevation_deg) = (sv_pvt.azimuth_deg, sv_pvt.elevation_deg);
 
                     let correction = sv_pvt.clock_correction.unwrap_or_default();
 
@@ -194,7 +82,7 @@ impl<'a> Iterator for NavCggttsSolver<'a> {
                         _ => None,
                     };
 
-                    info!("{:?}({}): new solution: (azim={:.2}°, elev={:.2}°, refsv={:.3E}, refsys={:.3E})", t, sv, azimuth_deg, elevation_deg, refsv, refsys);
+                    info!("{:?}({}): new solution: (azim={:.2}°, elev={:.2}°, refsv={:.3E}, refsys={:.3E})", t, sv_pvt.sv, azimuth_deg, elevation_deg, refsv, refsys);
 
                     // // form FitData
                     // let fitdata = FitData {
@@ -206,16 +94,11 @@ impl<'a> Iterator for NavCggttsSolver<'a> {
                     //     azimuth_deg,
                     //     elevation_deg,
                     // };
-                },
-                Err(e) => {
-                    error!("rtk error: {}", e);
-
-                    // clear for next time
-                    self.observations.clear();
-                },
-            }
-
-            self.observations.clear();
+                }
+            },
+            Err(e) => {
+                error!("{}: rtk error: {}", t, e);
+            },
         }
 
         Some(Err(QcRtkCggttsError::Dumy))
@@ -228,7 +111,8 @@ impl QcContext {
     /// ## Inputs
     /// - cfg: [RTKConfig] setup
     /// - meta: [ObsMetaData] rover selector
-    /// - rx_position_ecef_m: mandatory ground position expressed in ECEF (km)
+    /// - rx_position_ecef_km: ground position expressed in ECEF (km),
+    /// the RINex position is used when not provided
     /// - tracking: [Duration] to be used by track scheduler
     pub fn nav_cggtts_solver<'a>(
         &'a self,
@@ -236,48 +120,37 @@ impl QcContext {
         meta: &ObsMetaData,
         rx_position_ecef_km: Option<(f64, f64, f64)>,
         _tracking_duration: Duration,
-    ) -> Result<NavCggttsSolver, QcError> {
+    ) -> Result<NavCggttsSolver<'a>, QcError> {
         // Obtain ephemeris context
         let eph_ctx = self.ephemeris_context().ok_or(QcError::EphemerisSource)?;
 
         // Obtain signal source
         let signal = self
-            .rover_signal_source(&meta)
+            .rover_signal_source(meta)
             .ok_or(QcError::SignalSource)?;
-        let rinex = self.obs_dataset.get(&meta).ok_or(QcError::RxPosition)?;
+
+        let rinex = self.obs_dataset.get(meta).ok_or(QcError::RxPosition)?;
 
         // Reference position: prefer user settings over RINex position
-        let pos_vel = if let Some((x_ecef_km, y_ecef_km, z_ecef_km)) = rx_position_ecef_km {
-            Vector6::new(x_ecef_km, y_ecef_km, z_ecef_km, 0.0, 0.0, 0.0)
-        } else {
-            // Using internal position (which then, needs to be defined)
-            let (x_ecef_m, y_ecef_m, z_ecef_m) =
-                rinex.header.rx_position.ok_or(QcError::RxPosition)?;
+        let rx_position_ecef_m =
+            if let Some((x_ecef_km, y_ecef_km, z_ecef_km)) = rx_position_ecef_km {
+                (x_ecef_km * 1.0E3, y_ecef_km * 1.0E3, z_ecef_km * 1.0E3)
+            } else {
+                // Using internal position (which then, needs to be defined)
+                let (x_ecef_m, y_ecef_m, z_ecef_m) =
+                    rinex.header.rx_position.ok_or(QcError::RxPosition)?;
 
-            info!(
-                "using RINex ({}) reference position: {:?}",
-                meta,
+                info!(
+                    "using RINex ({}) reference position: {:?}",
+                    meta,
+                    (x_ecef_m, y_ecef_m, z_ecef_m)
+                );
+
                 (x_ecef_m, y_ecef_m, z_ecef_m)
-            );
-
-            Vector6::new(
-                x_ecef_m / 1000.0,
-                y_ecef_m / 1000.0,
-                z_ecef_m / 1000.0,
-                0.0,
-                0.0,
-                0.0,
-            )
-        };
-
-        // Position of the receiver
-        let t0 = rinex.first_epoch().ok_or(QcError::RxPosition)?;
-
-        let rx_orbit = Orbit::from_cartesian_pos_vel(pos_vel, t0, self.earth_cef);
+            };
 
         // Deploy solver: share almanac & reference frame model
-        let solver =
-            Solver::new_almanac_frame(&cfg, Some(rx_orbit), self.almanac.clone(), self.earth_cef);
+        let solver = self.deploy_solver(cfg, eph_ctx, Some(rx_position_ecef_m));
 
         // Initialize the track scheduler
         // let scheduler = CggttsScheduler::new(tracking_duration);
@@ -291,9 +164,10 @@ impl QcContext {
             solver,
             signal,
             // scheduler,
+            params: UserParameters::default(),
             next_release: Default::default(),
             track_midpoint: Default::default(),
-            eph_ctx: RefCell::new(eph_ctx),
+            pool: Vec::with_capacity(8),
             observations: HashMap::with_capacity(8),
         })
     }
@@ -302,17 +176,12 @@ impl QcContext {
 #[cfg(test)]
 mod test {
 
-    use crate::{
-        cfg::QcConfig,
-        context::{
-            meta::{MetaData, ObsMetaData},
-            QcContext,
-        },
-    };
+    use crate::{cfg::QcConfig, context::QcContext};
 
     use gnss_rtk::prelude::{Config as RTKConfig, Duration};
 
     #[test]
+    #[cfg(feature = "flate2")]
     pub fn cggtts_solver() {
         let cfg = QcConfig::default();
 
@@ -332,11 +201,11 @@ mod test {
 
         let rtk_cfg = RTKConfig::default();
 
-        let meta = ObsMetaData::from_meta(MetaData {
-            name: "ESBC00DNK".to_string(),
-            extension: "crx.gz".to_string(),
-            unique_id: Some("rcvr:SEPT POLARX5".to_string()),
-        });
+        let meta = ctx
+            .rover_observations_meta()
+            .find(|meta| meta.meta.name == "ESBC00DNK")
+            .expect("ESBC00DNK observations not loaded")
+            .clone();
 
         let _ = ctx
             .nav_cggtts_solver(rtk_cfg, &meta, None, Duration::from_seconds(60.0))

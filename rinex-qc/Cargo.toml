@@ -78,15 +78,11 @@ serde = { version = "1.0", default-features = false, features = ["derive"] }
 
 maud = { version = "0.26", optional = true }
 plotly = { version = "0.12", optional = true }
-anise = { version = "0.5.2", features = ["embed_ephem"], optional = true }
+anise = { version = "0.6", features = ["embed_ephem"], optional = true }
 
-# gnss-rtk = { version = "=0.7.4", features = ["serde"], optional = true }
-gnss-rtk = { path = "../../rtk-rs/gnss-rtk", features = ["serde"], optional = true }
-# gnss-rtk = { git = "https://github.com/rtk-rs/gnss-rtk", branch = "main", features = ["serde"], optional = true }
+gnss-rtk = { version = "=0.8.0", features = ["serde"], optional = true }
 
-# cggtts = { version = "4.1.6", features = ["serde", "scheduler"], optional = true }
-cggtts = { path = "../../cggtts/cggtts", features = ["serde"], optional = true }
-# cggtts = { git = "https://github.com/gwbres/cggtts", branch = "main", features = ["serde", "scheduler"], optional = true }
+cggtts = { version = "=4.4.0", features = ["serde", "scheduler"], optional = true }
 
 rinex = { path = "../rinex", version = "=0.17.0-alpha-1", features = ["serde"] }
 rinex-qc-traits = { path = "../qc-traits", version = "=0.2.1", features = ["processing"] }

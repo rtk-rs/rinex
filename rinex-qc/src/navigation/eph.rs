@@ -5,6 +5,8 @@ use rinex::{
 
 use crate::context::QcContext;
 
+use gnss_rtk::prelude::{Ephemeris as RTKEphemeris, EphemerisSource};
+
 use std::collections::HashMap;
 
 use log::error;
@@ -101,6 +103,17 @@ impl<'a> EphemerisContext<'a> {
 
         let (toc, toe, eph) = self.closest_in_time(t, sv)?;
         Some((toc, toe, eph.clone()))
+    }
+}
+
+/// [NullEphemeris] implements the solver [EphemerisSource] interface,
+/// which the solver does not use yet: orbital states are provided
+/// by the [OrbitSource] implementation instead.
+pub struct NullEphemeris {}
+
+impl EphemerisSource for NullEphemeris {
+    fn ephemeris_data(&self, _: Epoch, _: SV) -> Option<RTKEphemeris> {
+        None
     }
 }
 
