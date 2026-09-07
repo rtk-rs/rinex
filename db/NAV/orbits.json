@@ -831,5 +831,76 @@
             "accelZ": "f64",
             "iodn": "f64"
         }
+    },
+    {
+        "constellation": "IRNSS",
+        "version": {
+            "major": 3
+        },
+        "orbits": {
+            "iodec": "f64",
+            "crs": "f64",
+            "deltaN": "f64",
+            "m0": "f64",
+            "cuc": "f64",
+            "e": "f64",
+            "cus": "f64",
+            "sqrta": "f64",
+            "toe": "f64",
+            "cic": "f64",
+            "omega0": "f64",
+            "cis": "f64",
+            "i0": "f64",
+            "crc": "f64",
+            "omega": "f64",
+            "omegaDot": "f64",
+            "idot": "f64",
+            "spare1": "f64",
+            "week": "u32",
+            "spare2": "f64",
+            "accuracy": "f64",
+            "health": "flag",
+            "tgd": "f64",
+            "spare3": "f64",
+            "t_tm": "f64"
+        }
+    },
+    {
+        "constellation": "IRNSS",
+        "version": {
+            "major": 4
+        },
+        "type": "L1NV",
+        "orbits": {
+            "adot": "f64",
+            "crs": "f64",
+            "deltaN0": "f64",
+            "m0": "f64",
+            "cuc": "f64",
+            "e": "f64",
+            "cus": "f64",
+            "sqrta": "f64",
+            "iodec": "f64",
+            "cic": "f64",
+            "omega0": "f64",
+            "cis": "f64",
+            "i0": "f64",
+            "crc": "f64",
+            "omega": "f64",
+            "omegaDot": "f64",
+            "idot": "f64",
+            "deltaN0Dot": "f64",
+            "spare1": "f64",
+            "rsf": "f64",
+            "urai": "f64",
+            "health": "flag",
+            "tgdL1PL5": "f64",
+            "tgdSL5": "f64",
+            "iscSL1P": "f64",
+            "iscL1DL1P": "f64",
+            "iscL1PS": "f64",
+            "iscL1DS": "f64",
+            "t_tm": "f64"
+        }
     }
 ]

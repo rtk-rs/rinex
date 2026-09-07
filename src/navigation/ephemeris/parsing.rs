@@ -550,4 +550,59 @@ mod test {
         assert_eq!(ephemeris.get_orbit_f64("t_tm"), Some(3.553500000000e+05));
         assert_eq!(ephemeris.get_orbit_f64("fitInt"), Some(4.0));
     }
+
+    #[test]
+    fn navic_lnav_v4() {
+        // RINEX 4.02 Table A32, in GPST (Table A30)
+        let content =
+            "I02 2020 09 15 02 05 36 6.225099787116e-04 1.773514668457e-11 0.000000000000e+00
+     1.690000000000e+02-5.793750000000e+02 4.834487090078e-09-4.281979621524e-01
+    -1.904368400574e-05 2.015684265643e-03-3.430992364883e-06 6.493289550781e+03
+     1.803360000000e+05 2.495944499969e-07-1.337499015334e+00 7.450580596924e-08
+     5.022043764738e-01 1.946250000000e+02-2.970970345572e+00-4.461614415577e-09
+    -9.578970431139e-10                    2.123000000000e+03
+     2.000000000000e+00 0.000000000000e+00-1.862645149231e-09
+     1.804920000000e+05";
+        let (epoch, sv, eph) =
+            Ephemeris::parse_v4(NavMessageType::LNAV, content.lines(), TimeScale::GPST).unwrap();
+        assert_eq!(sv, SV::from_str("I02").unwrap());
+        assert_eq!(epoch, Epoch::from_str("2020-09-15T02:05:36 GPST").unwrap());
+        assert_eq!(eph.clock_bias, 6.225099787116e-04);
+        assert_eq!(eph.get_orbit_f64("iodec"), Some(169.0));
+        assert_eq!(eph.get_orbit_f64("sqrta"), Some(6.493289550781e+03));
+        assert_eq!(eph.get_week(), Some(2123));
+        assert_eq!(eph.get_orbit_f64("accuracy"), Some(2.0));
+        assert_eq!(eph.get_orbit_f64("health"), Some(0.0));
+        assert_eq!(eph.get_orbit_f64("tgd"), Some(-1.862645149231e-09));
+        assert_eq!(eph.get_orbit_f64("t_tm"), Some(1.804920000000e+05));
+    }
+
+    #[test]
+    fn navic_l1nv_v4() {
+        // RINEX 4.02 Table A32
+        let content =
+            "I10 2023 06 24 00 05 00 1.527369022369e-07 1.364242052659e-12 0.000000000000e+00
+     0.000000000000e+00-2.593125000000e+02 7.028864208979e-09 2.300305834983e+00
+    -8.691102266312e-06 4.531537415460e-04-3.855675458908e-06 6.493495117188e+03
+     7.000000000000e+00 1.341104507446e-07 1.359342162629e-01-7.078051567078e-08
+     8.594830530333e-02 1.214375000000e+02-5.136403830694e-02-5.858815471753e-09
+    -4.846630453041e-10 0.000000000000e+00                    1.000000000000e+00
+     1.500000000000e+01 0.000000000000e+00                   -3.608874976635e-09
+                                           6.984919309616e-09 5.995389074087e-09
+     5.191380000000e+05";
+        let (epoch, sv, eph) =
+            Ephemeris::parse_v4(NavMessageType::L1NV, content.lines(), TimeScale::GPST).unwrap();
+        assert_eq!(sv, SV::from_str("I10").unwrap());
+        assert_eq!(epoch, Epoch::from_str("2023-06-24T00:05:00 GPST").unwrap());
+        assert_eq!(eph.get_orbit_f64("crs"), Some(-2.593125000000e+02));
+        assert_eq!(eph.get_orbit_f64("iodec"), Some(7.0));
+        assert_eq!(eph.get_orbit_f64("rsf"), Some(1.0));
+        assert_eq!(eph.get_orbit_f64("urai"), Some(15.0));
+        assert_eq!(eph.get_orbit_f64("health"), Some(0.0));
+        assert_eq!(eph.get_orbit_f64("tgdL1PL5"), None);
+        assert_eq!(eph.get_orbit_f64("tgdSL5"), Some(-3.608874976635e-09));
+        assert_eq!(eph.get_orbit_f64("iscL1PS"), Some(6.984919309616e-09));
+        assert_eq!(eph.get_orbit_f64("iscL1DS"), Some(5.995389074087e-09));
+        assert_eq!(eph.get_orbit_f64("t_tm"), Some(5.191380000000e+05));
+    }
 }
