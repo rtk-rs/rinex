@@ -358,8 +358,11 @@ impl Record {
                         },
 
                         Type::IonosphereMaps => {
-                            if is_new_tec_map(&line_buf) {
-                                match parse_ionex_tec_map(
+                            // the buffered block starts with its own descriptor
+                            let descriptor = epoch_buf.lines().next().unwrap_or("");
+
+                            let parsed = if is_new_tec_map(descriptor) {
+                                parse_ionex_tec_map(
                                     &epoch_buf,
                                     ionex_lat_exponent,
                                     ionex_long_exponent,
@@ -367,12 +370,9 @@ impl Record {
                                     ionex_tec_exponent,
                                     ionex_t,
                                     &mut ionex_rec,
-                                ) {
-                                    Ok(()) => {},
-                                    Err(_) => {},
-                                }
-                            } else if is_new_rms_map(&line_buf) {
-                                match parse_ionex_rms_map(
+                                )
+                            } else if is_new_rms_map(descriptor) {
+                                parse_ionex_rms_map(
                                     &epoch_buf,
                                     ionex_lat_exponent,
                                     ionex_long_exponent,
@@ -380,23 +380,20 @@ impl Record {
                                     ionex_tec_exponent,
                                     ionex_t,
                                     &mut ionex_rec,
-                                ) {
-                                    Ok(()) => {},
-                                    Err(_) => {},
-                                }
+                                )
                             } else {
-                                // match parse_ionex_height_map(
-                                //     &epoch_buf,
-                                //     ionex_lat_exponent,
-                                //     ionex_long_exponent,
-                                //     ionex_alt_exponent,
-                                //     ionex_tec_exponent,
-                                //     ionex_t,
-                                //     &mut ionex_rec,
-                                // ) {
-                                //     Ok(()) => {},
-                                //     Err(_) => {},
-                                // }
+                                // height maps are not supported
+                                Ok(())
+                            };
+
+                            match parsed {
+                                Ok(()) => {},
+                                #[cfg(feature = "log")]
+                                Err(e) => {
+                                    error!("ionex parsing: {}", e);
+                                },
+                                #[cfg(not(feature = "log"))]
+                                Err(_) => {},
                             }
                         },
                     }

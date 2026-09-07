@@ -182,5 +182,19 @@ pub fn generic_ionex_test(
             tec.tecu(),
             point.tecu
         );
+
+        match point.rms {
+            Some(rms) => {
+                let dut_rms = tec.rms_tec().expect(&format!(
+                    "missing RMS for t={};lat={};long={};z={}",
+                    epoch, lat_ddeg, long_ddeg, alt_km
+                ));
+                let error = (dut_rms - rms).abs();
+                assert!(error < 1.0E-5, "bad rms value: {} versus {}", dut_rms, rms);
+            },
+            None => {
+                assert!(tec.rms_tec().is_none(), "unexpected RMS at {}", epoch);
+            },
+        }
     }
 }

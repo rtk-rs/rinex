@@ -3,7 +3,7 @@ use crate::{
     tests::toolkit::{generic_ionex_test, TecPoint, TimeFrame},
 };
 
-use std::path::Path;
+use std::{collections::BTreeSet, path::Path};
 
 #[test]
 #[cfg(feature = "flate2")]
@@ -41,7 +41,7 @@ fn v1_ckmg0020_22i() {
         6371.0,
         0.0,
         None,
-        TimeFrame::from_inclusive_csv("2022-01-02T00:00:00 UTC, 2022-01-02T23:00:00 UTC, 1 hour"),
+        TimeFrame::from_inclusive_csv("2022-01-02T00:00:00 UTC, 2022-01-03T00:00:00 UTC, 1 hour"),
         vec![
             TecPoint {
                 t: "2022-01-02T00:00:00 UTC",
@@ -150,7 +150,7 @@ fn v1_ckmg0090_12i() {
         6371.0,
         0.0,
         None,
-        TimeFrame::from_inclusive_csv("2021-01-09T00:00:00 UTC, 2021-01-09T23:00:00 UTC, 1 hour"),
+        TimeFrame::from_inclusive_csv("2021-01-09T00:00:00 UTC, 2021-01-10T00:00:00 UTC, 1 hour"),
         vec![],
     );
 }
@@ -192,7 +192,7 @@ fn v1_jplg0010_17i() {
         6371.0,
         10.0,
         None,
-        TimeFrame::from_inclusive_csv("2017-01-01T00:00:00 UTC, 2017-01-01T23:00:00 UTC, 2 hour"),
+        TimeFrame::from_inclusive_csv("2017-01-01T00:00:00 UTC, 2017-01-02T00:00:00 UTC, 2 hour"),
         vec![
             TecPoint {
                 t: "2017-01-01T00:00:00 UTC",
@@ -226,5 +226,43 @@ fn v1_jplg0010_17i() {
 
     for (k, _) in dut.ionex_tec_maps_iter() {
         assert_eq!(k.coordinates.altitude_km(), 450.0);
+    }
+}
+
+/// Every map announced by the header is parsed, along with its RMS map
+#[test]
+#[cfg(feature = "flate2")]
+fn v1_complete_maps() {
+    for (file, has_rms) in [
+        ("CKMG0020.22I.gz", false),
+        ("CKMG0080.09I.gz", false),
+        ("CKMG0090.21I.gz", false),
+        ("jplg0010.17i.gz", true),
+    ] {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("test_resources")
+            .join("IONEX")
+            .join("V1")
+            .join(file);
+
+        let dut = Rinex::from_gzip_file(path).unwrap();
+        let specs = dut.header.ionex.as_ref().unwrap();
+        let record = dut.record.as_ionex().unwrap();
+
+        let epochs = record.keys().map(|k| k.epoch).collect::<BTreeSet<_>>();
+        assert_eq!(epochs.len(), specs.number_of_maps, "{}: missing maps", file);
+        assert_eq!(epochs.first().copied(), Some(specs.epoch_of_first_map));
+        assert_eq!(epochs.last().copied(), Some(specs.epoch_of_last_map));
+
+        let with_rms = record
+            .values()
+            .filter(|tec| tec.rms_tec().is_some())
+            .count();
+        if has_rms {
+            assert_eq!(with_rms, record.len(), "{}: missing RMS values", file);
+        } else {
+            assert_eq!(with_rms, 0, "{}: unexpected RMS values", file);
+        }
     }
 }

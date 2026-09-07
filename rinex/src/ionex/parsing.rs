@@ -173,7 +173,7 @@ pub fn parse_rms_map(
 
     for line in lines {
         if line.len() > 60 {
-            let marker = line.split_at(60).1;
+            let (content, marker) = line.split_at(60);
             if marker.contains("END OF RMS MAP") {
                 return Ok(());
             } else if marker.contains("EXPONENT") {
@@ -182,13 +182,9 @@ pub fn parse_rms_map(
             } else if marker.contains("START OF") {
                 continue; // avoid parsing
             } else if marker.contains("LAT/LON1/LON2/DLON/H") {
-                // gric specs (to follow)
+                // grid specs (to follow)
                 (fixed_lat, long, long_spacing, fixed_alt) = parse_grid_specs(content)?;
                 continue; // avoid parsing
-            } else if marker.contains("END OF RMS MAP") {
-                // block conclusion
-                // don't care about block #id actually
-                return Ok(());
             }
         }
 
