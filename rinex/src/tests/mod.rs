@@ -7,6 +7,7 @@ mod crinex;
 mod filename;
 pub mod formatting;
 mod parsing;
+mod version;
 
 #[cfg(feature = "qc")]
 mod merge;

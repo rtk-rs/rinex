@@ -1,7 +1,10 @@
 //! `RINEX` revision description
 use crate::prelude::ParsingError;
 
-/// Current `RINEX` version supported to this day
+/// Latest `RINEX` major revision supported by this library.
+/// Any minor revision of this major revision, or of an older one,
+/// is accepted by the parser: see [Version::is_supported].
+/// This is also the revision new files are written in by default.
 pub const SUPPORTED_VERSION: Version = Version { major: 4, minor: 0 };
 
 /// Version is used to describe RINEX standards revisions.
@@ -110,15 +113,14 @@ impl Version {
     pub fn new(major: u8, minor: u8) -> Self {
         Self { major, minor }
     }
-    /// Returns true if this version is supported
+    /// Returns true if this revision can be parsed.
+    /// Minor revisions only refine a major revision and never
+    /// change the overall file structure, so every minor revision
+    /// of a supported major revision is accepted, including minor
+    /// revisions published after this library. Unknown major
+    /// revisions are rejected.
     pub fn is_supported(&self) -> bool {
-        if self.major < SUPPORTED_VERSION.major {
-            true
-        } else if self.major == SUPPORTED_VERSION.major {
-            self.minor <= SUPPORTED_VERSION.minor
-        } else {
-            false
-        }
+        self.major <= SUPPORTED_VERSION.major
     }
 }
 
@@ -159,10 +161,25 @@ mod test {
         assert!(version.is_supported());
         let version = SUPPORTED_VERSION;
         assert!(version.is_supported());
+
+        // older revisions
+        for version in ["1", "2.11", "3.02", "3.05"] {
+            let version = Version::from_str(version).unwrap();
+            assert!(version.is_supported(), "{} must be supported", version);
+        }
+
+        // minor revisions of the current major revision,
+        // including revisions newer than SUPPORTED_VERSION
+        for version in ["4.00", "4.01", "4.02", "4.99"] {
+            let version = Version::from_str(version).unwrap();
+            assert!(version.is_supported(), "{} must be supported", version);
+        }
     }
     #[test]
     fn non_supported_version() {
         let version = Version::new(5, 0);
+        assert!(!version.is_supported());
+        let version = Version::new(5, 2);
         assert!(!version.is_supported());
     }
     #[test]
