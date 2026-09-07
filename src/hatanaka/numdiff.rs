@@ -1,5 +1,7 @@
 //! Y. Hatanaka lossless numerical compression algorithm
 
+use crate::hatanaka::Error;
+
 /// This module implements the Hatanaka scheme for numerical (de)-compression.
 /// Values are multiplied by a factor of 10^N (N is the number of decimals in the
 /// original data) to turn them into integers.
@@ -20,6 +22,11 @@
 /// (m <= M = 6).
 ///
 /// Currently compressor.rs uses level = 3 ([CompressorExpert::format()]).
+///
+/// Both directions fail with [Error::CompressionOrder] when the order
+/// exceeds M or 6, and with [Error::NumericOverflow] when the checked
+/// arithmetic leaves the i64 range (corrupt data, or a kernel that was
+/// not reset where it should have been).
 #[derive(Debug, Clone)]
 pub struct NumDiff<const M: usize> {
     /// iteration counter
@@ -31,24 +38,36 @@ pub struct NumDiff<const M: usize> {
 }
 
 impl<const M: usize> NumDiff<M> {
+    /// Highest (de)compression order this implementation supports, whatever M.
+    pub const MAX_ORDER: usize = 6;
+
+    /// Binomial coefficients (alternating signs) applied to the history,
+    /// per order: order m uses the first m entries of row m.
+    const COEFFICIENTS: [[i64; 6]; 7] = [
+        [0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0],
+        [2, -1, 0, 0, 0, 0],
+        [3, -3, 1, 0, 0, 0],
+        [4, -6, 4, -1, 0, 0],
+        [5, -10, 10, -5, 1, 0],
+        [6, -15, 20, -15, 6, -1],
+    ];
+
     /// Builds a [NumDiff] structure dedicated to numerical (de-)compression.
-    /// Level must not exceed 6 otherwise this will panic.
     /// ## Inputs
     ///  - data: initial point
-    ///  - level: compression level / range.
+    ///  - level: compression level / range. Must not exceed M nor
+    /// [Self::MAX_ORDER], otherwise (de)compression will fail with
+    /// [Error::CompressionOrder].
     pub fn new(data: i64, level: usize) -> Self {
-        if level > 6 {
-            panic!("M=6 is the compression limit");
-        }
         let mut buf = [0; M]; // reset
         buf[0] = data;
         Self { buf, m: 0, level }
     }
-    /// [NumDiff] needs to be reinit   when ???
+
+    /// Reinitializes the kernel with a new reference point and level,
+    /// as commanded by a "m&value" kernel reset in the compressed stream.
     pub fn force_init(&mut self, data: i64, level: usize) {
-        if level > 6 {
-            panic!("M=6 is the compression limit");
-        }
         self.m = 0;
         self.level = level;
         self.rotate_history(data);
@@ -60,31 +79,31 @@ impl<const M: usize> NumDiff<M> {
         self.buf[0] = data;
     }
 
-    /// Decompresses input data point, returns recovered data point.
-    pub fn decompress(&mut self, data: i64) -> i64 {
+    /// Increments the current order (up to level) and returns the
+    /// coefficients to apply to the history, or an error if that
+    /// order is not supported by this kernel.
+    fn next_order(&mut self) -> Result<&'static [i64], Error> {
         if self.m < self.level {
             self.m += 1;
         }
+        if self.m > M || self.m > Self::MAX_ORDER {
+            return Err(Error::CompressionOrder);
+        }
+        Ok(&Self::COEFFICIENTS[self.m][..self.m])
+    }
 
-        let new: i64 = match self.m {
-            1 => data + self.buf[0],
-            2 => data + 2 * self.buf[0] - self.buf[1],
-            3 => data + 3 * self.buf[0] - 3 * self.buf[1] + self.buf[2],
-            4 => data + 4 * self.buf[0] - 6 * self.buf[1] + 4 * self.buf[2] - self.buf[3],
-            5 => {
-                data + 5 * self.buf[0] - 10 * self.buf[1] + 10 * self.buf[2] - 5 * self.buf[3]
-                    + self.buf[4]
-            },
-            6 => {
-                data + 6 * self.buf[0] - 15 * self.buf[1] + 20 * self.buf[2] - 15 * self.buf[3]
-                    + 6 * self.buf[4]
-                    - self.buf[5]
-            },
-            _ => panic!("numdiff is limited to M < 7"),
-        };
+    /// Decompresses input data point, returns recovered data point.
+    pub fn decompress(&mut self, data: i64) -> Result<i64, Error> {
+        let coefficients = self.next_order()?;
+
+        let mut new = data;
+        for (coeff, past) in coefficients.iter().zip(self.buf.iter()) {
+            let term = coeff.checked_mul(*past).ok_or(Error::NumericOverflow)?;
+            new = new.checked_add(term).ok_or(Error::NumericOverflow)?;
+        }
 
         self.rotate_history(new);
-        new
+        Ok(new)
     }
 
     /// Compresses input data point, returns "compressed" data point.
@@ -93,30 +112,17 @@ impl<const M: usize> NumDiff<M> {
     /// sample is pushed, exactly mirroring [Self::decompress]: order `m`
     /// reads `buf[0..m]` in both directions, so a `NumDiff<M>` supports
     /// orders up to `M` for compression and decompression alike.
-    pub fn compress(&mut self, data: i64) -> i64 {
-        if self.m < self.level {
-            self.m += 1;
+    pub fn compress(&mut self, data: i64) -> Result<i64, Error> {
+        let coefficients = self.next_order()?;
+
+        let mut compressed = data;
+        for (coeff, past) in coefficients.iter().zip(self.buf.iter()) {
+            let term = coeff.checked_mul(*past).ok_or(Error::NumericOverflow)?;
+            compressed = compressed.checked_sub(term).ok_or(Error::NumericOverflow)?;
         }
 
-        let compressed: i64 = match self.m {
-            1 => data - self.buf[0],
-            2 => data - 2 * self.buf[0] + self.buf[1],
-            3 => data - 3 * self.buf[0] + 3 * self.buf[1] - self.buf[2],
-            4 => data - 4 * self.buf[0] + 6 * self.buf[1] - 4 * self.buf[2] + self.buf[3],
-            5 => {
-                data - 5 * self.buf[0] + 10 * self.buf[1] - 10 * self.buf[2] + 5 * self.buf[3]
-                    - self.buf[4]
-            },
-            6 => {
-                data - 6 * self.buf[0] + 15 * self.buf[1] - 20 * self.buf[2] + 15 * self.buf[3]
-                    - 6 * self.buf[4]
-                    + self.buf[5]
-            },
-            _ => panic!("numdiff is limited to M < 7"),
-        };
-
         self.rotate_history(data);
-        compressed
+        Ok(compressed)
     }
 }
 
@@ -127,44 +133,44 @@ mod test {
     #[test]
     fn test_decompression() {
         let mut diff = NumDiff::<6>::new(126298057858, 3);
-        assert_eq!(diff.decompress(-15603288), 126282454570);
-        assert_eq!(diff.decompress(521089), 126267372371);
-        assert_eq!(diff.decompress(-752), 126252810509);
-        assert_eq!(diff.decompress(1575419284), 127814188268);
-        assert_eq!(diff.decompress(-3150848707), 127800656941);
-        assert_eq!(diff.decompress(1575424909), 127787641437);
-        assert_eq!(diff.decompress(-135), 127775141621);
+        assert_eq!(diff.decompress(-15603288), Ok(126282454570));
+        assert_eq!(diff.decompress(521089), Ok(126267372371));
+        assert_eq!(diff.decompress(-752), Ok(126252810509));
+        assert_eq!(diff.decompress(1575419284), Ok(127814188268));
+        assert_eq!(diff.decompress(-3150848707), Ok(127800656941));
+        assert_eq!(diff.decompress(1575424909), Ok(127787641437));
+        assert_eq!(diff.decompress(-135), Ok(127775141621));
 
         // test re-init
         diff.force_init(111982965979, 3);
-        assert_eq!(diff.decompress(-16266911), 111966699068);
-        assert_eq!(diff.decompress(609858), 111951042015);
-        assert_eq!(diff.decompress(-213), 111935994607);
-        assert_eq!(diff.decompress(1575419307), 113496976151);
-        assert_eq!(diff.decompress(-3150848442), 113483138205);
-        assert_eq!(diff.decompress(1575425367), 113469906136);
-        assert_eq!(diff.decompress(146), 113457280090);
+        assert_eq!(diff.decompress(-16266911), Ok(111966699068));
+        assert_eq!(diff.decompress(609858), Ok(111951042015));
+        assert_eq!(diff.decompress(-213), Ok(111935994607));
+        assert_eq!(diff.decompress(1575419307), Ok(113496976151));
+        assert_eq!(diff.decompress(-3150848442), Ok(113483138205));
+        assert_eq!(diff.decompress(1575425367), Ok(113469906136));
+        assert_eq!(diff.decompress(146), Ok(113457280090));
     }
 
     #[test]
     fn test_compression() {
         let mut diff = NumDiff::<6>::new(126298057858, 3);
-        assert_eq!(diff.compress(126282454570), -15603288);
-        assert_eq!(diff.compress(126267372371), 521089);
-        assert_eq!(diff.compress(126252810509), -752);
-        assert_eq!(diff.compress(127814188268), 1575419284);
-        assert_eq!(diff.compress(127800656941), -3150848707);
-        assert_eq!(diff.compress(127787641437), 1575424909);
-        assert_eq!(diff.compress(127775141621), -135);
+        assert_eq!(diff.compress(126282454570), Ok(-15603288));
+        assert_eq!(diff.compress(126267372371), Ok(521089));
+        assert_eq!(diff.compress(126252810509), Ok(-752));
+        assert_eq!(diff.compress(127814188268), Ok(1575419284));
+        assert_eq!(diff.compress(127800656941), Ok(-3150848707));
+        assert_eq!(diff.compress(127787641437), Ok(1575424909));
+        assert_eq!(diff.compress(127775141621), Ok(-135));
 
         diff.force_init(111982965979, 3);
-        assert_eq!(diff.compress(111966699068), -16266911);
-        assert_eq!(diff.compress(111951042015), 609858);
-        assert_eq!(diff.compress(111935994607), -213);
-        assert_eq!(diff.compress(113496976151), 1575419307);
-        assert_eq!(diff.compress(113483138205), -3150848442);
-        assert_eq!(diff.compress(113469906136), 1575425367);
-        assert_eq!(diff.compress(113457280090), 146);
+        assert_eq!(diff.compress(111966699068), Ok(-16266911));
+        assert_eq!(diff.compress(111951042015), Ok(609858));
+        assert_eq!(diff.compress(111935994607), Ok(-213));
+        assert_eq!(diff.compress(113496976151), Ok(1575419307));
+        assert_eq!(diff.compress(113483138205), Ok(-3150848442));
+        assert_eq!(diff.compress(113469906136), Ok(1575425367));
+        assert_eq!(diff.compress(113457280090), Ok(146));
     }
 
     #[test]
@@ -210,7 +216,7 @@ mod test {
 
         let mut recovered = vec![original[0]];
         for value in compressed {
-            recovered.push(diff.decompress(value));
+            recovered.push(diff.decompress(value).unwrap());
         }
 
         assert_eq!(
@@ -258,7 +264,7 @@ mod test {
 
         let compressed: Vec<i64> = original[1..]
             .iter()
-            .map(|value| diff.compress(*value))
+            .map(|value| diff.compress(*value).unwrap())
             .collect();
 
         assert_eq!(compressed, expected);
@@ -279,8 +285,8 @@ mod test {
             let mut decompressor = NumDiff::<M>::new(original[0], level);
 
             for value in &original[1..] {
-                let compressed = compressor.compress(*value);
-                let recovered = decompressor.decompress(compressed);
+                let compressed = compressor.compress(*value).unwrap();
+                let recovered = decompressor.decompress(compressed).unwrap();
                 assert_eq!(
                     recovered, *value,
                     "round trip mismatch for M={} level={}",
@@ -293,8 +299,8 @@ mod test {
             decompressor.force_init(original[0], level);
 
             for value in &original[1..] {
-                let compressed = compressor.compress(*value);
-                let recovered = decompressor.decompress(compressed);
+                let compressed = compressor.compress(*value).unwrap();
+                let recovered = decompressor.decompress(compressed).unwrap();
                 assert_eq!(
                     recovered, *value,
                     "round trip mismatch after force_init for M={} level={}",
@@ -312,5 +318,56 @@ mod test {
         for level in 1..=6 {
             round_trip::<6>(level);
         }
+    }
+
+    #[test]
+    fn test_overflow_is_an_error() {
+        // gh-426: corrupt input, or a kernel that was never reset, must
+        // surface as an error rather than an arithmetic overflow panic
+        // (debug) or a silently wrapped value (release).
+        let mut diff = NumDiff::<5>::new(0, 5);
+        let mut last = Ok(0);
+        for _ in 0..64 {
+            last = diff.decompress(i64::MAX / 4);
+            if last.is_err() {
+                break;
+            }
+        }
+        assert_eq!(last, Err(Error::NumericOverflow));
+
+        let mut diff = NumDiff::<5>::new(i64::MIN, 1);
+        assert_eq!(diff.compress(i64::MAX), Err(Error::NumericOverflow));
+    }
+
+    #[test]
+    fn test_unsupported_order_is_an_error() {
+        // level within the buffer: fine
+        let mut diff = NumDiff::<5>::new(0, 5);
+        for _ in 0..8 {
+            assert!(diff.decompress(1).is_ok());
+        }
+
+        // level beyond the buffer size M: fails once that order is reached,
+        // instead of indexing out of bounds
+        let mut diff = NumDiff::<5>::new(0, 6);
+        for _ in 0..5 {
+            assert!(diff.decompress(1).is_ok());
+        }
+        assert_eq!(diff.decompress(1), Err(Error::CompressionOrder));
+
+        // same for a reset, and for compression
+        let mut diff = NumDiff::<3>::new(0, 3);
+        diff.force_init(0, 4);
+        assert!(diff.compress(1).is_ok());
+        assert!(diff.compress(2).is_ok());
+        assert!(diff.compress(3).is_ok());
+        assert_eq!(diff.compress(4), Err(Error::CompressionOrder));
+
+        // orders above 6 are never supported, whatever M
+        let mut diff = NumDiff::<8>::new(0, 7);
+        for _ in 0..6 {
+            assert!(diff.decompress(1).is_ok());
+        }
+        assert_eq!(diff.decompress(1), Err(Error::CompressionOrder));
     }
 }
