@@ -1,7 +1,7 @@
 //! Navigation RINEX formatting round trips
 use crate::{
-    navigation::Record,
-    prelude::{Rinex, Version},
+    navigation::{NavFrameType, NavMessageType, OrbitItem, Record},
+    prelude::{Constellation, Rinex, Version},
     tests::formatting::Utf8Buffer,
 };
 
@@ -179,5 +179,190 @@ fn nav_v4_02_spec_examples_round_trip() {
             .get(header)
             .unwrap_or_else(|| panic!("unexpected record {}", header));
         assert_eq!(lines, model, "{}", header);
+    }
+}
+
+/// Parses the formatted text
+fn reparse(formatted: &str) -> Rinex {
+    Rinex::parse(&mut BufReader::new(Cursor::new(formatted)))
+        .unwrap_or_else(|e| panic!("formatted file does not parse: {:?}", e))
+}
+
+/// Orbits of `eph` with the RINEX 3 BeiDou group delay names
+/// renamed to the RINEX 4 names
+fn v4_orbit_names(
+    orbits: &std::collections::HashMap<String, OrbitItem>,
+) -> BTreeMap<String, OrbitItem> {
+    orbits
+        .iter()
+        .map(|(k, v)| {
+            let k = match k.as_str() {
+                "tgd1b1b3" => "tgdb1b3",
+                "tgd2b2b3" => "tgdb2b3",
+                k => k,
+            };
+            (k.to_string(), v.clone())
+        })
+        .collect()
+}
+
+#[test]
+fn nav_v4_to_v3_conversion() {
+    let mut model = parse(&read_resource(
+        "NAV/V4/KMS300DNK_R_20221591000_01H_MN.rnx.gz",
+    ));
+    model.header.version = Version::new(3, 5);
+
+    let formatted = format(&model);
+    let dut = reparse(&formatted);
+    assert_eq!(dut.header.version, Version::new(3, 5));
+    let dut = dut.record.as_nav().unwrap();
+
+    // legacy ephemerides only: STO, ION and modern messages are skipped
+    let legacy = model
+        .record
+        .as_nav()
+        .unwrap()
+        .iter()
+        .filter(|(k, _)| {
+            k.frmtype == NavFrameType::Ephemeris
+                && matches!(
+                    k.msgtype,
+                    NavMessageType::LNAV
+                        | NavMessageType::FDMA
+                        | NavMessageType::INAV
+                        | NavMessageType::FNAV
+                        | NavMessageType::D1
+                        | NavMessageType::D2
+                        | NavMessageType::SBAS
+                )
+        })
+        .collect::<Vec<_>>();
+    assert!(legacy.len() > 300);
+
+    // every legacy ephemeris is written: one record per satellite
+    // line at column 0
+    let nb_records = formatted
+        .lines()
+        .skip_while(|l| !l.contains("END OF HEADER"))
+        .skip(1)
+        .filter(|l| !l.starts_with(' '))
+        .count();
+    assert_eq!(nb_records, legacy.len());
+
+    // RINEX 3 files every ephemeris as LNAV: a Galileo INAV and FNAV
+    // pair of the same epoch shares a key once parsed back, and the
+    // last written (INAV) is kept
+    let mut expected = BTreeMap::new();
+    for (k, frame) in legacy {
+        let key = crate::navigation::NavKey {
+            msgtype: NavMessageType::LNAV,
+            ..*k
+        };
+        expected.insert(key, frame);
+    }
+    assert_eq!(dut.len(), expected.len());
+
+    for (key, frame) in expected {
+        let dut = dut
+            .get(&key)
+            .unwrap_or_else(|| panic!("{:?} missing", key))
+            .as_ephemeris()
+            .unwrap();
+        let eph = frame.as_ephemeris().unwrap();
+        let k = &key;
+        assert_eq!(dut.clock_bias, eph.clock_bias);
+        assert_eq!(dut.clock_drift, eph.clock_drift);
+        assert_eq!(dut.clock_drift_rate, eph.clock_drift_rate);
+        // the RINEX 3 layout is a subset of the RINEX 4 one, BeiDou
+        // group delays under their RINEX 3 names
+        assert!(!dut.orbits.is_empty());
+        for (name, item) in v4_orbit_names(&dut.orbits).iter() {
+            assert_eq!(Some(item), eph.orbits.get(name), "{:?} {}", k, name);
+        }
+    }
+}
+
+#[test]
+fn nav_v3_to_v4_conversion() {
+    let model = parse(&read_resource("NAV/V3/AMEL00NLD_R_20210010000_01D_MN.rnx"));
+    let model_rec = model.record.as_nav().unwrap();
+
+    let mut v4 = model.clone();
+    v4.header.version = Version::new(4, 0);
+    let formatted = format(&v4);
+
+    // RINEX 4 message types assigned from the constellation and content
+    assert!(formatted.contains("> EPH R"));
+    assert!(formatted.contains(" FDMA\n"));
+    assert!(formatted.contains(" INAV\n") || formatted.contains(" FNAV\n"));
+    assert!(formatted.contains("> EPH C05 D2\n"));
+    assert!(formatted.contains("> EPH C21 D1\n"));
+    assert!(!formatted.contains("> EPH R") || !formatted.contains("> EPH R05 LNAV"));
+
+    let dut = reparse(&formatted);
+    assert_eq!(dut.header.version, Version::new(4, 0));
+    let dut_rec = dut.record.as_nav().unwrap();
+    assert_eq!(dut_rec.len(), model_rec.len());
+
+    for ((k, frame), (dk, dframe)) in model_rec.iter().zip(dut_rec.iter()) {
+        assert_eq!((k.epoch, k.sv, k.frmtype), (dk.epoch, dk.sv, dk.frmtype));
+        let expected = match k.sv.constellation {
+            Constellation::Glonass => NavMessageType::FDMA,
+            Constellation::BeiDou if k.sv.prn <= 5 || k.sv.prn >= 59 => NavMessageType::D2,
+            Constellation::BeiDou => NavMessageType::D1,
+            Constellation::Galileo => {
+                let eph = frame.as_ephemeris().unwrap();
+                if eph.get_orbit_f64("dataSrc").unwrap_or(0.0) as u32 & 0x02 != 0 {
+                    NavMessageType::FNAV
+                } else {
+                    NavMessageType::INAV
+                }
+            },
+            c if c.is_sbas() => NavMessageType::SBAS,
+            _ => NavMessageType::LNAV,
+        };
+        assert_eq!(dk.msgtype, expected, "{:?}", k);
+        let eph = frame.as_ephemeris().unwrap();
+        let deph = dframe.as_ephemeris().unwrap();
+        assert_eq!(deph.sv_clock(), eph.sv_clock(), "{:?}", k);
+        // RINEX 4 layouts carry every RINEX 3 field, BeiDou group
+        // delays under their RINEX 4 names
+        let model_orbits = v4_orbit_names(&eph.orbits);
+        for (name, item) in model_orbits.iter() {
+            assert_eq!(deph.orbits.get(name), Some(item), "{:?} {}", k, name);
+        }
+    }
+
+    // and back to RINEX 3: identical record
+    let mut v3 = dut;
+    v3.header.version = model.header.version;
+    let back = reparse(&format(&v3));
+    assert_records_equal(back.record.as_nav().unwrap(), model_rec);
+}
+
+#[test]
+fn nav_v3_to_v2_conversion() {
+    let model = parse(&read_resource("NAV/V3/CBW100NLD_R_20210010000_01D_MN.rnx"));
+    let model_rec = model.record.as_nav().unwrap();
+
+    // RINEX 2 GPS file from a mixed RINEX 3 record: GPS only
+    let mut v2 = model.clone();
+    v2.header.version = Version::new(2, 11);
+    v2.header.constellation = Some(Constellation::GPS);
+    let formatted = format(&v2);
+
+    let dut = reparse(&formatted);
+    assert_eq!(dut.header.version, Version::new(2, 11));
+    let dut_rec = dut.record.as_nav().unwrap();
+
+    let gps = model_rec
+        .iter()
+        .filter(|(k, _)| k.sv.constellation == Constellation::GPS)
+        .collect::<Vec<_>>();
+    assert!(!gps.is_empty());
+    assert_eq!(dut_rec.len(), gps.len());
+    for (k, frame) in gps {
+        assert_eq!(dut_rec.get(k), Some(frame), "{:?}", k);
     }
 }

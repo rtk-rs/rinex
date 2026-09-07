@@ -6,8 +6,8 @@ use crate::{
     error::FormattingError,
     navigation::{
         orbits::closest_nav_standards, BdModel, EarthOrientation, Ephemeris, GloCdmaModel,
-        IonosphereModel, KbModel, KbRegionCode, NavFrameType, NavKey, NavicKbModel, NavicNeqnModel,
-        NgModel, OrbitItem, Record, SystemTime,
+        IonosphereModel, KbModel, KbRegionCode, NavFrameType, NavKey, NavMessageType, NavicKbModel,
+        NavicNeqnModel, NgModel, OrbitItem, Record, SystemTime,
     },
     prelude::{Constellation, Header, RinexType, Version},
 };
@@ -95,12 +95,68 @@ fn format_epoch_v2v3<W: Write>(w: &mut BufWriter<W>, k: &NavKey, major: u8) -> s
     }
 }
 
+/// Orbit fields named differently by the RINEX 3 and RINEX 4
+/// entries of the orbit database (BeiDou group delays).
+fn orbit_alias(key: &str) -> Option<&'static str> {
+    match key {
+        "tgdb1b3" => Some("tgd1b1b3"),
+        "tgd1b1b3" => Some("tgdb1b3"),
+        "tgdb2b3" => Some("tgd2b2b3"),
+        "tgd2b2b3" => Some("tgdb2b3"),
+        _ => None,
+    }
+}
+
+/// Message types with a representation prior RINEX 4:
+/// one legacy message per constellation.
+fn is_legacy_message(msgtype: NavMessageType, constellation: Constellation) -> bool {
+    match msgtype {
+        NavMessageType::LNAV => true,
+        NavMessageType::FDMA => constellation == Constellation::Glonass,
+        NavMessageType::INAV | NavMessageType::FNAV => constellation == Constellation::Galileo,
+        NavMessageType::D1 | NavMessageType::D2 => constellation == Constellation::BeiDou,
+        NavMessageType::SBAS => constellation.is_sbas(),
+        _ => false,
+    }
+}
+
+/// RINEX 4 message type of an ephemeris parsed from RINEX 2 or 3,
+/// where every ephemeris is filed as LNAV.
+fn v4_message_type(k: &NavKey, eph: &Ephemeris) -> NavMessageType {
+    if k.msgtype != NavMessageType::LNAV {
+        return k.msgtype;
+    }
+    match k.sv.constellation {
+        Constellation::Glonass => NavMessageType::FDMA,
+        Constellation::Galileo => {
+            // Table A13: data source bit 1 set for F/NAV E5a-I
+            let data_source = eph.get_orbit_f64("dataSrc").unwrap_or(0.0) as u32;
+            if data_source & 0x02 != 0 {
+                NavMessageType::FNAV
+            } else {
+                NavMessageType::INAV
+            }
+        },
+        Constellation::BeiDou => {
+            // D2 is broadcast by the GEO satellites (BDS ICD)
+            if k.sv.prn <= 5 || k.sv.prn >= 59 {
+                NavMessageType::D2
+            } else {
+                NavMessageType::D1
+            }
+        },
+        c if c.is_sbas() => NavMessageType::SBAS,
+        _ => NavMessageType::LNAV,
+    }
+}
+
 /// Formats the clock fields ending the first line of an ephemeris
 /// record, then the orbit lines as described by the orbit database
 /// for this revision and message type.
 fn format_ephemeris<W: Write>(
     w: &mut BufWriter<W>,
     k: &NavKey,
+    msgtype: NavMessageType,
     eph: &Ephemeris,
     version: Version,
     exponent: char,
@@ -129,7 +185,7 @@ fn format_ephemeris<W: Write>(
         k.sv.constellation
     };
 
-    let standards = closest_nav_standards(constellation, version, k.msgtype)
+    let standards = closest_nav_standards(constellation, version, msgtype)
         .ok_or(FormattingError::NoNavigationDefinition)?;
 
     let prefix = line_prefix(version.major);
@@ -139,7 +195,11 @@ fn format_ephemeris<W: Write>(
         if index % 4 == 0 {
             write!(w, "{}", prefix)?;
         }
-        match eph.orbits.get(*key) {
+        let item = eph
+            .orbits
+            .get(*key)
+            .or_else(|| orbit_alias(key).and_then(|alias| eph.orbits.get(alias)));
+        match item {
             Some(item) if !key.contains("spare") => {
                 write!(w, "{}", format_e19(orbit_value(item), exponent))?;
             },
@@ -325,6 +385,18 @@ fn format_ionosphere_model<W: Write>(
 /// Formats the navigation [Record] in the revision defined by [Header].
 /// The record is browsed in key order, which is chronological and
 /// then per satellite.
+///
+/// The record may have been parsed from another revision:
+/// - written as RINEX 2 or 3, only the ephemerides of the legacy
+///   messages are kept (LNAV, FDMA, INAV, FNAV, D1, D2, SBAS); the
+///   modern messages (CNAV, CNV1 to CNV3, L1NV, L1OC, L3OC) and the
+///   STO, EOP and ION records have no representation there and are
+///   skipped. RINEX 2 files describe a single constellation: when the
+///   header names one, the other satellites are skipped too.
+/// - written as RINEX 4, ephemerides parsed from RINEX 2 or 3 are
+///   given their RINEX 4 message type: FDMA for GLONASS, SBAS for
+///   SBAS, INAV or FNAV for Galileo from the data source flags, D1 or
+///   D2 for BeiDou from the GEO PRN range.
 pub fn format<W: Write>(
     writer: &mut BufWriter<W>,
     rec: &Record,
@@ -334,14 +406,40 @@ pub fn format<W: Write>(
     let major = version.major;
     let exponent = if major < 3 { 'D' } else { 'E' };
 
+    // RINEX 2: single constellation
+    let constellation = if major < 3 {
+        header.constellation.filter(|c| *c != Constellation::Mixed)
+    } else {
+        None
+    };
+
     for (k, frame) in rec.iter() {
         if let Some(eph) = frame.as_ephemeris() {
             if major > 3 {
-                format_epoch_v4(writer, k)?;
+                let key = NavKey {
+                    msgtype: v4_message_type(k, eph),
+                    ..*k
+                };
+                format_epoch_v4(writer, &key)?;
+                format_ephemeris(writer, &key, key.msgtype, eph, version, exponent)?;
             } else {
+                if !is_legacy_message(k.msgtype, k.sv.constellation) {
+                    continue;
+                }
+                if let Some(constellation) = constellation {
+                    let same = if constellation.is_sbas() {
+                        k.sv.constellation.is_sbas()
+                    } else {
+                        k.sv.constellation == constellation
+                    };
+                    if !same {
+                        continue;
+                    }
+                }
                 format_epoch_v2v3(writer, k, major)?;
+                // every RINEX 2/3 orbit definition is filed as LNAV
+                format_ephemeris(writer, k, NavMessageType::LNAV, eph, version, exponent)?;
             }
-            format_ephemeris(writer, k, eph, version, exponent)?;
         } else if major > 3 {
             format_epoch_v4(writer, k)?;
             if let Some(sto) = frame.as_system_time() {
@@ -352,7 +450,6 @@ pub fn format<W: Write>(
                 format_ionosphere_model(writer, k, model, exponent)?;
             }
         }
-        // STO, EOP and ION frames have no representation prior RINEX 4
     }
     Ok(())
 }
