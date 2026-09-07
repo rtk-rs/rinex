@@ -1,5 +1,6 @@
 pub mod header;
 pub mod ionex;
+pub mod nav;
 pub mod obs;
 
 use std::collections::HashMap;
