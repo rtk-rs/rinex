@@ -146,6 +146,8 @@ pub struct DecompressorExpert<const M: usize> {
     /// Stored index of current BLANKS
     /// for correct flags omition in this case
     blanking_indexes: Vec<usize>,
+    /// Vehicles of the epoch being decompressed
+    epoch_svs: Vec<SV>,
     /// Cleaned up flags buffer (single malloc)
     flags_buf: String,
 
@@ -181,6 +183,7 @@ impl<const M: usize> Default for DecompressorExpert<M> {
             flags_diff: HashMap::with_capacity(8),       // cannot initialize yet
             epoch_descriptor: String::with_capacity(256),
             blanking_indexes: Vec::with_capacity(32),
+            epoch_svs: Vec::with_capacity(64),
             flags_buf: String::with_capacity(32),
             clock_diff: NumDiff::<M>::new(0, M),
         }
@@ -284,6 +287,7 @@ impl<const M: usize> DecompressorExpert<M> {
             obs_diff: HashMap::with_capacity(8), // cannot initialize yet
             flags_diff: HashMap::with_capacity(8), // cannot initialize yet
             blanking_indexes: Vec::with_capacity(32),
+            epoch_svs: Vec::with_capacity(64),
             flags_buf: String::with_capacity(32),
             epoch_descriptor: String::with_capacity(256),
             clock_diff: NumDiff::<M>::new(0, M),
@@ -538,6 +542,8 @@ impl<const M: usize> DecompressorExpert<M> {
         // complex resynchronization scenario. But that also means we are not able
         // to partly decompress the first valid data fields. In otherwords, we are
         // very sensitive to valid satellites description.
+        self.epoch_svs.clear();
+
         for i in 0..self.numsat {
             let start = Self::sv_slice_start(self.v3, i);
 
@@ -570,6 +576,8 @@ impl<const M: usize> DecompressorExpert<M> {
                 },
             };
 
+            self.epoch_svs.push(sv);
+
             // initialize compression kernel on first satellite encounter
             if self.flags_diff.get(&sv).is_none() {
                 // Initializes with a little bit of capacity to improve performances.
@@ -577,6 +585,13 @@ impl<const M: usize> DecompressorExpert<M> {
                 self.flags_diff.insert(sv, textdiff);
             }
         }
+
+        // vehicles absent from this epoch restart from scratch when they
+        // come back: their kernels are reset by the compressor and their
+        // flags are published in full.
+        let epoch_svs = &self.epoch_svs;
+        self.flags_diff.retain(|sv, _| epoch_svs.contains(sv));
+        self.obs_diff.retain(|(sv, _), _| epoch_svs.contains(sv));
 
         let obs = self
             .get_observables(&self.sv.constellation)
