@@ -249,6 +249,12 @@ fn parse_signals_v2(
         let sv_end = (sv_ptr + SVNN_SIZE).min(systems_str_len);
         let system = systems_str[sv_ptr..sv_end].trim();
 
+        if system.is_empty() {
+            // blank slot: fewer than twelve vehicles on a line that
+            // carries a clock offset
+            break;
+        }
+
         let mut sv = SV::default();
         if let Ok(found) = SV::from_str(system) {
             sv = found;
