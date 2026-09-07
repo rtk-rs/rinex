@@ -902,5 +902,87 @@
             "iscL1DS": "f64",
             "t_tm": "f64"
         }
+    },
+    {
+        "constellation": "GLO",
+        "version": {
+            "major": 4
+        },
+        "type": "L1OC",
+        "orbits": {
+            "satPosX": "f64",
+            "velX": "f64",
+            "accelX": "f64",
+            "health": "flag",
+            "satPosY": "f64",
+            "velY": "f64",
+            "accelY": "f64",
+            "dataValidity": "u8",
+            "satPosZ": "f64",
+            "velZ": "f64",
+            "accelZ": "f64",
+            "tgdL2OCp": "f64",
+            "satType": "u8",
+            "sourceFlags": "u8",
+            "aode": "f64",
+            "aodc": "f64",
+            "attitudeFlag": "u8",
+            "tin": "f64",
+            "tau1": "f64",
+            "tau2": "f64",
+            "yawAngle": "f64",
+            "signFlag": "f64",
+            "angularRate": "f64",
+            "angularAccel": "f64",
+            "maxAngularRate": "f64",
+            "pcX": "f64",
+            "pcY": "f64",
+            "pcZ": "f64",
+            "uraiOrb": "f64",
+            "uraiClk": "f64",
+            "spare1": "f64",
+            "t_tm": "f64"
+        }
+    },
+    {
+        "constellation": "GLO",
+        "version": {
+            "major": 4
+        },
+        "type": "L3OC",
+        "orbits": {
+            "satPosX": "f64",
+            "velX": "f64",
+            "accelX": "f64",
+            "health": "flag",
+            "satPosY": "f64",
+            "velY": "f64",
+            "accelY": "f64",
+            "dataValidity": "u8",
+            "satPosZ": "f64",
+            "velZ": "f64",
+            "accelZ": "f64",
+            "iscL3OCp": "f64",
+            "satType": "u8",
+            "sourceFlags": "u8",
+            "aode": "f64",
+            "aodc": "f64",
+            "attitudeFlag": "u8",
+            "tin": "f64",
+            "tau1": "f64",
+            "tau2": "f64",
+            "yawAngle": "f64",
+            "signFlag": "f64",
+            "angularRate": "f64",
+            "angularAccel": "f64",
+            "maxAngularRate": "f64",
+            "pcX": "f64",
+            "pcY": "f64",
+            "pcZ": "f64",
+            "uraiOrb": "f64",
+            "uraiClk": "f64",
+            "spare1": "f64",
+            "t_tm": "f64"
+        }
     }
 ]

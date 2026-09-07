@@ -605,4 +605,33 @@ mod test {
         assert_eq!(eph.get_orbit_f64("iscL1DS"), Some(5.995389074087e-09));
         assert_eq!(eph.get_orbit_f64("t_tm"), Some(5.191380000000e+05));
     }
+
+    #[test]
+    fn glonass_l1oc_v4() {
+        // RINEX 4.02 Table A18
+        let content =
+            "R26 2024 02 03 00 15 00-1.605716170161e-05 1.652011860642e-12-2.081668171172e-17
+     1.812154053020e+04-2.071979139000e+00 5.729816621169e-10 1.000000000000e+00
+    -2.325615360260e+03 1.285475494340e+00-1.047737896442e-09 1.000000000000e+00
+     1.781341854668e+04 2.280306640081e+00-9.458744898438e-10 0.000000000000e+00
+     2.000000000000e+00 1.000000000000e+01 7.500000000000e-01 7.500000000000e-01
+     0.000000000000e+00 0.000000000000e+00 0.000000000000e+00 0.000000000000e+00
+     0.000000000000e+00 0.000000000000e+00 0.000000000000e+00 0.000000000000e+00
+     0.000000000000e+00 0.000000000000e+00 0.000000000000e+00 0.000000000000e+00
+     1.500000000000e+01 5.000000000000e+00                    5.184000000000e+05";
+        for msgtype in [NavMessageType::L1OC, NavMessageType::L3OC] {
+            let (epoch, sv, eph) =
+                Ephemeris::parse_v4(msgtype, content.lines(), TimeScale::UTC).unwrap();
+            assert_eq!(sv, SV::from_str("R26").unwrap());
+            assert_eq!(epoch, Epoch::from_str("2024-02-03T00:15:00 UTC").unwrap());
+            assert_eq!(eph.get_orbit_f64("satPosX"), Some(1.812154053020e+04));
+            assert_eq!(eph.get_orbit_f64("health"), Some(1.0));
+            assert_eq!(eph.get_orbit_f64("dataValidity"), Some(1.0));
+            assert_eq!(eph.get_orbit_f64("satType"), Some(2.0));
+            assert_eq!(eph.get_orbit_f64("sourceFlags"), Some(10.0));
+            assert_eq!(eph.get_orbit_f64("uraiOrb"), Some(15.0));
+            assert_eq!(eph.get_orbit_f64("uraiClk"), Some(5.0));
+            assert_eq!(eph.get_orbit_f64("t_tm"), Some(5.184000000000e+05));
+        }
+    }
 }
