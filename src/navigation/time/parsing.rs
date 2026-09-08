@@ -129,11 +129,16 @@ impl TimeOffset {
     /// Parse [TimeOffset] from RINEXv4 standard
     pub fn parse_v4(line_1: &str, line_2: &str) -> Result<Self, ParsingError> {
         let (epoch, rem) = line_1.split_at(24);
-        let (timescales, _) = rem.split_at(4);
+        let (timescales, rem) = rem.split_at(4);
 
         let (lhs, rhs) = Self::parse_lhs_rhs_timescales(timescales)?;
 
-        // let utc = rem.trim().to_string();
+        // UTC identifier (column 63), when the message defines one
+        let utc = match rem.trim() {
+            "" => None,
+            utc => Some(utc.to_string()),
+        };
+
         let t_ref = parse_epoch_in_timescale(epoch.trim(), lhs)?;
         let (t_week, t_nanos) = t_ref.to_time_of_week();
 
@@ -154,7 +159,8 @@ impl TimeOffset {
             parse_f64(a2.trim()).map_err(|_| ParsingError::NavTimeOffsetParinsg)?,
         );
 
-        let time_offset = Self::from_time_of_week(t_week, t_nanos, lhs, rhs, (a0, a1, a2));
+        let mut time_offset = Self::from_time_of_week(t_week, t_nanos, lhs, rhs, (a0, a1, a2));
+        time_offset.utc = utc;
 
         Ok(time_offset)
     }

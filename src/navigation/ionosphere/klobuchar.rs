@@ -462,3 +462,42 @@ mod test {
         }
     }
 }
+
+impl KbModel {
+    /// Formats the RINEX 4 Klobuchar ION record (Table A35).
+    pub(crate) fn format_v4<W: std::io::Write>(
+        &self,
+        w: &mut std::io::BufWriter<W>,
+        epoch: Epoch,
+    ) -> Result<(), crate::error::FormattingError> {
+        use crate::navigation::formatting::{format_epoch_v4_fields, NavFormatter};
+        use std::io::Write;
+
+        writeln!(
+            w,
+            "    {}{}{}{}",
+            format_epoch_v4_fields(epoch),
+            NavFormatter::new(self.alpha.0),
+            NavFormatter::new(self.alpha.1),
+            NavFormatter::new(self.alpha.2),
+        )?;
+
+        writeln!(
+            w,
+            "    {}{}{}{}",
+            NavFormatter::new(self.alpha.3),
+            NavFormatter::new(self.beta.0),
+            NavFormatter::new(self.beta.1),
+            NavFormatter::new(self.beta.2),
+        )?;
+
+        writeln!(
+            w,
+            "    {}{}",
+            NavFormatter::new(self.beta.3),
+            NavFormatter::new(self.region as u8 as f64),
+        )?;
+
+        Ok(())
+    }
+}

@@ -201,6 +201,9 @@ pub enum FormattingError {
 
     #[error("nav: missing grid defs")]
     NoGridDefinition,
+
+    #[error("crinex compression: {0}")]
+    Hatanaka(#[from] HatanakaError),
 }
 
 /// General error (processing, analysis..)

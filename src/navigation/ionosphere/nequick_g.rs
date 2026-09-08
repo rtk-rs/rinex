@@ -140,3 +140,28 @@ mod test {
         );
     }
 }
+
+impl NgModel {
+    /// Formats the RINEX 4 Nequick-G ION record (Table A36).
+    pub(crate) fn format_v4<W: std::io::Write>(
+        &self,
+        w: &mut std::io::BufWriter<W>,
+        epoch: Epoch,
+    ) -> Result<(), crate::error::FormattingError> {
+        use crate::navigation::formatting::{format_epoch_v4_fields, NavFormatter};
+        use std::io::Write;
+
+        writeln!(
+            w,
+            "    {}{}{}{}",
+            format_epoch_v4_fields(epoch),
+            NavFormatter::new(self.a.0),
+            NavFormatter::new(self.a.1),
+            NavFormatter::new(self.a.2),
+        )?;
+
+        writeln!(w, "    {}", NavFormatter::new(self.region.bits() as f64))?;
+
+        Ok(())
+    }
+}

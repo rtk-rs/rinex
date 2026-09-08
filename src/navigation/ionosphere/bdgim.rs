@@ -58,3 +58,42 @@ impl BdModel {
         Ok((epoch, Self { alpha }))
     }
 }
+
+impl BdModel {
+    /// Formats the RINEX 4 BDGIM ION record (Table A37).
+    pub(crate) fn format_v4<W: std::io::Write>(
+        &self,
+        w: &mut std::io::BufWriter<W>,
+        epoch: Epoch,
+    ) -> Result<(), crate::error::FormattingError> {
+        use crate::navigation::formatting::{format_epoch_v4_fields, NavFormatter};
+        use std::io::Write;
+
+        writeln!(
+            w,
+            "    {}{}{}{}",
+            format_epoch_v4_fields(epoch),
+            NavFormatter::new(self.alpha.0),
+            NavFormatter::new(self.alpha.1),
+            NavFormatter::new(self.alpha.2),
+        )?;
+
+        writeln!(
+            w,
+            "    {}{}{}{}",
+            NavFormatter::new(self.alpha.3),
+            NavFormatter::new(self.alpha.4),
+            NavFormatter::new(self.alpha.5),
+            NavFormatter::new(self.alpha.6),
+        )?;
+
+        writeln!(
+            w,
+            "    {}{}",
+            NavFormatter::new(self.alpha.7),
+            NavFormatter::new(self.alpha.8),
+        )?;
+
+        Ok(())
+    }
+}

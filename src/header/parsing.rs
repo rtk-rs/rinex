@@ -820,7 +820,7 @@ impl Header {
         let (mm, rem) = rem.split_at(6);
         let (ss, rem) = rem.split_at(5);
         let (_dot, rem) = rem.split_at(1);
-        let (ns, rem) = rem.split_at(8);
+        let (fraction, rem) = rem.split_at(8);
 
         // println!("Y \"{}\" M \"{}\" D \"{}\" HH \"{}\" MM \"{}\" SS \"{}\" NS \"{}\"", y, m, d, hh, mm, ss, ns); // DEBUG
         let mut y = y
@@ -860,10 +860,15 @@ impl Header {
             .parse::<u8>()
             .map_err(|_| ParsingError::DatetimeParsing)?;
 
-        let ns = ns
-            .trim()
+        // fractional seconds: F13.7 gives seven digits, older files
+        // may give fewer. Scale the digits to nanoseconds.
+        let fraction = fraction.trim();
+        let fraction = &fraction[..fraction.len().min(9)];
+
+        let ns = fraction
             .parse::<u32>()
-            .map_err(|_| ParsingError::DatetimeParsing)?;
+            .map_err(|_| ParsingError::DatetimeParsing)?
+            * 10_u32.pow((9 - fraction.len()) as u32);
 
         /*
          * We set TAI as "default" Timescale.
@@ -882,7 +887,7 @@ impl Header {
         }
 
         Epoch::from_str(&format!(
-            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:08} {}",
+            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:09} {}",
             y, m, d, hh, mm, ss, ns, ts
         ))
         .map_err(|_| ParsingError::DatetimeParsing)
@@ -975,5 +980,22 @@ mod test {
         let content = "  1995    01    01    00    00   00.000000             ";
         let parsed = Header::parse_time_of_obs(&content).unwrap();
         assert_eq!(parsed, Epoch::from_str("1995-01-01T00:00:00 TAI").unwrap());
+
+        // fractional seconds (F13.7): the digits were read as a plain
+        // integer and formatted over eight positions, so .9890000 became
+        // 0.0989 s
+        let content = "  2024     9    20     8    17   50.9890000     GPS";
+        let parsed = Header::parse_time_of_obs(&content).unwrap();
+        assert_eq!(
+            parsed,
+            Epoch::from_str("2024-09-20T08:17:50.989 GPST").unwrap()
+        );
+
+        let content = "  2024     9    20     8    17   50.0000001     GPS";
+        let parsed = Header::parse_time_of_obs(&content).unwrap();
+        assert_eq!(
+            parsed,
+            Epoch::from_str("2024-09-20T08:17:50.0000001 GPST").unwrap()
+        );
     }
 }
