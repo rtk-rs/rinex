@@ -492,7 +492,7 @@ impl<const M: usize> DecompressorExpert<M> {
             } else {
                 match line.trim().parse::<i64>() {
                     Ok(val) => {
-                        let val = self.clock_diff.decompress(val);
+                        let val = self.clock_diff.decompress(val)?;
                         clock_data = Some(val);
                     },
                     Err(_) => {},
@@ -502,7 +502,7 @@ impl<const M: usize> DecompressorExpert<M> {
             // highly compressed clock data
             match line.trim().parse::<i64>() {
                 Ok(val) => {
-                    let val = self.clock_diff.decompress(val);
+                    let val = self.clock_diff.decompress(val)?;
                     clock_data = Some(val);
                 },
                 Err(_) => {},
@@ -649,7 +649,7 @@ impl<const M: usize> DecompressorExpert<M> {
                         // compressed data case
                         if let Ok(value) = slice.parse::<i64>() {
                             if let Some(kernel) = self.obs_diff.get_mut(&(self.sv, ptr)) {
-                                let value = kernel.decompress(value);
+                                let value = kernel.decompress(value)?;
                                 let value = value as f64 / 1000.0;
                                 formatted = format!("{:14.3}  ", value).to_string();
                             }
@@ -669,7 +669,7 @@ impl<const M: usize> DecompressorExpert<M> {
 
                         if let Ok(value) = slice.parse::<i64>() {
                             if let Some(kernel) = self.obs_diff.get_mut(&(self.sv, ptr)) {
-                                let value = kernel.decompress(value);
+                                let value = kernel.decompress(value)?;
                                 let value = value as f64 / 1000.0;
                                 formatted = format!("{:14.3}  ", value).to_string();
                             }
@@ -742,7 +742,7 @@ impl<const M: usize> DecompressorExpert<M> {
                         // compressed data case
                         if let Ok(value) = slice.parse::<i64>() {
                             if let Some(kernel) = self.obs_diff.get_mut(&(self.sv, ptr)) {
-                                let value = kernel.decompress(value);
+                                let value = kernel.decompress(value)?;
                                 let value = value as f64 / 1000.0;
                                 formatted = format!("{:14.3}  ", value).to_string();
                             }

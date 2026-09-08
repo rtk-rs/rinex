@@ -186,7 +186,7 @@ impl<const M: usize> CompressorExpert<M> {
                             .filter(|((sv, obs), _)| *sv == signal.sv && obs == &signal.observable)
                             .reduce(|k, _| k)
                         {
-                            let compressed = sv_kernel.compress(quantized);
+                            let compressed = sv_kernel.compress(quantized)?;
                             write!(w, "{} ", compressed)?;
                         } else {
                             // first encounter: build kernel
