@@ -126,39 +126,49 @@ impl Observations {
         const NUM_SV_PER_LINE: usize = 12;
         const NEW_LINE_PADDING: &str = "                                ";
 
-        if let Some(clock) = self.clock {
-            // TODO format clock data!
-            write!(
-                w,
-                " {}  {} {:2}",
-                epoch_format(key.epoch, RinexType::ObservationData, 2),
-                key.flag,
-                numsat,
-            )?;
-        } else {
-            write!(
-                w,
-                " {}  {} {:2}",
-                epoch_format(key.epoch, RinexType::ObservationData, 2),
-                key.flag,
-                numsat,
-            )?;
-        }
+        // receiver clock offset: F12.9 in columns 69-80 of the first line,
+        // right after the twelve SV slots
+        const CLOCK_OFFSET: usize = 68;
+
+        let clock = self.clock.map(|clock| format!("{:12.9}", clock.offset_s));
+
+        let mut line = format!(
+            " {}  {} {:2}",
+            epoch_format(key.epoch, RinexType::ObservationData, 2),
+            key.flag,
+            numsat,
+        );
 
         for (nth, sv) in sv_list.iter().enumerate() {
             if nth > 0 && (nth % NUM_SV_PER_LINE) == 0 {
-                write!(w, "{}", NEW_LINE_PADDING)?;
+                if nth == NUM_SV_PER_LINE {
+                    Self::push_clock_v2(&mut line, &clock, CLOCK_OFFSET);
+                }
+                writeln!(w, "{}", line)?;
+                line.clear();
+                line.push_str(NEW_LINE_PADDING);
             }
-            write!(w, "{:x}", sv)?;
-            if nth < numsat - 1 && nth % NUM_SV_PER_LINE == NUM_SV_PER_LINE - 1 {
-                write!(w, "{}", '\n')?;
-            }
-            if nth == numsat - 1 {
-                write!(w, "{}", '\n')?;
-            }
+            line.push_str(&format!("{:x}", sv));
         }
 
+        if sv_list.len() <= NUM_SV_PER_LINE {
+            Self::push_clock_v2(&mut line, &clock, CLOCK_OFFSET);
+        }
+
+        writeln!(w, "{}", line)?;
+
         Ok(())
+    }
+
+    /// Appends the formatted clock offset (if any) at `offset` of the
+    /// first V2 epoch line, padding the SV list with blanks.
+    fn push_clock_v2(line: &mut String, clock: &Option<String>, offset: usize) {
+        if let Some(clock) = clock {
+            while line.len() < offset {
+                line.push(' ');
+            }
+            line.push_str(clock);
+        }
     }
 
     /// Formats [Observations] according to RINEXv3 standards.
@@ -266,9 +276,10 @@ impl Observations {
         numsat: usize,
     ) -> Result<(), FormattingError> {
         if let Some(clock) = self.clock {
+            // receiver clock offset: F15.12 in columns 42-56
             writeln!(
                 w,
-                "> {}  {} {:2}  {:13.4}",
+                "> {}  {} {:2}      {:15.12}",
                 epoch_format(key.epoch, RinexType::ObservationData, 3),
                 key.flag,
                 numsat,
@@ -291,7 +302,9 @@ impl Observations {
 mod test {
 
     use crate::{
-        observation::{EpochFlag, HeaderFields, ObsKey, Observations, SignalObservation},
+        observation::{
+            ClockObservation, EpochFlag, HeaderFields, ObsKey, Observations, SignalObservation,
+        },
         prelude::{Constellation, Epoch, Observable, SV},
     };
 
@@ -913,6 +926,113 @@ S33         4.000
 S35         4.000  
 S36         4.000  
 "
+        );
+    }
+
+    #[test]
+    fn test_format_epoch_v2_clock_offset() {
+        let epoch = Epoch::from_str("2021-01-01T00:00:00 GPST").unwrap();
+        let key = ObsKey {
+            flag: EpochFlag::Ok,
+            epoch,
+        };
+
+        let c1 = Observable::from_str("C1").unwrap();
+        let clock = Some(ClockObservation::default().with_offset_s(epoch, -0.000123456));
+
+        // clock offset in columns 69-80, SV list padded to column 68
+        let signals = ["G07", "G23", "G26"]
+            .iter()
+            .map(|sv| SignalObservation {
+                value: 1.0,
+                observable: c1.clone(),
+                lli: None,
+                snr: None,
+                sv: SV::from_str(sv).unwrap(),
+            })
+            .collect::<Vec<_>>();
+
+        let obs = Observations {
+            clock,
+            signals: signals.clone(),
+        };
+
+        let sv_list = signals.iter().map(|sig| sig.sv).collect::<Vec<_>>();
+
+        let mut buf = BufWriter::new(Utf8Buffer::new(1024));
+        obs.format_epoch_v2(&mut buf, &key, &sv_list, sv_list.len())
+            .unwrap();
+
+        let content = buf.into_inner().unwrap().to_ascii_utf8();
+        assert_eq!(
+            content,
+            " 21  1  1  0  0  0.0000000  0  3G07G23G26                           -0.000123456\n",
+        );
+
+        // more than 12 SVs: clock offset on the first line, after the 12th SV
+        let signals = (1..=14)
+            .map(|prn| SignalObservation {
+                value: 1.0,
+                observable: c1.clone(),
+                lli: None,
+                snr: None,
+                sv: SV::from_str(&format!("G{:02}", prn)).unwrap(),
+            })
+            .collect::<Vec<_>>();
+
+        let obs = Observations {
+            clock,
+            signals: signals.clone(),
+        };
+
+        let sv_list = signals.iter().map(|sig| sig.sv).collect::<Vec<_>>();
+
+        let mut buf = BufWriter::new(Utf8Buffer::new(1024));
+        obs.format_epoch_v2(&mut buf, &key, &sv_list, sv_list.len())
+            .unwrap();
+
+        let content = buf.into_inner().unwrap().to_ascii_utf8();
+        assert_eq!(
+            content,
+            " 21  1  1  0  0  0.0000000  0 14G01G02G03G04G05G06G07G08G09G10G11G12-0.000123456\n                                G13G14\n",
+        );
+    }
+
+    #[test]
+    fn test_format_epoch_v3_clock_offset() {
+        let epoch = Epoch::from_str("2024-01-01T00:00:00 GPST").unwrap();
+        let key = ObsKey {
+            flag: EpochFlag::Ok,
+            epoch,
+        };
+
+        // clock offset as F15.12 in columns 42-56
+        let obs = Observations {
+            clock: Some(ClockObservation::default().with_offset_s(epoch, 0.000000001520)),
+            signals: vec![],
+        };
+
+        let mut buf = BufWriter::new(Utf8Buffer::new(1024));
+        obs.format_epoch_v3(&mut buf, &key, 1).unwrap();
+
+        let content = buf.into_inner().unwrap().to_ascii_utf8();
+        assert_eq!(
+            content,
+            "> 2024 01 01 00 00  0.0000000  0  1       0.000000001520\n"
+        );
+
+        let obs = Observations {
+            clock: Some(ClockObservation::default().with_offset_s(epoch, -0.000000001459)),
+            signals: vec![],
+        };
+
+        let mut buf = BufWriter::new(Utf8Buffer::new(1024));
+        obs.format_epoch_v3(&mut buf, &key, 1).unwrap();
+
+        let content = buf.into_inner().unwrap().to_ascii_utf8();
+        assert_eq!(
+            content,
+            "> 2024 01 01 00 00  0.0000000  0  1      -0.000000001459\n"
         );
     }
 }
