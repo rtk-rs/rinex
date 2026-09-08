@@ -27,6 +27,21 @@ pub enum IonosphereModel {
     Bdgim(BdModel),
 }
 
+impl IonosphereModel {
+    /// Formats the RINEX 4 ION record, following the "> ION" record header.
+    pub(crate) fn format_v4<W: std::io::Write>(
+        &self,
+        w: &mut std::io::BufWriter<W>,
+        epoch: crate::prelude::Epoch,
+    ) -> Result<(), crate::error::FormattingError> {
+        match self {
+            Self::Klobuchar(model) => model.format_v4(w, epoch),
+            Self::NequickG(model) => model.format_v4(w, epoch),
+            Self::Bdgim(model) => model.format_v4(w, epoch),
+        }
+    }
+}
+
 impl Default for IonosphereModel {
     fn default() -> Self {
         Self::Klobuchar(KbModel::default())

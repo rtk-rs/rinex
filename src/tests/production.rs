@@ -146,7 +146,6 @@ fn nav_v3() {
 }
 
 #[test]
-#[ignore]
 fn nav_v4() {
     let folder = env!("CARGO_MANIFEST_DIR").to_owned() + "/data/NAV/V4/";
     for file in std::fs::read_dir(folder).unwrap() {

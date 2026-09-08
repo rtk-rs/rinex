@@ -46,3 +46,4 @@ pub fn generic_formatted_lines_test(utf8_content: &str, test_values: HashMap<usi
     }
     assert_eq!(nb_tests, total_tests);
 }
+pub mod nav;

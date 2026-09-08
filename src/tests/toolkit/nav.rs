@@ -166,8 +166,7 @@ pub fn generic_comparison(dut: &Rinex, model: &Rinex) {
 
     for (k, v) in model.iter() {
         if let Some(dut_v) = dut.get(&k) {
-            // TODO: add f64_eq verifications
-            // assert_eq!(v, dut_v);
+            assert_eq!(v, dut_v, "frame differs at {:?}", k);
         } else {
             panic!("missing data at {:?}", k);
         }

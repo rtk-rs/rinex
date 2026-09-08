@@ -2,8 +2,12 @@
 
 use crate::{
     epoch::parse_in_timescale as parse_epoch_in_timescale,
+    error::FormattingError,
+    navigation::formatting::{format_epoch_v4_fields, NavFormatter},
     prelude::{Epoch, ParsingError, TimeScale},
 };
+
+use std::io::{BufWriter, Write};
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
@@ -74,6 +78,43 @@ impl EarthOrientation {
                 delta_ut1,
             },
         ))
+    }
+
+    /// Formats the RINEX 4 EOP record (Table A34), following the
+    /// "> EOP" record header.
+    pub(crate) fn format_v4<W: Write>(
+        &self,
+        w: &mut BufWriter<W>,
+        epoch: Epoch,
+    ) -> Result<(), FormattingError> {
+        writeln!(
+            w,
+            "    {}{}{}{}",
+            format_epoch_v4_fields(epoch),
+            NavFormatter::new(self.x.0),
+            NavFormatter::new(self.x.1),
+            NavFormatter::new(self.x.2),
+        )?;
+
+        writeln!(
+            w,
+            "{:23}{}{}{}",
+            "",
+            NavFormatter::new(self.y.0),
+            NavFormatter::new(self.y.1),
+            NavFormatter::new(self.y.2),
+        )?;
+
+        writeln!(
+            w,
+            "    {}{}{}{}",
+            NavFormatter::new(self.t_tm as f64),
+            NavFormatter::new(self.delta_ut1.0),
+            NavFormatter::new(self.delta_ut1.1),
+            NavFormatter::new(self.delta_ut1.2),
+        )?;
+
+        Ok(())
     }
 }
 
