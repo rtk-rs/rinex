@@ -5,41 +5,57 @@ use crate::prelude::{Carrier, Constellation, Error, ParsingError};
 #[derive(Debug, Clone, PartialEq, PartialOrd, Hash, Ord, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Observable {
-    /// Carrier phase range converted to [m] (not cycles!)
+    /// Carrier phase range converted to meters (not cycles!)
     PhaseRange(String),
+
     /// Doppler shift observation
     Doppler(String),
-    /// SSI: Receiver signal strength observation [dB]
+
+    /// SSI: Receiver signal strength observation (in dB)
     SSI(String),
-    /// Received Power [dBm]
+
+    /// Received Power (in dBm)
     Power(String),
-    /// Decoded Pseudo range converted to [m]
+
+    /// Decoded Pseudo range converted to meters
     PseudoRange(String),
+
     /// Channel number Pseudo Observable.
     /// Attached to Phase or PseudoRange observable to accurately
     /// described how they were sampled.
     ChannelNumber(String),
+
     /// Pressure observation in hPa
     Pressure,
+
     /// Dry temperature measurement in Celcius degrees
     Temperature,
+
     /// Relative humidity measurement in %
     HumidityRate,
+
     /// Wet Zenith Path delay in mm
     ZenithWetDelay,
+
     /// Zenith path delay, dry component in mm
     ZenithDryDelay,
+
     /// Total zenith path delay (dry + wet) in mm
     ZenithTotalDelay,
+
     /// Wind direction azimuth in degrees
     WindDirection,
+
     /// Wind speed in m.s⁻¹
     WindSpeed,
+
     /// Rain Increment: rain accumulation
     /// since previous measurement, in 10th of mm
     RainIncrement,
+
     /// Hail Indicator
     HailIndicator,
+
     /// Frequency Ratio (dimensionless)
     FrequencyRatio,
 }

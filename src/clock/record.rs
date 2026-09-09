@@ -77,16 +77,21 @@ impl std::fmt::Display for ClockType {
 #[derive(Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 pub struct ClockProfile {
-    /// Clock bias [s]
+    /// Clock bias (in seconds)
     pub bias: f64,
+
     /// Clock bias deviation
     pub bias_dev: Option<f64>,
-    /// Clock drift [s/s]
+
+    /// Clock drift (in seconds per second)
     pub drift: Option<f64>,
+
     /// Clock drift deviation
     pub drift_dev: Option<f64>,
-    /// Clock drift change [s/s^2]
+
+    /// Clock drift change (in seconds per squared second)
     pub drift_change: Option<f64>,
+
     /// Clock drift change deviation
     pub drift_change_dev: Option<f64>,
 }

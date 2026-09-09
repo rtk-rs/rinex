@@ -33,8 +33,8 @@ pub use snr::SNR;
 
 pub(crate) use parsing::{is_new_epoch, parse_epoch};
 
-#[cfg(docsrs)]
-use crate::Bibliography;
+#[cfg(doc)]
+use crate::prelude::{Header, TimeScale};
 
 use std::collections::BTreeMap;
 
@@ -65,7 +65,7 @@ impl Default for Observations {
 }
 
 impl Observations {
-    /// Define [Observations] with Clock offset [s] observed at [Epoch]
+    /// Define [Observations] with Clock offset (in seconds) observed at [Epoch]
     pub fn with_clock_offset_s(&self, timeof_obs: Epoch, offset_s: f64) -> Self {
         let mut s = self.clone();
         if let Some(ref mut clock) = s.clock {

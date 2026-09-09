@@ -18,8 +18,8 @@ impl Rinex {
         Some(end - start)
     }
 
-    /// Form a [`Timeseries`] iterator spanning [Self::duration]
-    /// with [Self::dominant_sample_rate] spacing
+    /// Form a [TimeSeries] iterator spanning [Self::duration]
+    /// with [Self::dominant_sampling_interval] spacing
     pub fn timeseries(&self) -> Option<TimeSeries> {
         let start = self.first_epoch()?;
         let end = self.last_epoch()?;

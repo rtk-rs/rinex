@@ -5,13 +5,16 @@ use nav::Streamer as NavStreamer;
 
 use rtcm_rs::msg::message::Message;
 
+#[cfg(doc)]
+use std::io::Read;
+
 /// RINEX type dependent record streamer
 enum TypeDependentStreamer<'a> {
     /// NAV frames streamer
     NAV(NavStreamer<'a>),
 }
 
-/// [RNX2UBX] can serialize a [Rinex] structure as a stream of UBX frames.
+/// [RNX2RTCM] can serialize a [Rinex] structure as a stream of UBX frames.
 /// It implements [Read] which lets you stream data bytes into your own buffer.
 pub struct RNX2RTCM<'a> {
     type_dependent: TypeDependentStreamer<'a>,

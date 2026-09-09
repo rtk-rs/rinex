@@ -31,9 +31,11 @@ use serde::{Deserialize, Serialize};
 pub struct MeteoKey {
     /// [Epoch] of observation
     pub epoch: Epoch,
+
     /// [Observable] determines the physics
     pub observable: Observable,
 }
 
-/// [MeteoObservation]s sorted by [Epoch]
+/// Meteo sensor observations, sorted by [MeteoKey].
+/// Measurement unit is [Observable] dependent.
 pub type Record = BTreeMap<MeteoKey, f64>;

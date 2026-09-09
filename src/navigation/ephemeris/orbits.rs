@@ -439,7 +439,7 @@ impl OrbitItem {
         }
     }
 
-    /// Unwraps Self as [Gpsl2pFlag] (if feasible)
+    /// Unwraps Self as [OrbitItem::Gpsl2pFlag] (if feasible)
     pub fn as_gps_l2p_flag(&self) -> Option<bool> {
         match self {
             OrbitItem::Gpsl2pFlag(flag) => Some(*flag),

@@ -126,7 +126,7 @@ pub mod prelude {
 
     pub use crate::meteo::MeteoKey;
 
-    pub use crate::prod::ProductionAttributes;
+    pub use crate::production::ProductionAttributes;
     pub use crate::record::{Comments, Record};
 
     // pub re-export
@@ -203,13 +203,6 @@ pub mod prelude {
     pub use crate::ublox::RNX2UBX;
 }
 
-/// Package dedicated to file production.
-pub mod prod {
-    pub use crate::production::{
-        DataSource, DetailedProductionAttributes, ProductionAttributes, FFU, PPU,
-    };
-}
-
 use carrier::Carrier;
 use prelude::*;
 
@@ -225,6 +218,9 @@ use crate::{
 
 #[cfg(docsrs)]
 pub use bibliography::Bibliography;
+
+#[cfg(doc)]
+use crate::prelude::qc::Merge;
 
 /// Parse a floating point number from a string, handling Fortran-style 'D'/'d'
 /// exponent notation (e.g. `1.3775D+02`) that Rust's standard `FromStr` does not
@@ -790,7 +786,7 @@ impl Rinex {
         attributes
     }
 
-    /// Parse [RINEX] content by consuming [BufReader] (efficient buffered reader).
+    /// Parse [Rinex] content by consuming [BufReader] (efficient buffered reader).
     /// Attributes potentially described by a file name need to be provided either
     /// manually / externally, or guessed when parsing has been completed.
     pub fn parse<R: Read>(reader: &mut BufReader<R>) -> Result<Self, ParsingError> {
@@ -809,7 +805,7 @@ impl Rinex {
         })
     }
 
-    /// Format [RINEX] into writable I/O using efficient buffered writer
+    /// Format [Rinex] into writable I/O using efficient buffered writer
     /// and following standard specifications. The revision to be followed is defined
     /// in [Header] section. This is the mirror operation of [Self::parse].
     pub fn format<W: Write>(&self, writer: &mut BufWriter<W>) -> Result<(), FormattingError> {
@@ -858,7 +854,7 @@ impl Rinex {
         Ok(rinex)
     }
 
-    /// Dumps [RINEX] into writable local file (as readable ASCII UTF-8)
+    /// Dumps [Rinex] into writable local file (as readable ASCII UTF-8)
     /// using efficient buffered formatting.
     /// This is the mirror operation of [Self::from_file].
     /// Returns total amount of bytes that was generated.
@@ -915,7 +911,7 @@ impl Rinex {
         Ok(rinex)
     }
 
-    /// Dumps and gzip encodes [RINEX] into writable local file,
+    /// Dumps and gzip encodes [Rinex] into writable local file,
     /// using efficient buffered formatting.
     /// This is the mirror operation of [Self::from_gzip_file].
     /// Returns total amount of bytes that was generated.
@@ -1345,7 +1341,7 @@ impl Rinex {
             }
         }))
     }
-    /// Returns APC offset for given spacecraft, expressed in NEU coordinates [mm] for given
+    /// Returns APC offset for given spacecraft, expressed in NEU coordinates (in millimeters) for given
     /// frequency. "now" is used to determine calibration validity (in time).
     pub fn sv_antenna_apc_offset(
         &self,
@@ -1370,8 +1366,8 @@ impl Rinex {
     }
     /// Returns APC offset for given RX Antenna model (ground station model).
     /// Model name is the IGS code, which has to match exactly but we're case insensitive.
-    /// The APC offset is expressed in NEU coordinates
-    /// [mm]. "now" is used to determine calibration validity (in time).
+    /// The APC offset is expressed in NEU coordinates (in millimeters).
+    /// "now" is used to determine calibration validity (in time).
     pub fn rx_antenna_apc_offset(
         &self,
         now: Epoch,

@@ -74,7 +74,7 @@ pub enum NavFrame {
     ION(IonosphereModel),
 
     /// [TimeOffset] frames were introduced in RINEXv4 to describe
-    /// the state of GNSS [Timescale]s more precisely during the course of the day.
+    /// the state of GNSS [TimeScale]s more precisely during the course of the day.
     /// Until RINEXv3 (included), their state is updated one per RINEX publication,
     /// so typically once per day.
     STO(TimeOffset),

@@ -10,6 +10,9 @@ use crate::{
 #[cfg(feature = "serde")]
 use serde::Serialize;
 
+#[cfg(doc)]
+use crate::antex::frequency::Frequency;
+
 /// Returns true if this line matches
 /// the beginning of a `epoch` for ATX file (special files),
 /// this is not really an epoch but rather a group of dataset

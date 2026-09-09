@@ -7,6 +7,9 @@ use crate::{
 
 use std::io::{BufRead, BufReader, Lines, Read};
 
+#[cfg(doc)]
+use crate::hatanaka::Decompressor;
+
 /// [DecompressorIO] emplements [DecompressorExpert] internally and works
 /// directly on any [Read]able I/O interface.
 ///

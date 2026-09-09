@@ -6,6 +6,7 @@ use crate::carrier::Carrier;
 pub enum Pattern {
     /// Non azimuth dependent pattern
     NonAzimuthDependent(Vec<f64>),
+
     /// Azimuth dependent pattern
     AzimuthDependent((f64, Vec<f64>)),
 }

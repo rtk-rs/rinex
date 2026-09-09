@@ -4,6 +4,9 @@ use std::str::FromStr;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[cfg(doc)]
+use crate::prelude::Epoch;
+
 /// `EpochFlag` validates an epoch,
 /// or describes possible events that occurred
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -11,16 +14,22 @@ use serde::{Deserialize, Serialize};
 pub enum EpochFlag {
     /// Epoch is sane
     Ok,
+
     /// Power failure since previous epoch
     PowerFailure,
+
     /// Antenna is being moved at current epoch
     AntennaBeingMoved,
+
     /// Site has changed, received has moved since last epoch
     NewSiteOccupation,
+
     /// New information to come after this epoch
     HeaderInformationFollows,
+
     /// External event - significant event in this epoch
     ExternalEvent,
+
     /// Cycle slip at this epoch
     CycleSlip,
 }

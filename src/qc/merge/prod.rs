@@ -1,6 +1,6 @@
 use crate::{
     prelude::qc::{Merge, MergeError},
-    prod::{DataSource, ProductionAttributes},
+    production::{DataSource, ProductionAttributes},
 };
 
 use super::merge_mut_option;
