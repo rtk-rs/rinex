@@ -115,7 +115,7 @@ serde_json = { version = "1", features = ["preserve_order"] }
 serde = { version = "1", default-features = false, features = ["derive"] }
 
 [dependencies.gnss-rs]
-version = "2.7"
+version = "2"
 features = ["std", "domes", "cospar", "sbas"]
 
 [dependencies.gnss-qc-traits]
@@ -138,11 +138,11 @@ optional = true
 features = ["std", "sfrbx-gps"]
 
 [dependencies.hifitime]
-version = "4.2"
+version = "4"
 features = ["std"]
 
 [dependencies.anise]
-version = "0.9"
+version = "0.10"
 optional = true
 
 [dependencies]
