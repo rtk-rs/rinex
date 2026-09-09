@@ -181,7 +181,8 @@ pub struct Ephemeris {
 }
 
 impl Ephemeris {
-    /// Returns [SV] onboard clock (bias [s], drift [s/s], drift rate [s/s]).
+    /// Returns [SV] onboard clock (bias in seconds, drift in seconds per second,
+    /// and drift rate in seconds per squared second).
     pub fn sv_clock(&self) -> (f64, f64, f64) {
         (self.clock_bias, self.clock_drift, self.clock_drift_rate)
     }

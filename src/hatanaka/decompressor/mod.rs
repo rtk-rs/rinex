@@ -16,6 +16,9 @@ use log::{error, trace};
 #[cfg(doc)]
 use crate::{hatanaka::Compressor, prelude::Header};
 
+#[cfg(doc)]
+use std::io::Lines;
+
 /// [Decompressor] is a structure to decompress CRINEX (compressed compacted RINEX)
 /// into readable RINEX. It is scaled to operate according to the historical CRX2RNX tool,
 /// which seems to limit itself to M=3 in the compression algorithm.
@@ -290,7 +293,7 @@ impl<const M: usize> DecompressorExpert<M> {
     /// Decompresses following line and pushes recovered content into buffer.
     /// Inputs
     ///  - line: trimed line (no \n termination), which is consistent with
-    /// [LinesIterator].
+    /// [Lines] [Iterator].
     /// - len: line.len()
     /// - buf: destination buffer
     /// - size: size available in destination buffer

@@ -1,6 +1,8 @@
 //! Y. Hatanaka lossless numerical compression algorithm
-
 use crate::hatanaka::Error;
+
+#[cfg(doc)]
+use crate::hatanaka::{Compressor, DecompressorExpert};
 
 /// This module implements the Hatanaka scheme for numerical (de)-compression.
 /// Values are multiplied by a factor of 10^N (N is the number of decimals in the
@@ -17,11 +19,11 @@ use crate::hatanaka::Error;
 /// A higher m does not necessarily mean better compression, since at a high-enough
 /// level random noise dominates over any differential trend.
 ///
-/// If you want to produce compatible data, you should respect M = 5.
+/// If you want to produce compatibl    e data, you should respect M = 5.
 /// If your remain within our application, you can use higher compression order
 /// (m <= M = 6).
 ///
-/// Currently compressor.rs uses level = 3 ([CompressorExpert::format()]).
+/// Currently, [Compressor] uses level = 3 similarly to the historical RNX2CRX tool.
 ///
 /// Both directions fail with [Error::CompressionOrder] when the order
 /// exceeds M or 6, and with [Error::NumericOverflow] when the checked
@@ -31,8 +33,10 @@ use crate::hatanaka::Error;
 pub struct NumDiff<const M: usize> {
     /// iteration counter
     m: usize,
+
     /// compression level, within M maximal range
     level: usize,
+
     /// internal data history
     buf: [i64; M],
 }

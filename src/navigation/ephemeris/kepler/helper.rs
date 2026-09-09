@@ -78,7 +78,7 @@ impl Helper {
         (fd_x, fd_y)
     }
 
-    /// Calculate ecef position [km].
+    /// Calculate ecef position (in kilometers).
     pub fn ecef_position(&self) -> Vector3 {
         if self.sv.is_beidou_geo() {
             self.beidou_geo_ecef_position()

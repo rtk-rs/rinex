@@ -35,8 +35,8 @@ use std::{
 use log::error;
 
 impl Record {
-    /// Parses [Record] section by consuming [Reader] entirely.
-    /// This requires reference to [Header] that was just parsed by consuming [Reader] until this point.
+    /// Parses [Record] section by consuming [Read]er entirely.
+    /// This requires reference to [Header] that was just parsed by consuming [Read]er until this point.
     pub fn parse<R: Read>(
         header: &mut Header,
         reader: &mut BufReader<R>,

@@ -103,7 +103,7 @@ impl Rinex {
         }
     }
 
-    /// [SystemTime] frames [Iterator].
+    /// [TimeOffset] [Iterator].
     /// This type of frames exists in NAV V4 only.
     pub fn nav_system_time_frames_iter(
         &self,

@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::prelude::ParsingError;
 
+#[cfg(doc)]
+use crate::bibliography::Bibliography;
+
 /// Support Navigation Messages.
 /// Refer to [Bibliography::RINEX4] definitions.
 #[derive(Default, Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
@@ -11,30 +14,43 @@ pub enum NavMessageType {
     /// Legacy NAV message
     #[default]
     LNAV,
+
     /// Glonass FDMA message
     FDMA,
+
     /// Galileo FNAV message
     FNAV,
+
     /// Galileo INAV message
     INAV,
+
     /// IFNV,
     IFNV,
+
     /// BeiDou D1 NAV message
     D1,
+
     /// BeiDou D2 NAV message
     D2,
+
     /// D1D2
     D1D2,
+
     /// SBAS NAV message
     SBAS,
+
     /// GPS / QZSS Civilian NAV message
     CNAV,
+
     /// BeiDou CNV1 message
     CNV1,
+
     /// GPS / QZSS / BeiDou CNV2 message
     CNV2,
+
     /// BeiDou CNV3 message
     CNV3,
+
     /// CNVX special marker
     CNVX,
 }

@@ -44,7 +44,7 @@ impl SignalObservation {
         s
     }
 
-    /// [Observation] is said OK when
+    /// [SignalObservation] is said OK when
     ///  - If LLI is present it must match [LliFlags::OK_OR_UNKNOWN]
     ///  - If SNR is present, it must be [SNR::strong]
     ///  - NB: when both are missing, we still return OK.
@@ -56,7 +56,7 @@ impl SignalObservation {
         lli_ok && snr_ok
     }
 
-    /// [Observation::is_ok] with additional SNR criteria to match (>=).
+    /// [SignalObservation::is_ok] with additional SNR criteria to match (>=).
     /// SNR must then be present otherwise this is not OK.
     pub fn is_ok_snr(&self, min_snr: SNR) -> bool {
         let lli_ok = self.lli.unwrap_or(LliFlags::OK_OR_UNKNOWN) == LliFlags::OK_OR_UNKNOWN;

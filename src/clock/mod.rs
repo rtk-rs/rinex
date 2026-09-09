@@ -19,19 +19,26 @@ use crate::{
 pub struct HeaderFields {
     /// Site name
     pub site: Option<String>,
+
     /// Site DOMES ID#
     pub domes: Option<DOMES>,
+
     /// IGS code
     pub igs: Option<String>,
+
     /// Full name
     pub full_name: Option<String>,
+
     /// Station reference clock
     pub ref_clock: Option<String>,
+
     /// Timescale is either a GNSS timescale or UTC / TAI.
     /// Timescale is omitted in SBAS or COMPASS files.
     pub timescale: Option<TimeScale>,
+
     /// Reference clocks used in measurement / analysis process
     pub work_clock: Vec<WorkClock>,
+
     /// Types of clock profiles encountered in this file
     pub codes: Vec<ClockProfileType>,
 }
@@ -42,9 +49,11 @@ pub struct HeaderFields {
 pub struct WorkClock {
     /// Name of this local clock
     pub name: String,
+
     /// Clock site DOMES ID#
     pub domes: Option<DOMES>,
-    /// Possible clock constraint [s]
+
+    /// Possible clock constraint (in seconds)
     pub constraint: Option<f64>,
 }
 

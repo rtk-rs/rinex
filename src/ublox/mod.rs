@@ -4,7 +4,10 @@ mod nav;
 use nav::Streamer as NavStreamer;
 
 #[cfg(doc)]
-use ublox::Parser;
+use ublox::{AnyPacketRef, Parser};
+
+#[cfg(doc)]
+use std::io::{BufRead, Read};
 
 /// RINEX Type dependant record streamer
 enum TypeDependentStreamer<'a> {
@@ -20,7 +23,7 @@ impl<'a> TypeDependentStreamer<'a> {
 }
 
 impl Rinex {
-    /// Obtain a [RNX2UBX] streamer to serialize this [Rinex] into a stream of U-Blox [PacketRef]s.
+    /// Obtain a [RNX2UBX] streamer to serialize this [Rinex] into a stream of U-Blox [AnyPacketRef]s.
     /// Unlike other streamers (RTCM, BINEX..), the UBX streamer can only operate on a buffer.
     /// Conveniently, [RNX2UBX] implements [Read] and [BufRead] to let you stream all the supported messages
     /// into your own buffer.
