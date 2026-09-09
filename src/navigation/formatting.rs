@@ -3,7 +3,7 @@ use std::io::{BufWriter, Write};
 use crate::{
     epoch::epoch_decompose as epoch_decomposition,
     error::FormattingError,
-    navigation::{NavFrame, NavFrameType, NavKey, Record},
+    navigation::{Ephemeris, NavFrame, NavFrameType, NavKey, NavMessageType, Record},
     prelude::{Constellation, Epoch, Header},
 };
 
@@ -151,21 +151,77 @@ pub(crate) fn format_epoch_v4_fields(epoch: Epoch) -> String {
 /// The ephemeris epoch line follows, the other records write their
 /// own epoch line along with their data.
 fn format_epoch_v4<W: Write>(w: &mut BufWriter<W>, k: &NavKey) -> std::io::Result<()> {
+    // records naming the constellation only carry PRN 0
+    let sv = if k.sv.prn == 0 {
+        format!("{:x}  ", k.sv.constellation)
+    } else {
+        format!("{:x}", k.sv)
+    };
+
+    // message type, and RINEX 4.02 subtype when defined
+    let msgtype = match k.subtype {
+        Some(subtype) => format!("{} {}", k.msgtype, subtype),
+        None => k.msgtype.to_string(),
+    };
+
     match k.frmtype {
         NavFrameType::Ephemeris => {
             write!(
                 w,
-                "> EPH {:x} {}\n{:x} {}",
-                k.sv,
-                k.msgtype,
-                k.sv,
+                "> EPH {} {}\n{} {}",
+                sv,
+                msgtype,
+                sv,
                 format_epoch_v4_fields(k.epoch)
             )
         },
-        frmtype => writeln!(w, "> {} {:x} {}", frmtype, k.sv, k.msgtype),
+        frmtype => writeln!(w, "> {} {} {}", frmtype, sv, msgtype),
     }
 }
 
+/// RINEX 4 message type of an ephemeris parsed from a RINEX 2 or 3 file,
+/// where every message is filed as LNAV: the legacy message of the
+/// constellation. Galileo tells INAV from FNAV by the data source
+/// (Table A13), BeiDou tells D2 (GEO) from D1 by the PRN range (BDS ICD).
+fn v4_message_type(k: &NavKey, eph: &Ephemeris) -> NavMessageType {
+    if k.msgtype != NavMessageType::LNAV {
+        return k.msgtype;
+    }
+    match k.sv.constellation {
+        Constellation::Glonass => NavMessageType::FDMA,
+        Constellation::Galileo => {
+            let data_source = eph.get_orbit_f64("source").unwrap_or(0.0) as u32;
+            if data_source & 0x02 != 0 {
+                NavMessageType::FNAV
+            } else {
+                NavMessageType::INAV
+            }
+        },
+        Constellation::BeiDou => {
+            if k.sv.prn <= 5 || k.sv.prn >= 59 {
+                NavMessageType::D2
+            } else {
+                NavMessageType::D1
+            }
+        },
+        c if c.is_sbas() => NavMessageType::SBAS,
+        _ => NavMessageType::LNAV,
+    }
+}
+
+/// Formats the navigation [Record] in the revision of the [Header].
+///
+/// The record is written as parsed when the revisions match. Otherwise:
+/// - written as RINEX 4, ephemerides parsed from RINEX 2 or 3 get the
+///   message type of their constellation (see [v4_message_type]);
+/// - written as RINEX 2 or 3, only the ephemerides of the legacy messages
+///   are kept, laid out with the RINEX 3 definitions; the modern messages
+///   (CNAV, CNV1 to CNV3) and the STO, EOP and ION records have no
+///   representation there and are skipped. A RINEX 2 file names a single
+///   constellation: the satellites of the other constellations are
+///   skipped too. When the record is not empty and none of its frames can
+///   be written, [FormattingError::NoRepresentableFrame] is returned
+///   before anything is written.
 pub fn format<W: Write>(
     writer: &mut BufWriter<W>,
     rec: &Record,
@@ -180,25 +236,63 @@ pub fn format<W: Write>(
         .constellation
         .ok_or(FormattingError::UndefinedConstellation)?;
 
+    // RINEX 2: single constellation file
+    let constellation = if v2 && file_constell != Constellation::Mixed {
+        Some(file_constell)
+    } else {
+        None
+    };
+
+    // frames with a representation prior RINEX 4
+    let representable = |k: &NavKey, frame: &NavFrame| {
+        if frame.as_ephemeris().is_none() || !k.msgtype.is_legacy(k.sv.constellation) {
+            return false;
+        }
+        match constellation {
+            Some(constellation) if constellation.is_sbas() => k.sv.constellation.is_sbas(),
+            Some(constellation) => k.sv.constellation == constellation,
+            None => true,
+        }
+    };
+
+    if !v4 && !rec.is_empty() && !rec.iter().any(|(k, frame)| representable(k, frame)) {
+        return Err(FormattingError::NoRepresentableFrame);
+    }
+
     // the record is sorted by key: chronological order, then vehicle,
     // then message type. Every entry is written, including messages of
     // different types sharing an epoch and vehicle.
     for (k, v) in rec.iter() {
         if v4 {
-            format_epoch_v4(writer, k)?;
-        } else {
             match v {
-                NavFrame::EPH(_) => format_epoch_v2v3(writer, k, v2, &file_constell)?,
-                // no record representation before RINEX 4
-                _ => continue,
+                NavFrame::EPH(eph) => {
+                    let key = NavKey {
+                        msgtype: v4_message_type(k, eph),
+                        ..*k
+                    };
+                    format_epoch_v4(writer, &key)?;
+                    eph.format(writer, key.sv, version, key.msgtype)?;
+                },
+                NavFrame::STO(sto) => {
+                    format_epoch_v4(writer, k)?;
+                    sto.format_v4(writer)?;
+                },
+                NavFrame::EOP(eop) => {
+                    format_epoch_v4(writer, k)?;
+                    eop.format_v4(writer, k.epoch)?;
+                },
+                NavFrame::ION(model) => {
+                    format_epoch_v4(writer, k)?;
+                    model.format_v4(writer, k.epoch)?;
+                },
             }
-        }
-
-        match v {
-            NavFrame::EPH(eph) => eph.format(writer, k.sv, version, k.msgtype)?,
-            NavFrame::STO(sto) => sto.format_v4(writer)?,
-            NavFrame::EOP(eop) => eop.format_v4(writer, k.epoch)?,
-            NavFrame::ION(model) => model.format_v4(writer, k.epoch)?,
+        } else if let Some(eph) = v.as_ephemeris() {
+            if !representable(k, v) {
+                continue;
+            }
+            format_epoch_v2v3(writer, k, v2, &file_constell)?;
+            // RINEX 2 and 3 definitions are filed as LNAV
+            eph.format(writer, k.sv, version, NavMessageType::LNAV)?;
         }
     }
 
@@ -279,6 +373,7 @@ mod test {
             sv: SV::from_str("E01").unwrap(),
             frmtype: NavFrameType::from_str("EOP").unwrap(),
             msgtype: NavMessageType::from_str("LNAV").unwrap(),
+            subtype: None,
         };
 
         format_epoch_v2v3(&mut writer, &key, true, &gal).unwrap();
@@ -300,6 +395,7 @@ mod test {
             sv: SV::from_str("G01").unwrap(),
             frmtype: NavFrameType::from_str("EPH").unwrap(),
             msgtype: NavMessageType::from_str("LNAV").unwrap(),
+            subtype: None,
         };
 
         format_epoch_v4(&mut writer, &key).unwrap();
@@ -325,6 +421,7 @@ G01 2023 03 12 00 00 00"
             sv: SV::from_str("G12").unwrap(),
             frmtype: NavFrameType::from_str("ION").unwrap(),
             msgtype: NavMessageType::from_str("LNAV").unwrap(),
+            subtype: None,
         };
 
         format_epoch_v4(&mut writer, &key).unwrap();
@@ -347,6 +444,7 @@ G01 2023 03 12 00 00 00"
             sv: SV::from_str("C21").unwrap(),
             frmtype: NavFrameType::from_str("STO").unwrap(),
             msgtype: NavMessageType::from_str("CNVX").unwrap(),
+            subtype: None,
         };
 
         format_epoch_v4(&mut writer, &key).unwrap();
@@ -368,6 +466,7 @@ G01 2023 03 12 00 00 00"
             sv: SV::from_str("G27").unwrap(),
             frmtype: NavFrameType::from_str("EOP").unwrap(),
             msgtype: NavMessageType::from_str("CNVX").unwrap(),
+            subtype: None,
         };
 
         format_epoch_v4(&mut writer, &key).unwrap();

@@ -1,7 +1,8 @@
 use crate::{
     navigation::{
-        BdModel, EarthOrientation, Ephemeris, IonosphereModel, KbModel, NavFrame, NavFrameType,
-        NavKey, NavMessageType, NgModel, TimeOffset,
+        timescale, BdModel, EarthOrientation, Ephemeris, GloCdmaModel, IonosphereModel, KbModel,
+        KbRegionCode, NavFrame, NavFrameType, NavKey, NavMessageSubtype, NavMessageType,
+        NavicKbModel, NavicNeqnModel, NgModel, TimeOffset,
     },
     prelude::{Constellation, Epoch, ParsingError, SV},
 };
@@ -22,13 +23,30 @@ pub fn parse(content: &str) -> Result<(NavKey, NavFrame), ParsingError> {
 
     // frmtype defines message to follow
     let frmtype = class.trim().parse::<NavFrameType>()?;
-    let sv = svnn.trim().parse::<SV>()?;
-    let msgtype = rem.trim().parse::<NavMessageType>()?;
 
-    let ts = sv
-        .constellation
-        .timescale()
-        .ok_or(ParsingError::NoTimescaleDefinition)?;
+    // STO, EOP and ION records may name the constellation only
+    // (blank PRN): represented by PRN 0.
+    let svnn = svnn.trim();
+    let sv = if svnn.len() == 1 {
+        SV::new(svnn.parse::<Constellation>()?, 0)
+    } else {
+        svnn.parse::<SV>()?
+    };
+
+    // message type, followed by an optional subtype (RINEX 4.02)
+    let mut items = rem.split_ascii_whitespace();
+
+    let msgtype = items
+        .next()
+        .ok_or(ParsingError::NavMsgType)?
+        .parse::<NavMessageType>()?;
+
+    let subtype = match items.next() {
+        Some(item) => Some(item.parse::<NavMessageSubtype>()?),
+        None => None,
+    };
+
+    let ts = timescale(sv.constellation)?;
 
     // Parses navframe type dependent and epoch of publication
     let (epoch, fr) = match frmtype {
@@ -42,13 +60,36 @@ pub fn parse(content: &str) -> Result<(NavKey, NavFrame), ParsingError> {
                     let (epoch, model) = NgModel::parse(lines, ts)?;
                     (epoch, IonosphereModel::NequickG(model))
                 },
+                // RINEX 4.02: NavIC L1NV models, told apart by the subtype
+                NavMessageType::L1NV => match subtype {
+                    Some(NavMessageSubtype::KLOB) => {
+                        let (epoch, model) = NavicKbModel::parse(lines, ts)?;
+                        (epoch, IonosphereModel::NavicKlobuchar(model))
+                    },
+                    Some(NavMessageSubtype::NEQN) => {
+                        let (epoch, model) = NavicNeqnModel::parse(lines, ts)?;
+                        (epoch, IonosphereModel::NavicNequick(model))
+                    },
+                    _ => return Err(ParsingError::NavMsgSubtype),
+                },
+                // RINEX 4.02: GLONASS CDMA model
+                NavMessageType::LXOC => {
+                    let (epoch, model) = GloCdmaModel::parse(lines, ts)?;
+                    (epoch, IonosphereModel::GlonassCdma(model))
+                },
                 NavMessageType::CNVX => match sv.constellation {
                     Constellation::BeiDou => {
                         let (epoch, model) = BdModel::parse(lines, ts)?;
                         (epoch, IonosphereModel::Bdgim(model))
                     },
                     _ => {
-                        let (epoch, model) = KbModel::parse(lines, ts)?;
+                        let (epoch, mut model) = KbModel::parse(lines, ts)?;
+                        // RINEX 4.02: QZSS region code moved to the subtype field
+                        match subtype {
+                            Some(NavMessageSubtype::WIDE) => model.region = KbRegionCode::Worldwide,
+                            Some(NavMessageSubtype::JAPN) => model.region = KbRegionCode::Japan,
+                            _ => {},
+                        }
                         (epoch, IonosphereModel::Klobuchar(model))
                     },
                 },
@@ -85,6 +126,7 @@ pub fn parse(content: &str) -> Result<(NavKey, NavFrame), ParsingError> {
         sv,
         msgtype,
         frmtype,
+        subtype,
     };
 
     Ok((key, fr))

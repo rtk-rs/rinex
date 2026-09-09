@@ -128,6 +128,9 @@ pub enum ParsingError {
     NavInvalidTimescale,
     #[error("nav: invalid message type")]
     NavMsgType,
+
+    #[error("nav: invalid message subtype")]
+    NavMsgSubtype,
     #[error("nav: (ref) epoch week counter parsing")]
     NavEpochWeekCounter,
     #[error("nav: time offset parsing")]
@@ -152,6 +155,10 @@ pub enum ParsingError {
     NequickGData,
     #[error("nav:ion bdgim data")]
     BdgimData,
+    #[error("nav:ion navic data")]
+    NavicIonosphereData,
+    #[error("nav:ion glonass cdma data")]
+    GlonassIonosphereData,
     #[error("nav:sto data")]
     SystemTimeData,
     #[error("ionex: earth obs sat")]
@@ -204,6 +211,9 @@ pub enum FormattingError {
 
     #[error("crinex compression: {0}")]
     Hatanaka(#[from] HatanakaError),
+
+    #[error("nav: no frame can be written in this revision")]
+    NoRepresentableFrame,
 }
 
 /// General error (processing, analysis..)
