@@ -233,6 +233,20 @@ impl OrbitItem {
                                 Ok(OrbitItem::GlonassHealth(flags))
                             },
                             (
+                                NavMessageType::L1OC | NavMessageType::L3OC,
+                                Constellation::Glonass,
+                            ) => {
+                                // CDMA messages (RINEX 4.02): every bit is kept
+                                let flags = GlonassHealth::from_bits_retain(unsigned);
+
+                                Ok(OrbitItem::GlonassHealth(flags))
+                            },
+                            (NavMessageType::LNAV | NavMessageType::L1NV, Constellation::IRNSS) => {
+                                let flags = IrnssHealth::from_bits_retain(unsigned);
+
+                                Ok(OrbitItem::IrnssHealth(flags))
+                            },
+                            (
                                 NavMessageType::LNAV | NavMessageType::D1 | NavMessageType::D2,
                                 Constellation::BeiDou,
                             ) => {

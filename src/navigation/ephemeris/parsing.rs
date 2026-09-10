@@ -2,7 +2,7 @@ use crate::{
     epoch::parse_in_timescale as parse_epoch_in_timescale,
     navigation::{
         ephemeris::orbits::{closest_nav_standards, OrbitItem},
-        Ephemeris, NavMessageType,
+        timescale, Ephemeris, NavMessageType,
     },
     parse_f64,
     prelude::{Constellation, Epoch, ParsingError, TimeScale, Version, SV},
@@ -49,24 +49,24 @@ fn parse_orbits(
             false => &line[4..],
         };
 
-        let mut nb_missing = 4 - (line.len() / word_size);
-        // println!("LINE \"{}\" | NB MISSING {}", line, nb_missing); //DEBUG
+        // number of fields found on this line, blank or not
+        let mut nb_fields = 0;
 
         loop {
             if line.is_empty() {
-                key_index += nb_missing;
+                // fields omitted at the end of the line
+                key_index += 4_usize.saturating_sub(nb_fields);
                 break;
             }
 
             let (val_str, rem) = line.split_at(std::cmp::min(word_size, line.len()));
             let val_str = val_str.trim();
-            // println!("CONTENT \"{}\"", content); // DEBUG
+            nb_fields += 1;
 
             // handle omitted fields
             if val_str.is_empty() {
                 // omitted field
                 key_index += 1;
-                nb_missing = nb_missing.saturating_sub(1);
                 line = rem;
                 continue;
             }
@@ -130,10 +130,7 @@ impl Ephemeris {
             },
         };
 
-        let ts = sv
-            .constellation
-            .timescale()
-            .ok_or(ParsingError::NoTimescaleDefinition)?;
+        let ts = timescale(sv.constellation)?;
 
         let epoch = parse_epoch_in_timescale(date.trim(), ts)?;
 
@@ -227,8 +224,10 @@ impl Ephemeris {
 mod test {
     use crate::{
         navigation::{Ephemeris, NavMessageType},
-        prelude::{Constellation, Version},
+        prelude::{Constellation, Epoch, TimeScale, Version, SV},
     };
+
+    use std::str::FromStr;
 
     use super::parse_orbits;
 
@@ -513,5 +512,150 @@ mod test {
         assert_eq!(ephemeris.get_orbit_f64("velX"), None);
         assert_eq!(ephemeris.get_orbit_f64("satPosY"), Some(-0.216949155273E5));
         assert_eq!(ephemeris.get_orbit_f64("satPosZ"), Some(0.109021518555E5));
+    }
+
+    #[test]
+    fn blank_field_on_short_line() {
+        // A blank field followed by omitted trailing fields on the same
+        // line must not shift the fields of the following lines.
+        // GPS LNAV V4 line 5: idot, (blank l2 codes), week, omitted l2p flag
+        let content =
+            "     9.800000000000e+01-1.718750000000e+00 4.639836124941e-09 2.148941747752e+00
+    -1.881271600723e-07 3.355251392350e-04 8.245930075645e-06 5.153800453186e+03
+     3.600000000000e+05-1.676380634308e-08 5.171400020311e-01 1.490116119385e-08
+     9.601921900531e-01 2.187187500000e+02-1.736906885738e+00-8.044977962767e-09
+    -2.932264997750e-10                    2.044000000000e+03
+     4.000000000000e+00 6.300000000000e+01-8.847564458847e-09 8.660000000000e+02
+     3.553500000000e+05 4.000000000000e+00";
+        let orbits = parse_orbits(
+            Version::new(4, 0),
+            NavMessageType::LNAV,
+            Constellation::GPS,
+            content.lines(),
+        )
+        .unwrap();
+        let ephemeris = Ephemeris {
+            clock_bias: 0.0,
+            clock_drift: 0.0,
+            clock_drift_rate: 0.0,
+            orbits,
+        };
+        assert_eq!(ephemeris.get_orbit_f64("idot"), Some(-2.932264997750e-10));
+        assert_eq!(ephemeris.get_orbit_f64("l2Codes"), None);
+        assert_eq!(ephemeris.get_week(), Some(2044));
+        assert_eq!(ephemeris.get_orbit_f64("l2p"), None);
+        assert_eq!(ephemeris.get_orbit_f64("accuracy"), Some(4.0));
+        assert_eq!(ephemeris.get_orbit_f64("tgd"), Some(-8.847564458847e-09));
+        assert_eq!(ephemeris.get_orbit_f64("iodc"), Some(866.0));
+        assert_eq!(ephemeris.get_orbit_f64("t_tm"), Some(3.553500000000e+05));
+        assert_eq!(ephemeris.get_orbit_f64("fitInt"), Some(4.0));
+    }
+
+    #[test]
+    fn navic_lnav_v4() {
+        // RINEX 4.02 Table A32, in GPST (Table A30)
+        let content =
+            "I02 2020 09 15 02 05 36 6.225099787116e-04 1.773514668457e-11 0.000000000000e+00
+     1.690000000000e+02-5.793750000000e+02 4.834487090078e-09-4.281979621524e-01
+    -1.904368400574e-05 2.015684265643e-03-3.430992364883e-06 6.493289550781e+03
+     1.803360000000e+05 2.495944499969e-07-1.337499015334e+00 7.450580596924e-08
+     5.022043764738e-01 1.946250000000e+02-2.970970345572e+00-4.461614415577e-09
+    -9.578970431139e-10                    2.123000000000e+03
+     2.000000000000e+00 0.000000000000e+00-1.862645149231e-09
+     1.804920000000e+05";
+        let (epoch, sv, eph) =
+            Ephemeris::parse_v4(NavMessageType::LNAV, content.lines(), TimeScale::GPST).unwrap();
+        assert_eq!(sv, SV::from_str("I02").unwrap());
+        assert_eq!(epoch, Epoch::from_str("2020-09-15T02:05:36 GPST").unwrap());
+        assert_eq!(eph.clock_bias, 6.225099787116e-04);
+        assert_eq!(eph.get_orbit_f64("iodec"), Some(169.0));
+        assert_eq!(eph.get_orbit_f64("sqrta"), Some(6.493289550781e+03));
+        assert_eq!(eph.get_week(), Some(2123));
+        assert_eq!(eph.get_orbit_f64("accuracy"), Some(2.0));
+        assert_eq!(eph.get_orbit_f64("health"), Some(0.0));
+        assert_eq!(eph.get_orbit_f64("tgd"), Some(-1.862645149231e-09));
+        assert_eq!(eph.get_orbit_f64("t_tm"), Some(1.804920000000e+05));
+    }
+
+    #[test]
+    fn navic_l1nv_v4() {
+        // RINEX 4.02 Table A32
+        let content =
+            "I10 2023 06 24 00 05 00 1.527369022369e-07 1.364242052659e-12 0.000000000000e+00
+     0.000000000000e+00-2.593125000000e+02 7.028864208979e-09 2.300305834983e+00
+    -8.691102266312e-06 4.531537415460e-04-3.855675458908e-06 6.493495117188e+03
+     7.000000000000e+00 1.341104507446e-07 1.359342162629e-01-7.078051567078e-08
+     8.594830530333e-02 1.214375000000e+02-5.136403830694e-02-5.858815471753e-09
+    -4.846630453041e-10 0.000000000000e+00                    1.000000000000e+00
+     1.500000000000e+01 0.000000000000e+00                   -3.608874976635e-09
+                                           6.984919309616e-09 5.995389074087e-09
+     5.191380000000e+05";
+        let (epoch, sv, eph) =
+            Ephemeris::parse_v4(NavMessageType::L1NV, content.lines(), TimeScale::GPST).unwrap();
+        assert_eq!(sv, SV::from_str("I10").unwrap());
+        assert_eq!(epoch, Epoch::from_str("2023-06-24T00:05:00 GPST").unwrap());
+        assert_eq!(eph.get_orbit_f64("crs"), Some(-2.593125000000e+02));
+        assert_eq!(eph.get_orbit_f64("iodec"), Some(7.0));
+        assert_eq!(eph.get_orbit_f64("rsf"), Some(1.0));
+        assert_eq!(eph.get_orbit_f64("urai"), Some(15.0));
+        assert_eq!(eph.get_orbit_f64("health"), Some(0.0));
+        assert_eq!(eph.get_orbit_f64("tgdL1PL5"), None);
+        assert_eq!(eph.get_orbit_f64("tgdSL5"), Some(-3.608874976635e-09));
+        assert_eq!(eph.get_orbit_f64("iscL1PS"), Some(6.984919309616e-09));
+        assert_eq!(eph.get_orbit_f64("iscL1DS"), Some(5.995389074087e-09));
+        assert_eq!(eph.get_orbit_f64("t_tm"), Some(5.191380000000e+05));
+    }
+
+    #[test]
+    fn glonass_l1oc_v4() {
+        // RINEX 4.02 Table A18
+        let content =
+            "R26 2024 02 03 00 15 00-1.605716170161e-05 1.652011860642e-12-2.081668171172e-17
+     1.812154053020e+04-2.071979139000e+00 5.729816621169e-10 1.000000000000e+00
+    -2.325615360260e+03 1.285475494340e+00-1.047737896442e-09 1.000000000000e+00
+     1.781341854668e+04 2.280306640081e+00-9.458744898438e-10 0.000000000000e+00
+     2.000000000000e+00 1.000000000000e+01 7.500000000000e-01 7.500000000000e-01
+     0.000000000000e+00 0.000000000000e+00 0.000000000000e+00 0.000000000000e+00
+     0.000000000000e+00 0.000000000000e+00 0.000000000000e+00 0.000000000000e+00
+     0.000000000000e+00 0.000000000000e+00 0.000000000000e+00 0.000000000000e+00
+     1.500000000000e+01 5.000000000000e+00                    5.184000000000e+05";
+        for msgtype in [NavMessageType::L1OC, NavMessageType::L3OC] {
+            let (epoch, sv, eph) =
+                Ephemeris::parse_v4(msgtype, content.lines(), TimeScale::UTC).unwrap();
+            assert_eq!(sv, SV::from_str("R26").unwrap());
+            assert_eq!(epoch, Epoch::from_str("2024-02-03T00:15:00 UTC").unwrap());
+            assert_eq!(eph.get_orbit_f64("satPosX"), Some(1.812154053020e+04));
+            assert_eq!(eph.get_orbit_f64("health"), Some(1.0));
+            assert_eq!(eph.get_orbit_f64("dataValidity"), Some(1.0));
+            assert_eq!(eph.get_orbit_f64("satType"), Some(2.0));
+            assert_eq!(eph.get_orbit_f64("sourceFlags"), Some(10.0));
+            assert_eq!(eph.get_orbit_f64("uraiOrb"), Some(15.0));
+            assert_eq!(eph.get_orbit_f64("uraiClk"), Some(5.0));
+            assert_eq!(eph.get_orbit_f64("t_tm"), Some(5.184000000000e+05));
+        }
+    }
+
+    #[test]
+    fn cnav_flags_field() {
+        // RINEX 4.02 Table A10: optional flags after wn_op
+        let content =
+            "G04 2019 03 14 03 30 00 1.330042141490e-04 7.226219622680e-12 0.000000000000e+00
+     2.001762390137e-03 6.914062500000e-01 4.625906973308e-09 1.887277537485e+00
+     1.024454832077e-08 3.348654136062e-04 8.376315236092e-06 5.153800325291e+03
+     2.412000000000e+05-4.656612873077e-09 5.171544951605e-01 2.328306436539e-08
+     9.601927657114e-01 2.174140625000e+02-1.737767543851e+00-8.034028170143e-09
+    -2.950122884460e-10-1.312310522376e-14-2.000000000000e+00 2.000000000000e+00
+     0.000000000000e+00 7.000000000000e+00-8.789356797934e-09 5.000000000000e+00
+    -5.820766091347e-10-6.606569513679e-09-1.178705133498e-08-1.178705133498e-08
+     3.558540000000e+05 2.044000000000e+03";
+        let (_, _, eph) =
+            Ephemeris::parse_v4(NavMessageType::CNAV, content.lines(), TimeScale::GPST).unwrap();
+        assert_eq!(eph.get_orbit_f64("wn_op"), Some(2044.0));
+        assert_eq!(eph.get_orbit_f64("flags"), None);
+
+        let content = format!("{} 3.000000000000e+00", content);
+        let (_, _, eph) =
+            Ephemeris::parse_v4(NavMessageType::CNAV, content.lines(), TimeScale::GPST).unwrap();
+        assert_eq!(eph.get_orbit_f64("flags"), Some(3.0));
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     navigation::{NavFrameType, NavMessageType},
-    prelude::{Constellation, Epoch, Rinex, TimeScale, SV},
+    prelude::{Constellation, Epoch, Rinex, TimeScale, Version, SV},
     tests::toolkit::{generic_navigation_test, TimeFrame},
 };
 
@@ -1381,4 +1381,142 @@ fn nav_v2_iono_alphabeta_and_toe() {
     //     //     );
     //     // }
     // }
+}
+
+/// RINEX 4.02 specification examples (Tables A12, A18, A32 and A41)
+/// gathered in a single 4.02 file.
+#[test]
+fn nav_v4_02_spec_examples() {
+    use crate::navigation::{NavFrameType, NavMessageSubtype, NavMessageType};
+
+    let dut = Rinex::from_file("data/NAV/V4/rinex402_examples_MN.rnx").unwrap();
+    assert_eq!(dut.header.version, Version::new(4, 2));
+
+    let record = dut.record.as_nav().unwrap();
+
+    // records sharing epoch, satellite, message type and subtype
+    // share a key: the file has 34 records for 30 keys.
+    let count = |frmtype: NavFrameType| record.keys().filter(|k| k.frmtype == frmtype).count();
+    assert_eq!(count(NavFrameType::Ephemeris), 9);
+    assert_eq!(count(NavFrameType::SystemTimeOffset), 9);
+    assert_eq!(count(NavFrameType::EarthOrientation), 5);
+    assert_eq!(count(NavFrameType::IonosphereModel), 7);
+
+    let find = |frmtype: NavFrameType, sv: &str, msgtype: NavMessageType| {
+        let sv = SV::from_str(sv).unwrap();
+        record
+            .iter()
+            .find(|(k, _)| k.frmtype == frmtype && k.sv == sv && k.msgtype == msgtype)
+            .unwrap_or_else(|| panic!("{} {:x} {} not found", frmtype, sv, msgtype))
+    };
+
+    // GPS (Table A12)
+    let (_, eph) = find(NavFrameType::Ephemeris, "G04", NavMessageType::CNV2);
+    let eph = eph.as_ephemeris().unwrap();
+    assert_eq!(eph.get_orbit_f64("iscL1Cd"), Some(-3.492459654808e-10));
+    assert_eq!(eph.get_orbit_f64("t_tm"), Some(3.550860000000e+05));
+    assert_eq!(eph.get_orbit_f64("wn_op"), Some(2044.0));
+
+    // GLONASS (Table A18)
+    let (k, _) = find(NavFrameType::Ephemeris, "R01", NavMessageType::FDMA);
+    assert_eq!(k.epoch, Epoch::from_str("2020-09-15T23:45:00 UTC").unwrap());
+    for msgtype in [NavMessageType::L1OC, NavMessageType::L3OC] {
+        let (k, eph) = find(NavFrameType::Ephemeris, "R26", msgtype);
+        assert_eq!(k.epoch, Epoch::from_str("2024-02-03T00:15:00 UTC").unwrap());
+        let eph = eph.as_ephemeris().unwrap();
+        assert_eq!(eph.get_orbit_f64("satPosX"), Some(1.812154053020e+04));
+        assert_eq!(eph.get_orbit_f64("t_tm"), Some(5.184000000000e+05));
+    }
+
+    // NavIC (Table A32), in GPST
+    let epochs = record
+        .keys()
+        .filter(|k| k.sv == SV::from_str("I02").unwrap() && k.frmtype == NavFrameType::Ephemeris)
+        .map(|k| k.epoch)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        epochs,
+        vec![
+            Epoch::from_str("2020-09-15T02:05:36 GPST").unwrap(),
+            Epoch::from_str("2020-09-15T02:20:48 GPST").unwrap(),
+        ]
+    );
+    let (k, eph) = find(NavFrameType::Ephemeris, "I10", NavMessageType::L1NV);
+    assert_eq!(
+        k.epoch,
+        Epoch::from_str("2023-06-24T00:05:00 GPST").unwrap()
+    );
+    let eph = eph.as_ephemeris().unwrap();
+    assert_eq!(eph.get_orbit_f64("rsf"), Some(1.0));
+    assert_eq!(eph.get_orbit_f64("tgdSL5"), Some(-3.608874976635e-09));
+
+    // STO (Table A41): blank PRN, UTC identifier, new time system pairs
+    let (k, sto) = find(NavFrameType::SystemTimeOffset, "E00", NavMessageType::IFNV);
+    assert_eq!(k.epoch, Epoch::from_str("2020-09-15T00:00:00 GST").unwrap());
+    let sto = sto.as_system_time().unwrap();
+    assert_eq!(sto.time_system.as_deref(), Some("GAUT"));
+    assert_eq!(sto.utc.as_deref(), Some("UTCGAL"));
+    let (_, sto) = find(NavFrameType::SystemTimeOffset, "I10", NavMessageType::L1NV);
+    assert_eq!(
+        sto.as_system_time().unwrap().time_system.as_deref(),
+        Some("IRUT")
+    );
+    let (_, sto) = find(NavFrameType::SystemTimeOffset, "R26", NavMessageType::LXOC);
+    assert_eq!(
+        sto.as_system_time().unwrap().time_system.as_deref(),
+        Some("GLUT")
+    );
+
+    // EOP (Table A41)
+    let (k, eop) = find(NavFrameType::EarthOrientation, "I10", NavMessageType::L1NV);
+    assert_eq!(
+        k.epoch,
+        Epoch::from_str("2023-06-24T00:04:48 GPST").unwrap()
+    );
+    let eop = eop.as_earth_orientation().unwrap();
+    assert_eq!(eop.x.0, 1.616811752319e-01);
+    assert_eq!(eop.t_tm, 519426);
+    let (_, eop) = find(NavFrameType::EarthOrientation, "R04", NavMessageType::LXOC);
+    assert_eq!(eop.as_earth_orientation().unwrap().t_tm, 518394);
+
+    // ION (Table A41)
+    let (_, ion) = find(NavFrameType::IonosphereModel, "G14", NavMessageType::CNVX);
+    assert!(ion.as_ionosphere_model().unwrap().as_klobuchar().is_some());
+    let (_, ion) = find(NavFrameType::IonosphereModel, "E13", NavMessageType::IFNV);
+    assert_eq!(
+        ion.as_ionosphere_model()
+            .unwrap()
+            .as_nequick_g()
+            .unwrap()
+            .a
+            .0,
+        54.5
+    );
+    let (_, ion) = find(NavFrameType::IonosphereModel, "C03", NavMessageType::D1D2);
+    assert!(ion.as_ionosphere_model().unwrap().as_klobuchar().is_some());
+
+    // NavIC KLOB and NEQN share everything but the subtype
+    let i10 = SV::from_str("I10").unwrap();
+    let mut subtypes = record
+        .iter()
+        .filter(|(k, _)| k.frmtype == NavFrameType::IonosphereModel && k.sv == i10)
+        .map(|(k, v)| (k.subtype, v.as_ionosphere_model().unwrap()))
+        .collect::<Vec<_>>();
+    subtypes.sort_by_key(|(subtype, _)| *subtype);
+    assert_eq!(subtypes.len(), 2);
+    assert_eq!(subtypes[0].0, Some(NavMessageSubtype::KLOB));
+    assert_eq!(subtypes[0].1.as_navic_klobuchar().unwrap().iodk, 1.0);
+    assert_eq!(subtypes[1].0, Some(NavMessageSubtype::NEQN));
+    assert_eq!(
+        subtypes[1].1.as_navic_nequick().unwrap().regions[1].a.0,
+        208.5
+    );
+
+    let (_, ion) = find(NavFrameType::IonosphereModel, "R22", NavMessageType::LXOC);
+    let ion = ion
+        .as_ionosphere_model()
+        .unwrap()
+        .as_glonass_cdma()
+        .unwrap();
+    assert_eq!(ion.c_f107, 141.0);
 }
