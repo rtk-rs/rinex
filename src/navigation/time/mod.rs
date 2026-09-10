@@ -29,6 +29,11 @@ pub struct TimeOffset {
     /// Possible UTC ID# in case this came from RINEXv4
     pub utc: Option<String>,
 
+    /// Four letter time system pair as read from the file ("GPUT",
+    /// "GLUT", ...). Pairs without an exact [TimeScale] representation
+    /// (GLONASS and NavIC times) keep their identity here.
+    pub time_system: Option<String>,
+
     /// Interpolation polynomial
     pub polynomial: (f64, f64, f64),
 }
@@ -47,6 +52,7 @@ impl TimeOffset {
             rhs,
             t_ref,
             utc: None,
+            time_system: None,
             polynomial,
         }
     }
@@ -63,6 +69,7 @@ impl TimeOffset {
             lhs,
             rhs,
             utc: None,
+            time_system: None,
             polynomial,
             t_ref: (t_week, t_nanos),
         }

@@ -151,18 +151,31 @@ pub(crate) fn format_epoch_v4_fields(epoch: Epoch) -> String {
 /// The ephemeris epoch line follows, the other records write their
 /// own epoch line along with their data.
 fn format_epoch_v4<W: Write>(w: &mut BufWriter<W>, k: &NavKey) -> std::io::Result<()> {
+    // records naming the constellation only carry PRN 0
+    let sv = if k.sv.prn == 0 {
+        format!("{:x}  ", k.sv.constellation)
+    } else {
+        format!("{:x}", k.sv)
+    };
+
+    // message type, and RINEX 4.02 subtype when defined
+    let msgtype = match k.subtype {
+        Some(subtype) => format!("{} {}", k.msgtype, subtype),
+        None => k.msgtype.to_string(),
+    };
+
     match k.frmtype {
         NavFrameType::Ephemeris => {
             write!(
                 w,
-                "> EPH {:x} {}\n{:x} {}",
-                k.sv,
-                k.msgtype,
-                k.sv,
+                "> EPH {} {}\n{} {}",
+                sv,
+                msgtype,
+                sv,
                 format_epoch_v4_fields(k.epoch)
             )
         },
-        frmtype => writeln!(w, "> {} {:x} {}", frmtype, k.sv, k.msgtype),
+        frmtype => writeln!(w, "> {} {} {}", frmtype, sv, msgtype),
     }
 }
 
@@ -279,6 +292,7 @@ mod test {
             sv: SV::from_str("E01").unwrap(),
             frmtype: NavFrameType::from_str("EOP").unwrap(),
             msgtype: NavMessageType::from_str("LNAV").unwrap(),
+            subtype: None,
         };
 
         format_epoch_v2v3(&mut writer, &key, true, &gal).unwrap();
@@ -300,6 +314,7 @@ mod test {
             sv: SV::from_str("G01").unwrap(),
             frmtype: NavFrameType::from_str("EPH").unwrap(),
             msgtype: NavMessageType::from_str("LNAV").unwrap(),
+            subtype: None,
         };
 
         format_epoch_v4(&mut writer, &key).unwrap();
@@ -325,6 +340,7 @@ G01 2023 03 12 00 00 00"
             sv: SV::from_str("G12").unwrap(),
             frmtype: NavFrameType::from_str("ION").unwrap(),
             msgtype: NavMessageType::from_str("LNAV").unwrap(),
+            subtype: None,
         };
 
         format_epoch_v4(&mut writer, &key).unwrap();
@@ -347,6 +363,7 @@ G01 2023 03 12 00 00 00"
             sv: SV::from_str("C21").unwrap(),
             frmtype: NavFrameType::from_str("STO").unwrap(),
             msgtype: NavMessageType::from_str("CNVX").unwrap(),
+            subtype: None,
         };
 
         format_epoch_v4(&mut writer, &key).unwrap();
@@ -368,6 +385,7 @@ G01 2023 03 12 00 00 00"
             sv: SV::from_str("G27").unwrap(),
             frmtype: NavFrameType::from_str("EOP").unwrap(),
             msgtype: NavMessageType::from_str("CNVX").unwrap(),
+            subtype: None,
         };
 
         format_epoch_v4(&mut writer, &key).unwrap();

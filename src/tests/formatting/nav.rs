@@ -48,18 +48,24 @@ fn v4_record_blocks(content: &str) -> HashMap<String, Vec<String>> {
 /// each other in the record, so the original file may hold more.
 fn v4_records_write_back(name: &str) {
     let path = format!("data/NAV/V4/{}", name);
-    let original = Rinex::from_gzip_file(&path).unwrap();
+    let original = if name.ends_with(".gz") {
+        Rinex::from_gzip_file(&path).unwrap()
+    } else {
+        Rinex::from_file(&path).unwrap()
+    };
 
     let tmp = format!("test-{}.rnx", name);
     original.to_file(&tmp).unwrap();
     let written = read_to_string(&tmp).unwrap();
     let _ = remove_file(&tmp);
 
-    let original_text = {
+    let original_text = if name.ends_with(".gz") {
         let mut reader = flate2::read::GzDecoder::new(std::fs::File::open(&path).unwrap());
         let mut content = String::new();
         std::io::Read::read_to_string(&mut reader, &mut content).unwrap();
         content
+    } else {
+        read_to_string(&path).unwrap()
     };
 
     let model = v4_record_blocks(&original_text);
@@ -118,4 +124,11 @@ fn nav_v4_kms300dnk_records_write_back() {
 #[test]
 fn nav_v4_brd400dlr_records_write_back() {
     v4_records_write_back("BRD400DLR_S_20230710000_01D_MN.rnx.gz");
+}
+
+/// RINEX 4.02 specification examples: NavIC and GLONASS CDMA ION
+/// records, STO records with the new time system pairs and blank PRNs.
+#[test]
+fn nav_v4_02_examples_records_write_back() {
+    v4_records_write_back("rinex402_examples_MN.rnx");
 }

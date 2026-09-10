@@ -2,7 +2,9 @@ use crate::parse_f64;
 use crate::prelude::ParsingError;
 
 mod bdgim;
+mod glonass;
 mod klobuchar;
+mod navic;
 mod nequick_g;
 
 #[cfg(feature = "ublox")]
@@ -10,8 +12,22 @@ mod nequick_g;
 pub mod ublox;
 
 pub use bdgim::BdModel;
+pub use glonass::GloCdmaModel;
 pub use klobuchar::{KbModel, KbRegionCode};
+pub use navic::{NavicKbModel, NavicNeqnModel, NavicNeqnRegion};
 pub use nequick_g::{NgModel, NgRegionFlags};
+
+/// Parses `n` consecutive E19.12 fields starting at column `offset`.
+/// Returns None if a field is missing or invalid.
+pub(crate) fn parse_e19_fields(line: &str, offset: usize, n: usize) -> Option<Vec<f64>> {
+    let line = line.get(offset..)?;
+    let mut values = Vec::with_capacity(n);
+    for i in 0..n {
+        let field = line.get(i * 19..(i + 1) * 19)?;
+        values.push(parse_f64(field.trim()).ok()?);
+    }
+    Some(values)
+}
 
 /// [IonosphereModel] that may be described in modern NAV V4 RINEx
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
@@ -25,6 +41,15 @@ pub enum IonosphereModel {
 
     /// BDGIM [BdModel] streamed by BDS
     Bdgim(BdModel),
+
+    /// NavIC Klobuchar model (RINEX 4.02 L1NV KLOB message)
+    NavicKlobuchar(NavicKbModel),
+
+    /// NavIC NeQuick-N model (RINEX 4.02 L1NV NEQN message)
+    NavicNequick(NavicNeqnModel),
+
+    /// GLONASS CDMA model (RINEX 4.02 LXOC message)
+    GlonassCdma(GloCdmaModel),
 }
 
 impl IonosphereModel {
@@ -38,6 +63,9 @@ impl IonosphereModel {
             Self::Klobuchar(model) => model.format_v4(w, epoch),
             Self::NequickG(model) => model.format_v4(w, epoch),
             Self::Bdgim(model) => model.format_v4(w, epoch),
+            Self::NavicKlobuchar(model) => model.format_v4(w, epoch),
+            Self::NavicNequick(model) => model.format_v4(w, epoch),
+            Self::GlonassCdma(model) => model.format_v4(w, epoch),
         }
     }
 }
@@ -198,6 +226,30 @@ impl IonosphereModel {
     pub fn as_bdgim(&self) -> Option<&BdModel> {
         match self {
             Self::Bdgim(model) => Some(model),
+            _ => None,
+        }
+    }
+
+    /// Returns reference to NavIC Klobuchar [NavicKbModel]
+    pub fn as_navic_klobuchar(&self) -> Option<&NavicKbModel> {
+        match self {
+            Self::NavicKlobuchar(model) => Some(model),
+            _ => None,
+        }
+    }
+
+    /// Returns reference to NavIC NeQuick-N [NavicNeqnModel]
+    pub fn as_navic_nequick(&self) -> Option<&NavicNeqnModel> {
+        match self {
+            Self::NavicNequick(model) => Some(model),
+            _ => None,
+        }
+    }
+
+    /// Returns reference to GLONASS CDMA [GloCdmaModel]
+    pub fn as_glonass_cdma(&self) -> Option<&GloCdmaModel> {
+        match self {
+            Self::GlonassCdma(model) => Some(model),
             _ => None,
         }
     }

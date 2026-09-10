@@ -188,6 +188,9 @@ pub enum ParsingError {
     #[error("nav: invalid message type")]
     NavMsgType,
 
+    #[error("nav: invalid message subtype")]
+    NavMsgSubtype,
+
     #[error("nav: (ref) epoch week counter parsing")]
     NavEpochWeekCounter,
 
@@ -223,6 +226,12 @@ pub enum ParsingError {
 
     #[error("nav:ion bdgim data")]
     BdgimData,
+
+    #[error("nav:ion navic data")]
+    NavicIonosphereData,
+
+    #[error("nav:ion glonass cdma data")]
+    GlonassIonosphereData,
 
     #[error("nav:sto data")]
     SystemTimeData,

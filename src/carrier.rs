@@ -336,21 +336,21 @@ impl Carrier {
         }
     }
 
-    pub(crate) fn gpsl1_codes() -> [&'static str; 40] {
+    pub(crate) fn gpsl1_codes() -> [&'static str; 44] {
         [
             "C1", "L1", "D1", "S1", "P1", "C1C", "L1C", "D1C", "S1C", "C1S", "L1S", "D1S", "S1S",
             "C1L", "L1L", "D1L", "S1L", "C1X", "L1X", "D1X", "S1X", "C1P", "L1P", "D1P", "S1P",
             "C1W", "L1W", "D1W", "S1W", "C1Y", "L1Y", "D1Y", "S1Y", "C1M", "L1M", "D1M", "S1M",
-            "L1N", "D1N", "S1N",
+            "L1N", "D1N", "S1N", "C1R", "L1R", "D1R", "S1R",
         ]
     }
 
-    pub(crate) fn gpsl2_codes() -> [&'static str; 44] {
+    pub(crate) fn gpsl2_codes() -> [&'static str; 48] {
         [
             "C2", "L2", "D2", "S2", "P2", "C2C", "L2C", "D2C", "S2C", "C2D", "L2D", "D2D", "S2D",
             "C2S", "L2S", "D2S", "S2S", "C2L", "L2L", "D2L", "S2L", "C2X", "L2X", "D2X", "S2X",
             "C2P", "L2P", "D2P", "S2P", "C2W", "L2W", "D2W", "S2W", "C2Y", "L2Y", "D2Y", "S2Y",
-            "C2M", "L2M", "D2M", "S2M", "L2N", "D2N", "S2N",
+            "C2M", "L2M", "D2M", "S2M", "L2N", "D2N", "S2N", "C2R", "L2R", "D2R", "S2R",
         ]
     }
 
@@ -667,6 +667,13 @@ impl Carrier {
         }
     }
 
+    /// NavIC L1 codes (RINEX 4.01)
+    pub(crate) fn irnl1_codes() -> [&'static str; 12] {
+        [
+            "C1D", "L1D", "D1D", "S1D", "C1P", "L1P", "D1P", "S1P", "C1X", "L1X", "D1X", "S1X",
+        ]
+    }
+
     pub(crate) fn irnl5_codes() -> [&'static str; 20] {
         [
             "C5", "L5", "D5", "S5", "C5A", "L5A", "D5A", "S5A", "C5B", "L5B", "D5B", "S5B", "C5C",
@@ -688,7 +695,9 @@ impl Carrier {
             | Observable::SSI(code)
             | Observable::PseudoRange(code) => {
                 let code = code.as_str();
-                if Self::irnl5_codes().contains(&code) {
+                if Self::irnl1_codes().contains(&code) {
+                    Ok(Self::L1)
+                } else if Self::irnl5_codes().contains(&code) {
                     Ok(Self::L5)
                 } else if Self::irn_s_codes().contains(&code) {
                     Ok(Self::S)
@@ -794,6 +803,28 @@ impl Carrier {
 mod test {
     use super::*;
     use std::str::FromStr;
+
+    #[test]
+    fn rinex_4_01_observation_codes() {
+        // GPS L1/L2 "R" attribute and NavIC L1 codes, added by RINEX 4.01
+        for (constellation, code, carrier) in [
+            (Constellation::GPS, "L1R", Carrier::L1),
+            (Constellation::GPS, "C2R", Carrier::L2),
+            (Constellation::IRNSS, "C1D", Carrier::L1),
+            (Constellation::IRNSS, "L1P", Carrier::L1),
+            (Constellation::IRNSS, "S1X", Carrier::L1),
+            (Constellation::IRNSS, "C5A", Carrier::L5),
+        ] {
+            let observable = Observable::from_str(code).unwrap();
+            assert_eq!(
+                Carrier::from_observable(constellation, &observable).unwrap(),
+                carrier,
+                "{:?} {}",
+                constellation,
+                code
+            );
+        }
+    }
 
     #[test]
     fn test_carrier() {
