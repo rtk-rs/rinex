@@ -39,6 +39,8 @@ pub struct CompressorExpert<const M: usize> {
     /// Flag textdiff
     /// Compression kernels (per SV and signal)
     sv_kernels: HashMap<(SV, Observable), NumDiff<M>>,
+    /// Vehicles of the previous epoch
+    prev_svs: Vec<SV>,
     // /// Clock [NumDiff]
     // clock_diff: NumDiff<M>,
 }
@@ -52,6 +54,7 @@ impl<const M: usize> Default for CompressorExpert<M> {
             epoch_buf: String::with_capacity(128),
             flags_buf: String::with_capacity(128),
             sv_kernels: HashMap::with_capacity(8),
+            prev_svs: Vec::with_capacity(64),
             flags_diff: HashMap::with_capacity(8),
         }
     }
@@ -83,6 +86,13 @@ impl<const M: usize> CompressorExpert<M> {
                 .unique()
                 .sorted()
                 .collect::<Vec<_>>();
+
+            // vehicles absent from the previous epoch restart from scratch
+            // (Hatanaka): their kernels are reset and their flags published
+            // in full, which is what a decompressor expects.
+            let prev_svs = &self.prev_svs;
+            self.sv_kernels.retain(|(sv, _), _| prev_svs.contains(sv));
+            self.flags_diff.retain(|sv, _| prev_svs.contains(sv));
 
             if !self.epoch_compression {
                 if self.v3 {
@@ -237,6 +247,7 @@ impl<const M: usize> CompressorExpert<M> {
             // prepare for next epoch
             self.epoch_compression = true;
             self.epoch_buf.clear();
+            self.prev_svs = svnn;
         }
         Ok(())
     }
